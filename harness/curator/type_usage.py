@@ -63,7 +63,7 @@ def section(records: list[dict]) -> list[str]:
     for index, row in enumerate(rows):
         size += len(row.encode()) + 1
         if size > LIST_BYTES:
-            lines.append(f'{len(rows) - index} more tags in current-facts.jsonl.')
+            lines.append(f'{len(rows) - index} more tags accessible through knowledge/index.md or knowledge search.')
             break
         lines.append(row)
     if not rows:

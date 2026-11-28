@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as realDelay } from 'node:timers/promises';
-import { PROVIDER_ERROR_EXIT_CODE, projectImages, proxyFrom, runCurator, validateConfiguration } from '../host.mjs';
+import { FLEX_DEFERRED_EXIT_CODE, PROVIDER_ERROR_EXIT_CODE, REQUEST_BODY_BUDGET_BYTES, proxyFrom, runCurator, validateConfiguration } from '../host.mjs';
 import { listDir, readFile as readTool, validateSubmission, viewFrame, writeFile as writeTool } from '../workspace-tools.mjs';
 
 // The repository root, whose harness/curator validator and schemas the validation tests stage into workbench/.
@@ -48,8 +48,8 @@ async function stageWorkbench(root) {
 const TOKEN = 'a1'.repeat(32);
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=', 'base64');
 export const configuration = () => ({
-  schema: 'curator-host/1', effort: 'medium', max_requests: 6, request_timeout_seconds: 10, wall_seconds: 60,
-  max_context_images: 4, context_image_block: 2, workbench_timeout_seconds: 5, budget_usd: 1,
+  schema: 'curator-host/2', service_tier: 'default', effort: 'medium', max_requests: 6, request_timeout_seconds: 10, wall_seconds: 60,
+  max_context_images: 16, workbench_timeout_seconds: 5, budget_usd: 1,
   model: { id: 'openai/gpt-6.1-terra', name: 'Terra', reasoning: true, input: ['text', 'image'],
     cost: { input: 1, output: 5, cacheRead: 0.05, cacheWrite: 1.25 }, contextWindow: 262144, maxTokens: 4096,
     thinkingLevelMap: { medium: 'medium' },
@@ -59,12 +59,12 @@ export const configuration = () => ({
 });
 
 function sse(calls, usage = { prompt_tokens: 120, completion_tokens: 15, total_tokens: 135, cost: 0.0002,
-  prompt_tokens_details: { cached_tokens: 100 }, completion_tokens_details: { reasoning_tokens: 4 } }, prefix = 'call') {
+  prompt_tokens_details: { cached_tokens: 100 }, completion_tokens_details: { reasoning_tokens: 4 } }, prefix = 'call', metadata = {}) {
   const delta = { role: 'assistant', ...(calls.length ? { tool_calls: calls.map(([name, args], index) => ({
     index, id: `${prefix}-${name}-${index}`, type: 'function', function: { name, arguments: JSON.stringify(args) } })) } : { content: 'done' }) };
   const chunks = [{ id: 'g', model: 'backend', choices: [{ index: 0, delta, finish_reason: null }] },
     { id: 'g', model: 'backend', choices: [{ index: 0, delta: {}, finish_reason: calls.length ? 'tool_calls' : 'stop' }] },
-    { id: 'g', model: 'backend', choices: [], usage }];
+    { id: 'g', model: 'backend', choices: [], usage, ...metadata }];
   return new Response(chunks.map(chunk => 'data: ' + JSON.stringify(chunk) + '\n\n').join('') + 'data: [DONE]\n\n',
     { headers: { 'content-type': 'text/event-stream' } });
 }
@@ -115,6 +115,9 @@ async function session(t, replies, overrides = {}, prepare = undefined) {
 
 test('the configuration is closed and matches what the proxy forwards', () => {
   assert.doesNotThrow(() => validateConfiguration(configuration()));
+  assert.doesNotThrow(() => validateConfiguration({ ...configuration(), text_only: false, max_context_images: 1 }));
+  assert.doesNotThrow(() => validateConfiguration({ ...configuration(), text_only: true, max_context_images: 0,
+    service_tier: 'flex', request_timeout_seconds: 1800 }));
   const mutate = change => { const value = configuration(); change(value); return value; };
   for (const bad of [
     mutate(c => { c.model.compat.maxTokensField = 'max_tokens'; }),
@@ -125,7 +128,18 @@ test('the configuration is closed and matches what the proxy forwards', () => {
     mutate(c => { c.effort = 'high'; }),
     mutate(c => { c.model.id = 'no-vendor'; }),
     mutate(c => { c.context_image_block = 9; }),
-    mutate(c => { c.schema = 'curator-host/0'; }),
+    mutate(c => { c.schema = 'curator-host/1'; }),
+    mutate(c => { delete c.service_tier; }),
+    mutate(c => { c.service_tier = 'auto'; }),
+    mutate(c => { c.service_tier = 1; }),
+    mutate(c => { c.text_only = 'false'; }),
+    mutate(c => { c.text_only = undefined; }),
+    mutate(c => { c.max_context_images = 0; }),
+    mutate(c => { c.text_only = false; c.max_context_images = 0; }),
+    mutate(c => { c.text_only = true; c.max_context_images = -1; }),
+    mutate(c => { c.max_context_images = 0.5; }),
+    mutate(c => { c.max_context_images = 17; }),
+    mutate(c => { c.request_timeout_seconds = 1801; }),
   ]) assert.throws(() => validateConfiguration(bad));
 });
 
@@ -328,7 +342,7 @@ test('validate_submission works past four fifths of the budget and records only 
   assert.match(shown, /f1/);
 });
 
-async function runHost(t, respond, args) {
+async function runHost(t, respond, args, config = configuration()) {
   const root = await workspace(t);
   const server = createServer(async (request, response) => {
     for await (const _chunk of request) { /* drain */ }
@@ -338,7 +352,7 @@ async function runHost(t, respond, args) {
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
-  await writeNodeFile(join(root, 'scratch/config.json'), JSON.stringify(configuration()));
+  await writeNodeFile(join(root, 'scratch/config.json'), JSON.stringify(config));
   const child = spawn(process.execPath, [fileURLToPath(new URL('../run.mjs', import.meta.url)), ...(args ?? ['--config', 'scratch/config.json'])], {
     cwd: root, stdio: ['ignore', 'pipe', 'pipe'],
     env: { PATH: '/usr/bin:/bin', CURATOR_PROXY_URL: `http://127.0.0.1:${server.address().port}`, CURATOR_PROXY_TOKEN: TOKEN },
@@ -349,8 +363,11 @@ async function runHost(t, respond, args) {
   return { code, end: JSON.parse(stdout.trim().split('\n').at(-1)) };
 }
 
-test('run.mjs exits with the reserved code for a provider error and 1 for every other failure', async t => {
+test('run.mjs distinguishes Flex deferral, provider errors and other failures', async t => {
   assert.equal(PROVIDER_ERROR_EXIT_CODE, 75);
+  assert.equal(FLEX_DEFERRED_EXIT_CODE, 76);
+  const deferred = await runHost(t, () => rateLimit({}), undefined, { ...configuration(), service_tier: 'flex' });
+  assert.deepEqual([deferred.code, deferred.end.reason], [76, 'flex-capacity-deferred']);
   const refused = await runHost(t, () => new Response(JSON.stringify({ error: { message: 'refused' } }), { status: 400 }));
   assert.deepEqual([refused.code, refused.end.type, refused.end.reason], [75, 'host-end', 'provider-error']);
   const unfinished = await runHost(t, () => sse([]));
@@ -403,13 +420,6 @@ test('the dollar budget moves the phase too', async () => {
   assert.match(budgetNote({ requests: 1, maxRequests: 100, spent: 0.6, budget: 1 }).text, /a submission for changes you can support/);
   assert.match(budgetNote({ requests: 1, maxRequests: 100, spent: 0.85, budget: 1 }).text, /refused/);
   assert.doesNotMatch(budgetNote({ requests: 1, maxRequests: 100, spent: 0.1, budget: 1 }).text, /half|refused/);
-});
-
-test('view_frame shows up to four frames in one call', async t => {
-  const { events, payloads } = await session(t, [
-    sse([['view_frame', { frames: ['s-2', 's-2'] }]]), sse([['finish', { summary: 'looked' }]])]);
-  assert.equal(events.find(event => event.name === 'view_frame').ok, true);
-  assert.equal(JSON.stringify(payloads[1].body).split('"type":"image_url"').length - 1, 2);
 });
 
 test('the request limit stops the host and telemetry says why', async t => {
@@ -572,8 +582,9 @@ test('retry backoff retains request, host and cancellation ceilings', async t =>
         if (kind === 'cancelled') controller.abort();
         else sub.mock.timers.tick(1000);
       }
-      const { result, payloads } = await pending;
+      const { result, payloads, events } = await pending;
       assert.equal(result.reason, kind); assert.equal(result.requests, 1); assert.equal(payloads.length, 1);
+      assert.equal(events.filter(event => event.type === 'request-end').length, 1);
     } finally { controller.abort(); }
   });
 });
@@ -605,28 +616,8 @@ test('ending without finish is a failure', async t => {
   assert.deepEqual([result.ok, result.reason], [false, 'ended-without-finish']);
 });
 
-test('older frame images are replaced by a marker in whole blocks', () => {
-  const message = id => ({ role: 'toolResult', toolCallId: id, content: [{ type: 'image', data: 'AA==', mimeType: 'image/png' }] });
-  const messages = ['a', 'b', 'c', 'd', 'e'].map(message);
-  assert.equal(projectImages(messages.slice(0, 4), 4, 2).omitted, 0);
-  const projected = projectImages(messages, 4, 2);
-  assert.equal(projected.omitted, 2);
-  assert.equal(projected.messages[0].content[0].type, 'text');
-  assert.equal(projected.messages[2].content[0].type, 'image');
-  assert.equal(messages[0].content[0].type, 'image');
-});
-
-// ---- request serialization (ADR 009 context-stability readiness stage): what a provider's prompt cache sees, with no provider call ----
 const noteOf = body => body.messages.at(-1);
-const MARKED = '\n[Earlier frame image omitted';
 const bodyText = message => typeof message.content === 'string' ? message.content : (message.content ?? []).map(part => part.text ?? '').join('');
-const isCarrier = message => message.role === 'user' && Array.isArray(message.content) && message.content[0]?.text === 'Attached image(s) from tool result:';
-/** Messages, notes included, without the pixel carriers and the omission markers: what eviction never touches. */
-const skeleton = body => body.messages.filter(message => !isCarrier(message)).map(message => JSON.stringify(
-  message.role === 'tool' && typeof message.content === 'string' && message.content.includes(MARKED)
-    ? { ...message, content: message.content.slice(0, message.content.indexOf(MARKED)) } : message));
-const markersOf = body => new Map(body.messages.filter(message => message.role === 'tool' && bodyText(message).includes(MARKED))
-  .map(message => [message.tool_call_id, message.content]));
 
 function assertStable(payloads) {
   for (const [index, { body }] of payloads.entries()) {
@@ -635,30 +626,11 @@ function assertStable(payloads) {
     assert.equal(noteOf(body).role, 'user');
     assert.match(bodyText(noteOf(body)), /^Budget: /, 'the transient note is the tail');
     if (index === 0) continue;
-    const before = skeleton(payloads[index - 1].body), now = skeleton(body);
-    // The whole previous request, its note included, is a byte-identical prefix: the provider reuses
-    // a cached request only when a later one extends it (#489), so no note is ever rewritten.
-    if (JSON.stringify(body) === JSON.stringify(payloads[index - 1].body)) continue;   // a retry resends the same body
-    assert.deepEqual(now.slice(0, before.length), before, `request ${index + 1}: previous request is a byte-identical prefix`);
-    for (const [id, marker] of markersOf(payloads[index - 1].body)) assert.equal(markersOf(body).get(id), marker, 'a marker never changes once written');
+    const previous = payloads[index - 1].body.messages;
+    assert.equal(JSON.stringify(body.messages.slice(0, previous.length)), JSON.stringify(previous),
+      `request ${index + 1}: previous messages are a byte-identical prefix`);
   }
 }
-
-test('serialization: appends, eviction, a retry and the tail note keep the prefix byte-identical', async t => {
-  const view = n => () => sse([['view_frame', { frames: ['s-2'] }]], undefined, `v${n}`);
-  const gateway = () => new Response('bad gateway', { status: 502 });
-  const { result, payloads } = await session(t, [view(1), view(2), view(3), view(4), gateway, view(5), view(6), view(7), () => sse([['finish', { summary: 'done' }]])],
-    { configuration: { ...configuration(), max_requests: 12 } });
-  assert.equal(result.ok, true);
-  assert.equal(payloads.length, 9);
-  assertStable(payloads);
-  // The retried attempt resends the body unchanged.
-  assert.equal(JSON.stringify(payloads[4].body), JSON.stringify(payloads[5].body));
-  // Four images are allowed in blocks of two: evictions happened, rarely, and the markers name the frame.
-  const marked = markersOf(payloads.at(-1).body);
-  assert.ok(marked.size >= 2);
-  for (const marker of marked.values()) assert.match(marker, /frame s-2\); call view_frame with frames \["s-2"\] to see it again/);
-});
 
 test('serialization: the context notice persists once passed and precedes the capacity stop', async t => {
   const usage = tokens => ({ prompt_tokens: tokens, completion_tokens: 10, total_tokens: tokens + 10, cost: 0.0001 });
@@ -708,10 +680,182 @@ test('serialization: a host never sets an affinity header; the proxy owns it', a
   }
 });
 
-test('serialization: a marker names the frame, and one without a label keeps the older text', () => {
-  const batch = (id, name) => ({ role: 'toolResult', toolCallId: id, content: [{ type: 'text', text: name ? `frame ${name} (3 bytes)` : 'no label' }, { type: 'image', data: 'AA==', mimeType: 'image/png' }] });
-  const projected = projectImages([batch('a', 'sid-1'), batch('b', null), batch('c', 'sid-3')], 1, 2);
-  assert.match(projected.messages[0].content[1].text, /tool call a, frame sid-1\); call view_frame with frames \["sid-1"\]/);
-  assert.equal(projected.messages[1].content[1].text, '[Earlier frame image omitted to bound the request (tool call b); call view_frame again to see it.]');
-  assert.equal(projected.messages[2].content[1].type, 'image');
+// Stand-in PNG bytes with a preserved signature and distinct raw hashes. The proxy fixture
+// records request bodies and does not decode the images.
+function frameBytes(tag, size = png.length + 1) {
+  return Buffer.concat([png, Buffer.alloc(size - png.length, tag)]);
+}
+
+const finishReply = () => sse([['finish', { summary: 'done' }]]);
+const imageCounts = events => events.filter(event => event.type === 'request-start').map(event => event.image_parts);
+const frameCalls = events => events.filter(event => event.type === 'tool-call' && event.name === 'view_frame')
+  .map(({ frames, appended_frames, duplicate_frames, capped_frames }) => [frames, appended_frames, duplicate_frames, capped_frames]);
+const shownText = payload => payload.body.messages.map(bodyText).join('\n');
+
+test('curator-host/2 transport', async t => {
+  await t.test('the 16-image cap takes effect mid-batch and preserves the whole serialized prefix', async sub => {
+    const ids = Array.from({ length: 18 }, (_, index) => `frame-${index + 1}`);
+    const batches = [ids.slice(0, 3), ids.slice(3, 7), ids.slice(7, 11), ids.slice(11, 15),
+      [ids[15], ids[16], 'copy-1', ids[17]]];
+    const replies = batches.map((frames, index) => sse([['view_frame', { frames }]], undefined, `batch-${index}`));
+    replies.splice(4, 0, new Response('bad gateway', { status: 502 }));
+    const { result, events, payloads } = await session(sub, [...replies, finishReply()],
+      { configuration: { ...configuration(), max_requests: 10 } }, async root => {
+        await Promise.all(ids.map((id, index) => writeNodeFile(join(root, 'trace/frames', `${id}.png`), frameBytes(index))));
+        await writeNodeFile(join(root, 'trace/frames/copy-1.png'), frameBytes(0));
+      });
+    assert.equal(result.ok, true);
+    assert.deepEqual(imageCounts(events), [0, 3, 7, 11, 15, 15, 16]);
+    assert.equal(payloads[4].raw_body, payloads[5].raw_body);
+    assertStable(payloads);
+    assert.deepEqual(frameCalls(events).at(-1), [batches.at(-1), ['frame-16'], ['copy-1'], ['frame-17', 'frame-18']]);
+    const hash = createHash('sha256').update(frameBytes(0)).digest('hex').slice(0, 12);
+    const text = shownText(payloads.at(-1));
+    assert.ok(text.includes(`[frame copy-1 is pixel-identical to earlier frame frame-1 (sha256 ${hash}); image not re-appended]`));
+    assert.match(text, /frame frame-17 not appended: session image cap reached \(16\/16 images, ~\d+ bytes\)/);
+  });
+
+  await t.test('duplicate hashes within one call use the first frame and leave slots for distinct images', async sub => {
+    const frames = ['s-2', 'trace/frames/duplicate.png', 'different'];
+    const { result, events, payloads, root } = await session(sub, [
+      sse([['view_frame', { frames }], ['read_file', { path: 'brief.md', offset: 2, max_bytes: 4 }]]), finishReply(),
+    ], { configuration: { ...configuration(), max_context_images: 2 } }, async root => {
+      await writeNodeFile(join(root, 'trace/frames/duplicate.png'), png);
+      await writeNodeFile(join(root, 'trace/frames/different.png'), frameBytes(10));
+    });
+    assert.equal(result.ok, true);
+    assert.deepEqual(imageCounts(events), [0, 2]);
+    assert.deepEqual(frameCalls(events), [[frames, ['s-2', 'different'], ['duplicate'], []]]);
+    const { path, offset, max_bytes } = events.find(event => event.name === 'read_file');
+    assert.deepEqual({ path, offset, max_bytes }, { path: 'brief.md', offset: 2, max_bytes: 4 });
+    assert.match(shownText(payloads[1]), /frame duplicate is pixel-identical to earlier frame s-2/);
+    const { sha256, rawBytes, base64Bytes, frameId } = await viewFrame(root, { frame: 'trace/frames/duplicate.png' });
+    assert.equal(sha256, createHash('sha256').update(png).digest('hex'));
+    assert.deepEqual({ rawBytes, base64Bytes, frameId }, { rawBytes: png.length, base64Bytes: png.toString('base64').length,
+      frameId: 'duplicate' });
+  });
+
+  await t.test('the byte guard accounts for the whole batch, other calls and the last actual body', async sub => {
+    const sizes = { first: 2_800_000, second: 2_900_000, third: 1_000_000,
+      fourth: 2_000_000, fifth: 1_000_000, sixth: 1_000_000 };
+    const view = (...frames) => ['view_frame', { frames }];
+    const replies = [sse([view('first', 'second', 'third'), view('fourth')]), sse([view('fifth', 'sixth')]), finishReply()];
+    const { result, events, payloads } = await session(sub, replies, {}, async root => {
+      await Promise.all(Object.entries(sizes).map(([id, size], index) =>
+        writeNodeFile(join(root, 'trace/frames', `${id}.png`), frameBytes(index, size))));
+    });
+    assert.equal(result.ok, true);
+    assert.equal(REQUEST_BODY_BUDGET_BYTES, 7_500_000);
+    assert.deepEqual(imageCounts(events), [0, 2, 3]);
+    assert.deepEqual(frameCalls(events), [
+      [['first', 'second', 'third'], ['first', 'third'], [], ['second']],
+      [['fourth'], [], [], ['fourth']],
+      [['fifth', 'sixth'], ['fifth'], [], ['sixth']],
+    ]);
+    for (const id of ['second', 'fourth', 'sixth']) {
+      const match = new RegExp(`frame ${id} not appended: session byte cap reached .*~(\\d+) bytes`).exec(shownText(payloads.at(-1)));
+      assert.ok(match, id);
+      assert.ok(Number(match[1]) > REQUEST_BODY_BUDGET_BYTES && Number(match[1]) < 8 * 1024 * 1024);
+    }
+    assert.ok(payloads.every(payload => Buffer.byteLength(payload.raw_body) < REQUEST_BODY_BUDGET_BYTES));
+    assertStable(payloads);
+  });
+
+  await t.test('Flex is explicit and request-end reports each applied tier or null', async sub => {
+    const list = [['list_dir', {}]];
+    const { result, events, payloads } = await session(sub, [
+      sse(list, undefined, 'first', { service_tier: 'flex' }),
+      sse(list, undefined, 'second', { response: { service_tier: 'default' } }),
+      finishReply(),
+    ], { configuration: { ...configuration(), service_tier: 'flex' } });
+    assert.equal(result.ok, true);
+    assert.equal(events[0].requested_service_tier, 'flex');
+    assert.equal(events[0].text_only, false);
+    assert.ok(payloads.every(payload => payload.body.service_tier === 'flex'));
+    assert.deepEqual(events.filter(event => event.type === 'request-end').map(event => event.applied_service_tier),
+      ['flex', 'default', null]);
+  });
+
+  for (const [name, headers, textOnly, reason] of [
+    ['Flex capacity without Retry-After', {}, false, 'flex-capacity-deferred'],
+    ['Flex capacity above the delay ceiling', { 'retry-after': '121' }, false, 'flex-capacity-deferred'],
+    ['text-only Flex capacity even with Retry-After', { 'retry-after': '0' }, true, 'flex-capacity-deferred'],
+    ['local spend refusal on the Flex route', { 'retry-after': '0', 'x-curator-spend-refused': '1' }, false, 'spend-reservation-refused'],
+  ]) await t.test(name, async sub => {
+    const { result, events, payloads } = await session(sub, [rateLimit(headers)], {
+      configuration: { ...configuration(), service_tier: 'flex', text_only: textOnly, max_context_images: textOnly ? 0 : 16 },
+    });
+    assert.equal(result.ok, reason === 'spend-reservation-refused');
+    assert.equal(result.reason, reason);
+    assert.equal(payloads.length, 1);
+    assert.equal(events[0].text_only, textOnly);
+    assert.equal(events[0].tools.includes('view_frame'), !textOnly);
+    assert.equal(payloads[0].body.tools.some(tool => tool.function.name === 'view_frame'), !textOnly);
+    assert.deepEqual(events.find(event => event.type === 'request-end').failure, { kind: reason, phase: 'http-error' });
+    assert.ok(events.every(event => event.type !== 'abort'));
+  });
+
+  await t.test('Flex waits up to 120 seconds and a repeated 429 defers the window', async sub => {
+    sub.mock.timers.enable({ apis: ['setTimeout'] });
+    const controller = new AbortController();
+    let eligible = false, second = false;
+    const pending = session(sub, [rateLimit({ 'retry-after': '120' }), () => {
+      second = true;
+      return rateLimit({ 'retry-after': '1' });
+    }], { configuration: { ...configuration(), service_tier: 'flex', request_timeout_seconds: 1800, wall_seconds: 1900 },
+      signal: controller.signal, onEvent: event => { if (event.type === 'request-end' && event.retry) eligible = true; } });
+    try {
+      await waitFor(() => eligible);
+      sub.mock.timers.tick(119_999);
+      await realDelay(10);
+      assert.equal(second, false);
+      sub.mock.timers.tick(1);
+      const { result, events, payloads } = await pending;
+      assert.deepEqual([result.ok, result.reason, result.requests], [false, 'flex-capacity-deferred', 2]);
+      assert.equal(payloads[0].raw_body, payloads[1].raw_body);
+      const ends = events.filter(event => event.type === 'request-end');
+      assert.deepEqual(ends.map(event => [event.status, event.retry, event.applied_service_tier]), [[429, true, null], [429, undefined, null]]);
+      assert.deepEqual(ends[1].failure, { kind: 'flex-capacity-deferred', phase: 'http-error' });
+    } finally { controller.abort(); }
+  });
+
+  await t.test('Flex defers when the request budget has no second attempt', async sub => {
+    const { result, events } = await session(sub, [rateLimit({ 'retry-after': '0' })], {
+      configuration: { ...configuration(), service_tier: 'flex', max_requests: 1 },
+    });
+    assert.deepEqual([result.ok, result.reason, result.requests], [false, 'flex-capacity-deferred', 1]);
+    assert.deepEqual(events.find(event => event.type === 'request-end').failure,
+      { kind: 'flex-capacity-deferred', phase: 'http-error' });
+  });
+
+  for (const [name, reply] of [
+    ['gateway', () => new Response('bad gateway', { status: 502 })],
+    ['network', () => { throw new Error('network failure'); }],
+  ]) await t.test(`text-only sessions get zero ${name} retries`, async sub => {
+    const { result, events, payloads } = await session(sub, [reply], {
+      configuration: { ...configuration(), text_only: true, max_context_images: 0 },
+    });
+    assert.equal(result.reason, 'provider-error');
+    assert.equal(payloads.length, 1);
+    assert.ok(events.every(event => !event.retry));
+  });
+
+  await t.test('knowledge search and get dispatch with the backing path, while trace commands keep their module', async sub => {
+    const root = await workspace(sub);
+    const python = join(root, 'workbench/interpreter');
+    await writeNodeFile(python, '#!/bin/sh\nprintf "%s\\n" "$CURATOR_KNOWLEDGE_BACKING" "$@"\n', { mode: 0o700 });
+    const backing = join(root, 'private/knowledge');
+    const commands = [['knowledge', 'search', 'state reading'], ['knowledge', 'get', 'fact-1'], ['steps', '../trace']];
+    const { result, events, payloads } = await session(sub, [
+      sse(commands.map(args => ['run_workbench', { args }])), finishReply(),
+    ], { cwd: root, python, env: { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN,
+      CURATOR_KNOWLEDGE_BACKING: backing } });
+    assert.equal(result.ok, true);
+    assert.deepEqual(events.filter(event => event.name === 'run_workbench').map(event => event.ok), [true, true, true]);
+    const text = shownText(payloads[1]);
+    for (const args of [
+      ['harness.curator.search', 'search', 'state reading'], ['harness.curator.search', 'get', 'fact-1'],
+      ['harness.trace.workbench', 'steps', '../trace'],
+    ]) assert.ok(text.includes([backing, '-m', ...args].join('\n')), args.join(' '));
+  });
 });

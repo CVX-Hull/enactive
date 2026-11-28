@@ -29,5 +29,5 @@ def test_near_pairs_and_tag_list_have_size_limits(monkeypatch):
     assert len(type_usage.nearest(tags)) == type_usage.MAX_PAIRS
     monkeypatch.setattr(type_usage, 'LIST_BYTES', 20)
     brief = '\n'.join(type_usage.section([{'tags': tags}]))
-    assert 'more tags in current-facts.jsonl' in brief
+    assert 'more tags accessible through knowledge/index.md or knowledge search.' in brief
     assert 'No current tags.' in type_usage.section([])

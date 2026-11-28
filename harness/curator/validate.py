@@ -10,10 +10,18 @@ from pathlib import Path
 from . import check
 
 
-def validate(workspace: Path, submission: str) -> dict:
+def validate(workspace: Path, submission: str, backing: Path | None = None) -> dict:
     if Path(submission).name != submission or submission in ('', '.', '..'):
         raise ValueError('submission must be a directory name')
-    knowledge = workspace / 'knowledge'
+    if backing is None:
+        configured = os.environ.get('CURATOR_KNOWLEDGE_BACKING')
+        if configured is not None:
+            backing = Path(configured)
+        elif (workspace / 'knowledge' / 'facts.jsonl').is_file():
+            backing = workspace / 'knowledge'
+        else:
+            raise ValueError('knowledge backing is required')
+    knowledge = backing
     context = json.loads((knowledge / 'validation-context.json').read_bytes())
     metadata = json.loads((knowledge / 'knowledge.json').read_bytes())
     if metadata['schema'] != 'curator-knowledge/5':
@@ -79,9 +87,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workspace', required=True, type=Path)
     parser.add_argument('--submission', required=True)
+    parser.add_argument('--backing', type=Path)
     args = parser.parse_args()
     try:
-        result = validate(args.workspace, args.submission)
+        result = validate(args.workspace, args.submission, args.backing)
     except (ValueError, OSError, KeyError, TypeError) as error:
         parser.error(str(error))
     print(json.dumps(result))

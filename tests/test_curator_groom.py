@@ -44,7 +44,7 @@ def boundary(tmp_path, monkeypatch):
     runtime = tmp_path/'runtime'
     run = make_long_session(tmp_path/'runs', RUN, steps=1, actors=('001',))
     config = tmp_path/'runner.json'
-    config.write_text(json.dumps(dict(schema='curator-runner-config/1', knowledge_root=str(runtime/'knowledge'/'live'),
+    config.write_text(json.dumps(dict(schema='curator-runner-config/2', knowledge_root=str(runtime/'knowledge'/'live'),
                                       arm='terra', cap_usd='1', upstream='http://127.0.0.1:1')))
     repo = Repository(runtime/'knowledge'/'live', shadow.GAME)
     repo.ensure()

@@ -319,7 +319,7 @@ def live_run(out: Path, knowledge_root: Path, args: argparse.Namespace) -> dict:
     with StandIn() as stand_in:
         config = out/'runner-config.json'
         config.write_text(json.dumps(dict(
-            schema='curator-runner-config/1', knowledge_root=str(knowledge_root), arm=args.arm, cap_usd='1.00',
+            schema='curator-runner-config/2', knowledge_root=str(knowledge_root), arm=args.arm, cap_usd='1.00',
             session_cap_usd='0.25', upstream=stand_in.url,
             host=dict(max_requests=10, max_output_tokens=4096, wall_seconds=120),
             **({} if args.poll_seconds is None else dict(poll_seconds=args.poll_seconds))), indent=1) + '\n')

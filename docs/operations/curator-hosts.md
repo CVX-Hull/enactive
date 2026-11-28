@@ -97,8 +97,10 @@ Node tests: `cd tools/curator_host && npm test`.
   and with `--groom` a grooming session after each whole admission that publishes, on the
   same repository and under the same caps (not with windows); it has no live trigger
   (live runs use the [live curator runner](campaign-run.md#live-knowledge-updates)).
-- The frozen configuration is `curator-host/1`: model, effort, request and wall limits, image
-  limits. It names no endpoint and holds no key.
+- The frozen configuration is `curator-host/2`: model, effort, `service_tier` (`default` or `flex`),
+  optional `text_only` mode (for interleaved hygiene passes, omitting `view_frame` and using zero
+  retries), request and wall limits, and image cap (`max_context_images`, up to `16`, with zero
+  mid-session image eviction). It names no endpoint and holds no key.
 - The host reads `CURATOR_PROXY_URL` (must be `http://127.0.0.1:<port>`) and presents
   `CURATOR_PROXY_TOKEN` as its API key. Anything else is refused at start.
 - The tools are `list_dir`, `read_file`, `view_frame`, `write_file` (only `submissions/`,
@@ -191,9 +193,11 @@ states the same beside the rates.
 
 **What differs from the actor's route.** The proxy forwards a fixed field list, so the curator's
 route sets `maxTokensField: max_completion_tokens` (the actor uses `max_tokens`); the curator proxy
-refuses `max_tokens`. Both hosts explicitly request `service_tier: default`. The curator uses the
-pinned SDK's `onPayload` hook and records `requested_service_tier` at host start; its proxy refuses
-an omitted or different tier. OpenRouter can fill an omitted tier from a
+refuses `max_tokens`. The curator explicitly requests its configured `service_tier` (`default` or
+`flex`) via the pinned SDK's `onPayload` hook, records `requested_service_tier` at host start and
+`applied_service_tier` per response, and its proxy refuses an omitted or unlisted tier (default
+upstream timeout `>= 960 s` accommodates `flex` queueing; upstream `flex` `429` capacity responses
+yield exit code `76` for bounded same-window deferral). OpenRouter can fill an omitted tier from a
 [workspace default](https://openrouter.ai/docs/guides/features/service-tiers#workspace-default-service-tier),
 so a request that omitted the tier does not establish its applied tier. Requests and failures
 recorded without the explicit tier retain their original provenance
@@ -225,26 +229,25 @@ is recorded; it leaves no surviving process. The check is the escape suite
 (`tests/curator_adversary.py` through `tests/test_curator_sandbox.py`) run with these roots in
 the layout; the [#454 record](../acceptance/2026-11-08-curator-shadow-454.md#isolation) holds its last result.
 
-**Image cost in the reservation.** The proxy counts each inline image as a bounded number of input
-tokens (`IMAGE_TOKENS`), not its base64 bytes, at the arm's highest input price, so more images in a
-request raise the reservation. The host keeps at most `--max-context-images` (default 16) in a
-request, evicting the oldest in blocks of `--context-image-block` (default 8). Each marker names the
-evicted frame's source ID so `view_frame` can show it again. The peak trades three limits:
-- **Eviction.** It rewrites the prompt prefix, so a wide window keeps it rare.
-- **Reservation.** Pinned-route Terra 960×640 PNG frames reserve `TERRA_FRAME_TOKENS` (3,000)
-  input tokens at the request's reachable tier (`$0.06` per request at 16 frames in the base
-  cache-write tier, or `$0.12` in the long-prompt tier, before text or output). Non-standard
-  images, other models, or unpinned routes reserve `IMAGE_TOKENS` (10,000) at the highest
-  reachable input price (`$1.28` at 16 images on Opus). A small session cap can still refuse large
-  requests that would really cost less.
+**Image cap, byte budget and cache stability.** The proxy counts each inline image as a bounded
+number of input tokens (`IMAGE_TOKENS`), not its base64 bytes, at the arm's highest reachable input
+price, and uses strict prefix-suffix reservation whenever request headers and prior messages match
+the last settled request byte for byte (falling back to the full bound on any precondition miss).
+The host enforces a hard per-session cap of `--max-context-images` (default `16`) and a pre-append
+serialized request-body guard (`REQUEST_BODY_BUDGET_BYTES = 7,500,000`, below the proxy's 8 MiB
+`MAX_BODY`), plus exact pixel-hash duplicate short-circuiting. Mid-session image eviction is
+removed: once the image or byte cap is reached, additional `view_frame` requests return text-only
+pointers so earlier images and the prompt-cache prefix stay byte-for-byte intact.
+- **Reservation.** Pinned-route Terra 960×640 PNG frames (`PNG_960X640_PREFIX`) reserve
+  `TERRA_FRAME_TOKENS` (3,000) input tokens at the request's reachable tier (`$0.06` per request at
+  16 frames in the base cache-write tier, or `$0.12` in the long-prompt tier, before text or
+  output) on both `openai` and `openai/flex`. Non-standard images, other models, or unpinned routes
+  reserve `IMAGE_TOKENS` (10,000) at the highest reachable input price (`$1.28` at 16 images on
+  Opus).
 - **Body size.** The largest of the 1,932 frames in the sealed `397-seven-day` study (the
   [#397 lineage](../acceptance/2026-11-07-seven-day-397.md)) is 322,175 bytes, or 429,568 as
-  base64, a design input. Sixteen such frames stay under the proxy's 8 MiB request limit
-  (`MAX_BODY`), while 24 would exceed it and the proxy would refuse the request with a 413.
-
-To compare cached shares with the [#454](../acceptance/2026-11-08-curator-shadow-454.md) and
-[#489](../acceptance/2026-11-08-context-stability-489.md) records, pass the window they record
-(24 images, evicted 12 at a time) explicitly.
+  base64, a design input. Sixteen such frames stay under the `7,500,000`-byte pre-append guard and
+  the proxy's 8 MiB request limit (`MAX_BODY`).
 
 **Cache stability.** A prompt cache only helps when each request extends the last
 byte for byte, so:

@@ -12,17 +12,19 @@ look at the knowledge repository's tags, and signal handling. SIGTERM or SIGINT 
 session in flight (which seals its own aborted record), closes its proxy and any read, records the
 interruption and exits.
 
-The configuration (`curator-runner-config/1`) is one JSON object; only `schema`, `knowledge_root`,
+The configuration (`curator-runner-config/2`) is one JSON object; only `schema`, `knowledge_root`,
 `arm` and `cap_usd` are required:
 
-    {"schema": "curator-runner-config/1",
+    {"schema": "curator-runner-config/2",
      "knowledge_root": ".runtime/knowledge/live-845/first-run",   # inside <runtime-root>/knowledge
-     "arm": "terra", "cap_usd": "4.00", "session_cap_usd": "0.60",
+     "arm": "terra", "cap_usd": "4.00", "session_cap_usd": "0.60", "service_tier": "default",
      "upstream": "https://openrouter.ai", "prices": "data/curator/openrouter-prices-2026-11-08.json",
      "trigger_steps": 20, "ceiling_steps": 40, "poll_seconds": 15, "watch_seconds": 5,
+     "hygiene": {"enabled": true, "min_windows": 5, "max_unexamined_steps": 10,
+                 "pass_cap_usd": "0.30", "max_spend_share": "0.10",
+                 "max_requests": 10, "wall_seconds": 90, "max_consecutive_failures": 2},
      "host": {"effort": "medium", "max_requests": 120, "max_output_tokens": 16384,
-              "request_timeout_seconds": 240, "wall_seconds": 1800, "max_context_images": 16,
-              "context_image_block": 8}}
+              "request_timeout_seconds": 240, "wall_seconds": 1800, "max_context_images": 16}}
 
 Relative paths are from the project root. The knowledge repository is the configuration's own,
 created at `v0` if absent, never the repository's tracked knowledge. `cap_usd` bounds the
@@ -51,9 +53,23 @@ ROOT = Path(__file__).resolve().parents[2]
 if __package__ in (None, ''):
     sys.path.insert(0, str(ROOT))
 
+from harness.curator import hygiene as curator_hygiene  # noqa: E402
 from harness.curator.gate import journal  # noqa: E402
 from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
-from harness.curator.runner import SPEND_EXHAUSTED, SPEND_REFUSED, Outcome, Reading, Runner, RunnerError, Settings, TagLook, staged  # noqa: E402
+from harness.curator.runner import (  # noqa: E402
+    FLEX_DEFERRED,
+    HYGIENE_SUBCAP_EXHAUSTED,
+    SPEND_EXHAUSTED,
+    SPEND_REFUSED,
+    HygieneSettings,
+    Outcome,
+    Reading,
+    Runner,
+    RunnerError,
+    Settings,
+    TagLook,
+    staged,
+)
 from harness.curator.window import Window  # noqa: E402
 from harness.evaluation.core.sources import MANIFEST_SCHEMA  # noqa: E402
 from harness.trace.projection import valid_context  # noqa: E402
@@ -61,12 +77,18 @@ from tools import knowledge_export  # noqa: E402
 from tools.campaign_package import DELIVERED_DIRECTORY  # noqa: E402
 from tools.curator_host import shadow  # noqa: E402
 
-CONFIG_SCHEMA = 'curator-runner-config/1'
+CONFIG_SCHEMA = 'curator-runner-config/2'
 REQUIRED = {'schema', 'knowledge_root', 'arm', 'cap_usd'}
 SETTINGS = ('trigger_steps', 'ceiling_steps', 'poll_seconds', 'watch_seconds')
-OPTIONAL = {'session_cap_usd', 'upstream', 'prices', 'host', *SETTINGS}
+OPTIONAL = {'session_cap_usd', 'service_tier', 'provider', 'hygiene', 'upstream', 'prices', 'host', *SETTINGS}
 HOST = ('effort', 'max_requests', 'max_output_tokens', 'request_timeout_seconds', 'wall_seconds',
-        'max_context_images', 'context_image_block')
+        'max_context_images')
+HYGIENE_FIELDS = ('enabled', 'min_windows', 'max_unexamined_steps', 'pass_cap_usd', 'max_spend_share',
+                  'max_requests', 'wall_seconds', 'max_consecutive_failures')
+FLEX_DEFAULT_TIMEOUT_SECONDS = 960
+MAX_REQUEST_TIMEOUT_SECONDS = 1800
+FLEX_DEFERRED_EXIT_CODE = 76
+PREFLIGHT_MIN_PROMPT_TOKENS = 1024
 STOPPED, FAILED, INTERRUPTED = 1, 2, 130
 
 
@@ -74,15 +96,15 @@ class ConfigError(ValueError):
     """The runner's configuration cannot be used."""
 
 
-def _usd(value: object, name: str) -> Decimal:
+def _usd(value: object, name: str, *, allow_zero: bool = False) -> Decimal:
     if not isinstance(value, str):
         raise ConfigError(f'{name} is a decimal string')
     try:
         amount = Decimal(value)
     except InvalidOperation as exc:
         raise ConfigError(f'{name} is a decimal string') from exc
-    if not amount.is_finite() or amount <= 0:
-        raise ConfigError(f'{name} must be positive')
+    if not amount.is_finite() or (amount < 0 if allow_zero else amount <= 0):
+        raise ConfigError(f'{name} must be {"non-negative" if allow_zero else "positive"}')
     return amount
 
 
@@ -91,6 +113,25 @@ def _path(value: object, name: str) -> Path:
         raise ConfigError(f'{name} is a path')
     path = Path(value)
     return (path if path.is_absolute() else ROOT/path).resolve()
+
+
+def _hygiene_settings(raw: object) -> HygieneSettings:
+    if raw is None:
+        return HygieneSettings()
+    if not isinstance(raw, dict) or raw.keys() - set(HYGIENE_FIELDS):
+        raise ConfigError(f'hygiene may have {list(HYGIENE_FIELDS)}')
+    kwargs: dict = {}
+    for key in ('enabled', 'min_windows', 'max_unexamined_steps', 'max_requests', 'wall_seconds', 'max_consecutive_failures'):
+        if key in raw:
+            kwargs[key] = raw[key]
+    if 'pass_cap_usd' in raw:
+        kwargs['pass_cap_usd'] = _usd(raw['pass_cap_usd'], 'hygiene.pass_cap_usd')
+    if 'max_spend_share' in raw:
+        kwargs['max_spend_share'] = _usd(raw['max_spend_share'], 'hygiene.max_spend_share', allow_zero=True)
+    try:
+        return HygieneSettings(**kwargs)
+    except (ValueError, TypeError) as exc:
+        raise ConfigError(str(exc)) from exc
 
 
 def read_config(path: Path, runtime: Path) -> dict:
@@ -108,18 +149,29 @@ def read_config(path: Path, runtime: Path) -> dict:
         raise ConfigError(f'knowledge_root must be inside {Path(runtime).resolve()/"knowledge"}')
     if data['arm'] not in shadow.ARMS:
         raise ConfigError(f'unknown arm {data["arm"]!r}; choose one of {", ".join(sorted(shadow.ARMS))}')
-    host = data.get('host', {})
-    if not isinstance(host, dict) or host.keys() - set(HOST):
+    service_tier = data.get('service_tier', 'default')
+    if not isinstance(service_tier, str) or service_tier not in shadow.SERVICE_TIERS:
+        raise ConfigError(f'service_tier must be one of {", ".join(shadow.SERVICE_TIERS)}')
+    provider = data.get('provider')
+    if provider is not None and (not isinstance(provider, str) or not provider.strip()):
+        raise ConfigError('provider must be a non-empty string')
+    host_raw = data.get('host', {})
+    if not isinstance(host_raw, dict) or host_raw.keys() - set(HOST):
         raise ConfigError(f'host may have {list(HOST)}')
     defaults = shadow.parser()
-    host = {name: host.get(name, defaults.get_default(name)) for name in HOST}
+    host = {name: host_raw.get(name, defaults.get_default(name)) for name in HOST}
+    if service_tier == 'flex' and 'request_timeout_seconds' not in host_raw:
+        host['request_timeout_seconds'] = max(host['request_timeout_seconds'], FLEX_DEFAULT_TIMEOUT_SECONDS)
     for name in HOST[1:]:
         if type(host[name]) is not int or host[name] < 1:
             raise ConfigError(f'host {name} must be a positive integer')
+    if host['request_timeout_seconds'] > MAX_REQUEST_TIMEOUT_SECONDS:
+        raise ConfigError(f'host request_timeout_seconds must not exceed {MAX_REQUEST_TIMEOUT_SECONDS}')
     if host['effort'] is not None and not isinstance(host['effort'], str):
         raise ConfigError('host effort is a string')
     if host['wall_seconds'] <= 30:
         raise ConfigError('host wall_seconds must exceed 30')
+    hygiene = _hygiene_settings(data.get('hygiene'))
     try:
         settings = Settings(**{name: data[name] for name in SETTINGS if name in data})
         upstream = shadow.checked_upstream(data.get('upstream', shadow.OPENROUTER_ORIGIN))
@@ -127,42 +179,48 @@ def read_config(path: Path, runtime: Path) -> dict:
         raise ConfigError(str(exc)) from exc
     return dict(knowledge_root=knowledge, arm=data['arm'], cap=_usd(data['cap_usd'], 'cap_usd'),
                 session_cap=_usd(data['session_cap_usd'], 'session_cap_usd') if 'session_cap_usd' in data else None,
-                upstream=upstream,
+                service_tier=service_tier, provider=provider, hygiene=hygiene, upstream=upstream,
                 prices=_path(data['prices'], 'prices') if 'prices' in data else shadow.DEFAULT_PRICES,
                 settings=settings, host=host)
 
 
-def counted_spend(out: Path) -> Decimal:
+def _session_spend(session: Path) -> Decimal:
+    try:
+        closure = json.loads((session/'proxy-close.json').read_text())
+        if closure.get('receipt_error') is None:
+            return Decimal(closure['spent_snapshot_usd']) + Decimal(closure['pending_reserved_usd'])
+    except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
+        pass
+    start = session/'proxy-start.json'
+    if start.is_file():
+        return _usd(json.loads(start.read_text())['cap_usd'], 'recorded session cap')
+    return Decimal(shadow._ledger(session/'proxy-ledger.jsonl')['charged_usd'])
+
+
+def counted_spend(out: Path, *, lineage: str | None = None) -> Decimal:
     """Every session's spend as its proxy left it, whether or not the session returned: the closing
     snapshot (spent plus reservations still held) where the proxy closed, else the entire
     session cap. Ledgers from sessions with no recorded start contain only known charges."""
-    total = Decimal(0)
-    for session in sorted(p for p in out.glob('*/*') if p.is_dir()):
-        try:
-            closure = json.loads((session/'proxy-close.json').read_text())
-            if closure.get('receipt_error') is None:
-                total += Decimal(closure['spent_snapshot_usd']) + Decimal(closure['pending_reserved_usd'])
-                continue
-        except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
-            pass
-        start = session/'proxy-start.json'
-        if start.is_file():
-            total += _usd(json.loads(start.read_text())['cap_usd'], 'recorded session cap')
-        else:
-            total += Decimal(shadow._ledger(session/'proxy-ledger.jsonl')['charged_usd'])
-    return total
+    pattern = f'{lineage}/*' if lineage is not None else '*/*'
+    return sum((_session_spend(session) for session in sorted(p for p in out.glob(pattern) if p.is_dir())), Decimal(0))
 
 
-def session_host_configuration(config: dict, prices: dict, cap: Decimal) -> dict:
-    """Freeze host settings from a runner configuration for admission or boundary grooming."""
+def session_host_configuration(config: dict, prices: dict, cap: Decimal, *,
+                               text_only: bool = False, max_requests: int | None = None,
+                               wall_seconds: int | None = None) -> dict:
+    """Freeze host settings from a runner configuration for admission, hygiene or boundary grooming."""
     host = config['host']
     arm = shadow.ARMS[config['arm']]
+    effective_wall = wall_seconds if wall_seconds is not None else host['wall_seconds']
     return shadow.host_configuration(
         arm, prices, effort=host['effort'] or arm.effort,
-        max_requests=host['max_requests'], max_output_tokens=host['max_output_tokens'],
-        request_timeout_seconds=host['request_timeout_seconds'], wall_seconds=host['wall_seconds'] - 30,
-        max_context_images=host['max_context_images'], context_image_block=host['context_image_block'],
-        workbench_timeout_seconds=60, budget_usd=float(cap))
+        max_requests=max_requests if max_requests is not None else host['max_requests'],
+        max_output_tokens=host['max_output_tokens'],
+        request_timeout_seconds=host['request_timeout_seconds'], wall_seconds=effective_wall - 30,
+        max_context_images=0 if text_only else host['max_context_images'],
+        workbench_timeout_seconds=60, budget_usd=float(cap),
+        service_tier=config.get('service_tier', 'default'), text_only=text_only,
+        provider=config.get('provider'))
 
 
 def _host_ran(summary: dict) -> bool:
@@ -170,6 +228,16 @@ def _host_ran(summary: dict) -> bool:
     record = summary.get('record')
     log = Path(record)/'host-output.log' if record else None
     return log is not None and log.is_file() and log.stat().st_size > 0
+
+
+def _min_session_headroom(prices: dict, arm_name: str, max_output_tokens: int) -> Decimal:
+    """Worst-case reservation floor for a single minimal request on the configured arm."""
+    return prices[shadow.ARMS[arm_name].model].reservation(PREFLIGHT_MIN_PROMPT_TOKENS, max_output_tokens)
+
+
+def _flex_deferred(summary: dict) -> bool:
+    return (summary.get('sandbox', {}).get('returncode') == FLEX_DEFERRED_EXIT_CODE
+            or (summary.get('host_end') or {}).get('reason') == FLEX_DEFERRED)
 
 
 class Sessions:
@@ -191,9 +259,14 @@ class Sessions:
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config_path = shadow._write(self.config_dir/f'{self.config["arm"]}.json', self.model_config)
 
+    def min_headroom(self) -> Decimal:
+        return _min_session_headroom(self.prices, self.config['arm'], self.config['host']['max_output_tokens'])
+
     def __call__(self, read: Reading, window: Window, label: str) -> Outcome:
+        self.spent = counted_spend(self.out)
         remaining = self.config['cap'] - self.spent
-        if remaining <= 0:
+        min_headroom = self.min_headroom()
+        if remaining <= 0 or remaining < min_headroom:
             return Outcome(state=None, stop=SPEND_EXHAUSTED)
         if self.tools is None:
             try:
@@ -223,15 +296,88 @@ class Sessions:
             # Host processes survived, or the host ran and the sandbox's result is missing. A session that
             # aborted before its host ran is an ordinary failed session.
             stop = 'cleanup-unconfirmed'
-        elif self.config['cap'] - self.spent <= 0:
+        elif self.config['cap'] - self.spent < min_headroom:
             stop = SPEND_EXHAUSTED
         elif summary['stopped_by_cap']:
             stop = SPEND_REFUSED
+        elif _flex_deferred(summary):
+            stop = FLEX_DEFERRED
         details = dict(cost_usd=summary['cost_usd'], summary=str(self.out/read.directory.name/label/'summary.json'))
         error = summary['run_state'] if summary['run_state'] != 'completed' else None
         provider_error = summary.get('sandbox', {}).get('stopped') == 'provider-error'
         if 'session_id' not in summary and error and error.startswith('error: SessionError:'):
             # run_session raises SessionError only when the repository lock refuses a second session.
+            return Outcome(state=None, refused=True, stop=stop, error=error, details=details,
+                           provider_error=provider_error)
+        return Outcome(state=summary.get('session_state'), verdicts=tuple(summary.get('verdicts', ())),
+                       session_id=summary.get('session_id'), stop=stop, error=error, details=details,
+                       provider_error=provider_error)
+
+
+class HygieneSessions:
+    """Interleaved text-only hygiene pass callable with strict spend sub-caps and zero image tools."""
+
+    LINEAGE = 'hygiene'
+
+    def __init__(self, directory: Path, config: dict, repo: Repository, key: str, *, sessions: Sessions | None = None):
+        self.out, self.config, self.repo, self.key = directory/'sessions', config, repo, key
+        self.config_dir = directory/'host-config'
+        self.sessions = sessions
+        self.prices = sessions.prices if sessions is not None else shadow.load_prices(config['prices'])
+        self.tools = self.model_config = self.config_path = None
+
+    def _host(self) -> None:
+        self.tools = self.sessions.tools if (self.sessions is not None and self.sessions.tools is not None) else shadow.host_tools()
+        hs: HygieneSettings = self.config['hygiene']
+        self.model_config = session_host_configuration(
+            self.config, self.prices, hs.pass_cap_usd,
+            text_only=True, max_requests=hs.max_requests, wall_seconds=hs.wall_seconds)
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        self.config_path = shadow._write(self.config_dir/f'{self.config["arm"]}-hygiene.json', self.model_config)
+
+    def __call__(self, read: Reading, label: str) -> Outcome:
+        hs: HygieneSettings = self.config['hygiene']
+        total_spent = counted_spend(self.out)
+        total_remaining = self.config['cap'] - total_spent
+        hygiene_spent = counted_spend(self.out, lineage=self.LINEAGE)
+        share_remaining = (self.config['cap'] * hs.max_spend_share) - hygiene_spent
+        pass_cap = min(hs.pass_cap_usd, share_remaining, total_remaining)
+        min_headroom = _min_session_headroom(self.prices, self.config['arm'], self.config['host']['max_output_tokens'])
+        if pass_cap <= 0 or pass_cap < min_headroom:
+            return Outcome(state=None, stop=HYGIENE_SUBCAP_EXHAUSTED)
+        if self.tools is None:
+            try:
+                self._host()
+            except (shadow.ShadowError, OSError, subprocess.CalledProcessError) as exc:
+                return Outcome(state=None, stop=f'host-unavailable: {exc}')
+        try:
+            summary = shadow.run_one(
+                arm_name=self.config['arm'], lineage=self.LINEAGE, name=label, trace=read.directory,
+                repo=self.repo, memory=None, memory_note='hygiene is text-only over published records',
+                host=self.tools, config_path=self.config_path, config_dir=self.config_dir,
+                model_config=self.model_config, prices=self.prices, key=self.key, upstream=self.config['upstream'],
+                cap=pass_cap, out=self.out, wall_seconds=hs.wall_seconds,
+                max_output_tokens=self.config['host']['max_output_tokens'], window=Window(), session_kind='hygiene')
+        finally:
+            if self.sessions is not None:
+                self.sessions.spent = counted_spend(self.out)
+        proxy = summary['proxy']
+        stop = None
+        if proxy.get('revoked') or proxy.get('breaches'):
+            stop = 'proxy-revoked'
+        elif not proxy.get('settled', True):
+            stop = 'proxy-unsettled'
+        elif 'session_id' in summary and (summary.get('sandbox', {}).get('survivors')
+                                          or (summary.get('sandbox', {}).get('survivors') is None and _host_ran(summary))):
+            stop = 'cleanup-unconfirmed'
+        elif summary['stopped_by_cap']:
+            stop = SPEND_REFUSED
+        elif _flex_deferred(summary):
+            stop = FLEX_DEFERRED
+        details = dict(cost_usd=summary['cost_usd'], summary=str(self.out/self.LINEAGE/label/'summary.json'))
+        error = summary['run_state'] if summary['run_state'] != 'completed' else None
+        provider_error = summary.get('sandbox', {}).get('stopped') == 'provider-error'
+        if 'session_id' not in summary and error and error.startswith('error: SessionError:'):
             return Outcome(state=None, refused=True, stop=stop, error=error, details=details,
                            provider_error=provider_error)
         return Outcome(state=summary.get('session_state'), verdicts=tuple(summary.get('verdicts', ())),
@@ -318,8 +464,10 @@ class Delivery:
         try:
             with runner.lock:
                 confirmed, _, _ = runner.publications()
-                number = max((int(c['version'][1:]) for c in confirmed
-                              if runner.versions[c['version']]['restored_from'] is None), default=-1)
+                candidates = [int(c['version'][1:]) for c in confirmed
+                              if runner.versions[c['version']]['restored_from'] is None]
+                candidates.extend(int(v[1:]) for v in getattr(runner, 'hygiene_publications', lambda: [])())
+                number = max(candidates, default=-1)
             if number > self.last:
                 version = f'v{number}'
                 self._write(f'{version}.json', knowledge_export.published(
@@ -379,7 +527,7 @@ def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--run', required=True, type=Path, help='the live run directory')
     p.add_argument('--directory', required=True, type=Path, help="the runner's own directory")
-    p.add_argument('--config', required=True, type=Path, help='a curator-runner-config/1 file')
+    p.add_argument('--config', required=True, type=Path, help='a curator-runner-config/2 file')
     p.add_argument('--session', default=None, help='expected 32-hex live session id verified by supervision')
     p.add_argument('--runtime-root', type=Path, default=ROOT/'.runtime')
     return p
@@ -417,8 +565,14 @@ def main(argv: list[str] | None = None) -> int:
                 # Curation does not depend on delivery: the runner starts and leaves no version for the driver.
                 print(f'curator_runner: delivery to the running actor is off: {type(error).__name__}: {error}',
                       file=sys.stderr, flush=True)
-            runner = DeliveringRunner(directory, run.name, snapshot=staged(run), session_call=Sessions(directory, config, repo, key),
-                                      look=TagLook(repo), settings=config['settings'], run=run, deliver=deliver)
+            sessions = Sessions(directory, config, repo, key)
+            hygiene_sessions = HygieneSessions(directory, config, repo, key, sessions=sessions)
+            runner = DeliveringRunner(
+                directory, run.name, snapshot=staged(run), session_call=sessions,
+                hygiene_call=hygiene_sessions,
+                hygiene_check=lambda: curator_hygiene.hygiene_trigger(repo.records()),
+                hygiene_settings=config['hygiene'],
+                look=TagLook(repo), settings=config['settings'], run=run, deliver=deliver)
         except (ConfigError, RunnerError, KnowledgeError, shadow.ShadowError, OSError, ValueError) as error:
             print(f'curator_runner: {error}', file=sys.stderr)
             return FAILED
