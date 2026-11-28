@@ -454,15 +454,15 @@ own what is checked and recorded. Nothing waits for the refresh, and it never st
 
 With `context_cut` enabled, a `coverage-update-entry/1` line supplies the verified
 operation boundary for that version, or permanently invalidates further cuts
-for this actor after a restore. The host cuts whole turns only through applicable
-coverage for adopted knowledge. Pressure arms the cut until coverage allows it.
-The host chooses the smallest fitting covered prefix that meets both targets or,
-when no prefix reaches both targets, falls back to the full covered prefix (`k = E`)
-if it fits and strictly reduces estimated tokens (otherwise holding with
-`insufficient-cover`). Independent capacity rescue can remove fewer than
+for this actor after a restore. The host prefers whole-turn covered cuts through applicable coverage for adopted
+knowledge, and falls back to bounded uncovered cuts only above the derived Tier-2
+pressure ceiling (`min(max(high_mark, hard_limit - low_mark), ceil(high_mark * 5 / 3))`)
+or on strict-fit hard-capacity rescue when covered turns are insufficient (never advancing
+`covered_through_operation_id`, never dropping an unknown-transport turn, and still fenced
+by restore or `orderly_stop`). Independent capacity rescue can remove fewer than
 `min_free` turns. The new prefix carries a bounded briefing and a marker with
 the omitted frames' sources, the last five distinct committed public intents,
-`uncovered_turns: 0`, and the committed agenda when populated.
+the outstanding `uncovered_turns` count, and the committed agenda when populated.
 The
 [cut contract](../../docs/contracts/player-host.md#coverage-gated-context-cut)
 defines the boundaries, and the

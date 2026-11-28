@@ -42,6 +42,7 @@ game and provider key.
 | R-BAD-INPUT-SOURCE | Setup or continuous integration downloads or builds something other than the pinned game source and dependencies | None recorded | Moderate: what runs is not what was tested | Medium |
 | R-PUBLISHED-MISTAKE | A commit or evidence file publishes a private identity, secret, private path, save or material that breaks the game's licence | Placeholder commit identities appear in main's history | Severe: publication to a public repository cannot be fully withdrawn | High |
 | R-EVIDENCE-LOSS | Raw run evidence that a dated record cites is deleted or changed, usually by cleanup of the runtime directory | Second copies and stale resources had to be told apart from the only originals before removal ([retirement record](acceptance/2026-11-08-retirement.md)); the store has no backup | Moderate: the record's claims cannot be checked, and the run must be paid for again | Medium |
+| R-UNCOVERED-CONTEXT-LOSS | Under severe curator lag or non-real-time queueing, bounded uncovered-cut fallback trims raw turns from the player's live request before the curator synthesizes them, temporarily hiding unsynthesized detail until the curator catches up or the player re-reads omitted frames | Plausible under delayed or stalled curation ([lag replay](acceptance/2026-11-27-uncovered-cut-lag-replay-1037.md)); disk WAL ingestion is unchanged so durable memory is not lost | Moderate: suboptimal play or extra `player_source` reads during prolonged curator lag | Medium |
 
 ## Development risks
 

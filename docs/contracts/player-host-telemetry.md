@@ -56,9 +56,11 @@ history before ordinary image eviction, while `tokens_before` and
 eviction and any new tail notice.
 
 - `outcome: "cut"` also reports `cut_result` (`target` when a prefix met both
-  `low_mark` and the image target, `best_effort` when the `k = E` fallback ran,
-  or `rescue` when strict-fit hard-capacity rescue ran), `removed_turns`,
-  `uncovered_turns` (non-negative integer, `0` on covered cuts),
+  `low_mark` and the image target, `best_effort` when the full eligible or cuttable
+  fallback ran, or `rescue` when strict-fit hard-capacity rescue ran), `removed_turns`,
+  `uncovered_turns` (exact non-negative integer count of omitted turns not yet covered by
+  `covered_through_operation_id`; `0` on covered cuts and healing toward `0` as coverage
+  catches up),
   `cumulative_removed_turns`, `tokens_after`, `briefing_tokens`, `images_after`
   and `source_ids_count` for the cumulative distinct sources. The logical request
   carrying the cut gets a `knowledge-delivery` with `kind: "briefing"` and explicit

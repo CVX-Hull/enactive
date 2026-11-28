@@ -397,12 +397,24 @@ strict hard fit (`estimatedTokens + maxTokens < contextWindow`). If no `k` meets
 targets, it applies the owner-approved best-effort fallback at `k = E` provided `R_E`
 satisfies strict hard fit and strictly reduces total estimated tokens
 ([decision](../decisions/owner-decisions.md#context-cut-best-effort-fallback-949));
-otherwise it holds back with reason `insufficient-cover`. Independently of `high_mark`
+otherwise it holds back with reason `insufficient-cover`. Under sustained curator lag
+([decision](../decisions/owner-decisions.md#uncovered-cut-fallback-1037)), if no covered cut
+resolves pressure and post-briefing estimated tokens exceed the derived Tier-2 pressure ceiling
+`min(max(high_mark, hard_limit - low_mark), ceil(high_mark * 5 / 3))` (where
+`hard_limit = contextWindow - maxTokens`), the host applies a bounded deterministic
+uncovered-cut fallback over complete turns before the surviving latest turn (still fenced
+before any turn containing an unknown `player-transport/2` operation), choosing the smallest
+prefix `k >= max(min_free, E + 1)` meeting `low_mark`, image target and strict hard fit, or
+the largest fitting reducing prefix as best effort. Independently of `high_mark`
 and `min_free` (under the same three guards: cuts enabled, no restore, no accepted
-orderly stop), whenever the uncommitted candidate request fails strict hard fit and
-`E >= 1`, the host searches `k` from `1` through `E` on the original uncommitted
-projection for the smallest strict-fit prefix that strictly reduces tokens before falling
-back to a `context-capacity` stop. Image block eviction still applies after each decision.
+orderly stop), whenever the uncommitted candidate request fails strict hard fit, the host
+searches covered turns `k` from `1` through `E` first, and if none suffices searches uncovered
+turns `k` from `E + 1` through the cuttable prefix for the smallest strict-fit prefix that
+strictly reduces tokens before falling back to a `context-capacity` stop. Uncovered cuts keep
+`covered_through_operation_id` strictly at the curator's actual verified coverage frontier
+(never advancing `covered_prefix`), preserve `player_agenda`, `recent_intents` and all omitted
+`source_ids`, and leave curator disk WAL and `host.jsonl` ingestion unchanged. Image block
+eviction still applies after each decision.
 
 The cut preserves the system prompt and tools. It replaces the first user
 message with the frozen mission prompt and a fallible briefing from the adopted
@@ -414,9 +426,11 @@ rows), using the same 64-article / 24-fact caps, 1,000-character snippet clippin
 skip-if-oversized rule and `unlisted_entries` count as an actor-start briefing.
 `player_knowledge_read` and `player_knowledge_query` still reach every entry.
 The following user message is delimited by `BEGIN CONTEXT CUT` and
-`END CONTEXT CUT`. Its JSON line contains `grants_authority:false`, the cumulative
-`removed_turns`, `uncovered_turns` (non-negative integer, `0` on covered cuts, reserved
-for bounded uncovered-cut fallback without forcing a host schema bump),
+`END CONTEXT CUT` (its header notes `(some not yet curator-covered)` whenever
+`uncovered_turns > 0`). Its JSON line contains `grants_authority:false`, the cumulative
+`removed_turns`, `uncovered_turns` (exact non-negative count of omitted turns not yet
+covered by `covered_through_operation_id`; `0` on covered cuts and healing back toward `0`
+as later curator coverage catches up),
 `covered_through_operation_id`, the coverage `knowledge_version`,
 `recent_intents` (the last 5 distinct validated public `intent` strings from committed,
 non-refused actor tool calls in removed turns, excluding `player_finish`, clipped to 160
