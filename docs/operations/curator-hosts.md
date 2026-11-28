@@ -170,19 +170,23 @@ Node tests: `cd tools/curator_host && npm test`.
 
 | Arm | OpenRouter model | Pinned provider | Effort | Recorded base price per MTok (in / out / cache read / cache write) |
 | --- | --- | --- | --- | --- |
-| `terra` | `openai/gpt-6.1-terra` | `openai` (as the actor) | medium | $1 / $5 / $0.05 / $1.25 |
+| `terra` (`default`) | `openai/gpt-6.1-terra` | `openai` (as the actor) | medium | $1 / $5 / $0.05 / $1.25 |
+| `terra` (`flex`) | `openai/gpt-6.1-terra` | `openai/flex` (`service_tier: "flex"`, verified 27 Nov 2026) | medium | $0.50 / $2.50 / $0.025 / $0.625 (long-prompt `>= 272k`: $1 / $3.75 / $0.05 / $1.25) |
 | `opus` | `anthropic/claude-opus-5.5` | `anthropic` (not yet confirmed against the model's endpoint list) | medium | $4 / $20 / $0.20 / $8 (1-hour tier; 5-minute $5) |
 
 Prices are in [`data/curator/openrouter-prices-2026-11-08.json`](../../data/curator/openrouter-prices-2026-11-08.json)
 (`curator-prices/1`), read from OpenRouter's public model list (the file names the fetch date).
 The loader validates finite, nonnegative decimal-string rates and keeps the base rates and any
-recorded `long_prompt` tier separately. The proxy reserves at the highest tier reachable by the
-request's prompt-token bound (on Terra: `$1 / $5 / $0.05 / $1.25` per MTok below `272,000`
-tokens, and `$2 / $7.50 / $0.10 / $2.50` per MTok at or above `272,000` tokens), and missing-cost
-fallback uses the tier matching the response's actual prompt tokens (or the worst reachable tier
-when usage is absent). Reported actual fees remain authoritative; old receipts are not repriced.
-Opus has no separate long-prompt tier, so its bounds equal its base row. Its reasoning is mandatory and
-its listed default effort is high; `--effort` overrides.
+recorded `long_prompt` tier separately. The proxy reserves conservatively at the `default` price
+file's highest tier reachable by the request's prompt-token bound (on Terra: `$1 / $5 / $0.05 / $1.25`
+per MTok below `272,000` tokens, and `$2 / $7.50 / $0.10 / $2.50` per MTok at or above `272,000`
+tokens), and missing-cost fallback uses the tier matching the response's actual prompt tokens (or
+the worst reachable tier when usage is absent). Reported actual fees remain authoritative; old
+receipts are not repriced. The [#1047 `flex` probe](../acceptance/2026-11-27-flex-tier-probe-1047.md)
+confirmed on 27 November 2026 that pinned `openai/flex` with `service_tier: "flex"` applies `flex`
+on `20/20` requests and settles at exact `0.5000×` of `default` rates (`$0.0000000` discrepancy,
+including `$0.625/M` cache writes). Opus has no separate long-prompt tier, so its bounds equal its
+base row. Its reasoning is mandatory and its listed default effort is high; `--effort` overrides.
 
 Both arms use a 262,144-token comparison preset. The host checks the previous response's prompt
 usage plus the output allowance before sending the next request; it does not tokenize the newly
