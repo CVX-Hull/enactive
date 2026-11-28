@@ -96,10 +96,72 @@ def survival(timeline: Timeline, events: Sequence[EventRow], binding: Binding, f
         episodes=len(timeline.episodes)), len(readable), None), hours, reason
 
 
+def _legacy_memory_metrics(events: Sequence[EventRow], reads: Sequence[EventRow], facts: HostFacts,
+                           carry: Mapping[str, frozenset[str]], no_host: str | None) -> list[MetricRow]:
+    rows: list[MetricRow] = []
+    writes = [e for e in events if e.kind == 'memory_write']
+    rows.append(_row('memory.writes', len(writes) if facts.present else None, len(writes), None, no_host))
+    rows.append(_row('memory.reads', len(reads) if facts.present else None, len(reads), None, no_host))
+    previous_actor = {actor: facts.actors[i - 1] for i, actor in enumerate(facts.actors) if i > 0}
+    beyond: set[str] = set()  # distinct record IDs read that the reading actor's handoff context did not carry
+    for actor in facts.actors:
+        returned_ids = {r for e in reads if e.payload['actor'] == actor for r in e.payload['record_ids']}
+        beyond |= returned_ids - carry.get(previous_actor.get(actor, ''), frozenset())
+    written = {e.payload['record_id'] for e in writes}
+    rows.append(_row('memory.retrieved_beyond_carry', min(1.0, len(beyond) / len(written)) if written else None, len(beyond),
+        len(written), None if written else ('no_writes' if facts.present else no_host)))
+    calls = {actor: sum(1 for c in facts.calls if c.actor == actor and not c.refused) for actor in facts.actors}
+    late = sum(1 for e in writes if e.payload['call'] >= calls[e.payload['actor']] - 6)
+    rows.append(_row('memory.late_write_share', late / len(writes) if writes else None, late, len(writes),
+        None if writes else ('no_writes' if facts.present else no_host)))
+    saves = [e for e in events if e.kind == 'program_save']
+    runs = [e for e in events if e.kind == 'program_run']
+    outcomes: dict[str, int] = {}
+    for e in runs:
+        outcomes[str(e.payload['status'])] = outcomes.get(str(e.payload['status']), 0) + 1
+    rows.append(_row('programs.saved', len(saves) if facts.present else None, len(saves), None, no_host))
+    rows.append(_row('programs.runs', len(runs) if facts.present else None, len(runs), None, no_host))
+    reused = sum(1 for e in runs if e.payload['reused'])
+    rows.append(_row('programs.reused', reused if facts.present else None, reused, None, no_host))
+    if not facts.present or not outcomes:
+        rows.append(_row('programs.outcomes', None if not facts.present else 0, len(runs), None,
+            no_host or 'no_program_runs'))
+    for status in sorted(outcomes):
+        rows.append(_row('programs.outcomes', outcomes[status], outcomes[status], len(runs), key=status))
+    kinds: dict[str, int] = {}
+    for e in writes:
+        kinds[str(e.payload['record_kind'])] = kinds.get(str(e.payload['record_kind']), 0) + 1
+    if not kinds:
+        rows.append(_row('memory.records', None if not facts.present else 0, 0, 0, no_host or 'no_writes'))
+    for kind in sorted(kinds):
+        rows.append(_row('memory.records', kinds[kind], kinds[kind], len(writes), key=kind))
+    return rows
+
+
+def _knowledge_context_metrics(facts: HostFacts) -> list[MetricRow]:
+    no_host = None if facts.present else 'no_host'
+    deliveries = len(facts.deliveries) + facts.knowledge_delivery_outcomes['empty-suppressed']
+    total = facts.knowledge_delivery_events
+    rows = [_row('knowledge.deliveries', deliveries if facts.present else None, deliveries, total or None, no_host)]
+    rows.extend(_row('knowledge.deliveries', count, count, total, key=outcome)
+        for outcome, count in sorted(facts.knowledge_delivery_outcomes.items()))
+    rows.append(_row('context.uncovered_cuts', facts.uncovered_cuts if facts.present else None, facts.uncovered_cuts,
+        facts.applied_cuts, no_host or ('no_cuts' if facts.applied_cuts == 0 else None)))
+    agenda_calls = sum(1 for call in facts.calls if call.tool == 'player_agenda' and not call.refused)
+    rows.append(_row('agenda.calls', agenda_calls if facts.present else None, agenda_calls, None, no_host))
+    source_calls = [call for call in facts.calls if call.tool == 'player_source']
+    ancestor_reads = sum(1 for call in source_calls if isinstance(call.result, dict)
+        and call.result.get('schema') == 'player-source-read/2' and call.result.get('clickable') is False)
+    rows.append(_row('source.ancestor_reads', ancestor_reads if facts.present else None, ancestor_reads,
+        len(source_calls) or None, no_host or ('no_source_reads' if not source_calls else None)))
+    return rows
+
+
 def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events: Sequence[EventRow],
                     facts: HostFacts, binding: Binding, carry: Mapping[str, frozenset[str]],
                     human_rungs: frozenset[str] = frozenset(), external: Mapping[str, Any] | None = None,
-                    end: EndFacts | None = None) -> list[MetricRow]:
+                    end: EndFacts | None = None, *, manifest_schema: str,
+                    memory_schema: str | None = None) -> list[MetricRow]:
     """All metric rows for one run. `external` carries plain numbers computed elsewhere from the
     existing host and control summaries: `response_ms` and `first_chunk_ms` (lists) and
     `custody` (`{"receipts": n, "uncertain": n}`). Multi-valued metrics (per reader, percentile, status,
@@ -187,44 +249,18 @@ def compute_metrics(timeline: Timeline, operations: Sequence[Operation], events:
     stopped = any(e.kind == 'custody_stop' for e in events)
     rows.append(_row('custody.stopped', stopped, int(stopped), None))
 
-    # memory.*, programs.*
-    writes = [e for e in events if e.kind == 'memory_write']
     reads = [e for e in events if e.kind == 'memory_read']
-    rows.append(_row('memory.writes', len(writes) if facts.present else None, len(writes), None, no_host))
-    rows.append(_row('memory.reads', len(reads) if facts.present else None, len(reads), None, no_host))
-    previous_actor = {actor: facts.actors[i - 1] for i, actor in enumerate(facts.actors) if i > 0}
-    beyond: set[str] = set()  # distinct record IDs read that the reading actor's handoff context did not carry
-    for actor in facts.actors:
-        returned_ids = {r for e in reads if e.payload['actor'] == actor for r in e.payload['record_ids']}
-        beyond |= returned_ids - carry.get(previous_actor.get(actor, ''), frozenset())
-    written = {e.payload['record_id'] for e in writes}
-    rows.append(_row('memory.retrieved_beyond_carry', min(1.0, len(beyond) / len(written)) if written else None, len(beyond),
-        len(written), None if written else ('no_writes' if facts.present else no_host)))
-    calls = {actor: sum(1 for c in facts.calls if c.actor == actor and not c.refused) for actor in facts.actors}
-    late = sum(1 for e in writes if e.payload['call'] >= calls[e.payload['actor']] - 6)
-    rows.append(_row('memory.late_write_share', late / len(writes) if writes else None, late, len(writes),
-        None if writes else ('no_writes' if facts.present else no_host)))
-    saves = [e for e in events if e.kind == 'program_save']
-    runs = [e for e in events if e.kind == 'program_run']
-    outcomes: dict[str, int] = {}
-    for e in runs:
-        outcomes[str(e.payload['status'])] = outcomes.get(str(e.payload['status']), 0) + 1
-    rows.append(_row('programs.saved', len(saves) if facts.present else None, len(saves), None, no_host))
-    rows.append(_row('programs.runs', len(runs) if facts.present else None, len(runs), None, no_host))
-    reused = sum(1 for e in runs if e.payload['reused'])
-    rows.append(_row('programs.reused', reused if facts.present else None, reused, None, no_host))
-    if not facts.present or not outcomes:
-        rows.append(_row('programs.outcomes', None if not facts.present else 0, len(runs), None,
-            no_host or 'no_program_runs'))
-    for status in sorted(outcomes):
-        rows.append(_row('programs.outcomes', outcomes[status], outcomes[status], len(runs), key=status))
-    kinds: dict[str, int] = {}
-    for e in writes:
-        kinds[str(e.payload['record_kind'])] = kinds.get(str(e.payload['record_kind']), 0) + 1
-    if not kinds:
-        rows.append(_row('memory.records', None if not facts.present else 0, 0, 0, no_host or 'no_writes'))
-    for kind in sorted(kinds):
-        rows.append(_row('memory.records', kinds[kind], kinds[kind], len(writes), key=kind))
+    package, _, version = manifest_schema.partition('/')
+    journal_run = memory_schema == 'player-journal/1' or (
+        package == 'campaign-run' and version.isdecimal() and int(version) >= 10)
+    legacy_store = memory_schema is not None and memory_schema != 'player-journal/1'
+    legacy_writes = any(e.kind in ('memory_write', 'program_save', 'program_run') for e in events)
+    if not journal_run or legacy_store or legacy_writes:
+        rows.extend(_legacy_memory_metrics(events, reads, facts, carry, no_host))
+    else:
+        knowledge_reads = sum(1 for e in reads if e.payload['tool'] in ('player_knowledge_read', 'player_knowledge_query'))
+        rows.append(_row('knowledge.reads', knowledge_reads if facts.present else None, knowledge_reads, None, no_host))
+    rows.extend(_knowledge_context_metrics(facts))
 
     # handoff.*
     index_of = {s.seq: k for k, s in enumerate(steps)}

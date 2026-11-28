@@ -20,17 +20,19 @@ from pathlib import Path
 import time
 from typing import Any, Mapping
 
+from harness.jsonio import file_sha256
+
 from .binding import Binding
 from .derive import (CORE_READERS, CORE_VERSION, NO_FRAME, READER_CLOCK, READER_FRAME, READER_INPUT, READER_MAP,
     build_timeline, clock_readings, core_events, describe_actions, frame_summary, map_change_fraction,
     operation_events)
 from .facts import LABEL_KEYS, run_facts
-from .host import host_events, host_facts, seq_resolver
+from .host import HostFacts, host_events, host_facts, seq_resolver
 from .metrics import compute_metrics
-from .lineage import DAY_METRIC, ELAPSED_METRIC, MEMORY_METRIC, METRIC as LINEAGE_METRIC
-LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, MEMORY_METRIC)
+from .lineage import DAY_METRIC, ELAPSED_METRIC, KNOWLEDGE_METRIC, METRIC as LINEAGE_METRIC
+LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, KNOWLEDGE_METRIC)
 from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, record_path
-from .sources import MANIFEST_SCHEMA, RunInputs, archive_entry, read_run, run_name
+from .sources import MANIFEST_SCHEMA, RunInputs, archive_entry, read_json_file, read_run, run_name
 
 
 def _frame_matches(png: Path, sha256: str | None) -> bool:
@@ -92,8 +94,23 @@ def _read_new_steps(inputs: RunInputs, binding: Binding, known: list[StepRow], f
     return steps, readings
 
 
-def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, external: Mapping[str, Any] | None,
-            labels: Mapping[str, object] | None = None) -> dict:
+def _knowledge_versions(inputs: RunInputs, facts: HostFacts, *, digests: bool) -> dict[str, str | None]:
+    briefing = next((delivery for delivery in facts.deliveries if delivery.kind == 'briefing'), None)
+    opening = briefing.version if briefing is not None else None
+    if opening is None:
+        path = inputs.run_dir / 'delivered-knowledge.json'
+        if path.is_file():
+            snapshot = read_json_file(path)
+            version = snapshot.get('version') if isinstance(snapshot, dict) else None
+            opening = version if isinstance(version, str) and version else None
+            if digests:
+                inputs.digests[path.name] = file_sha256(path)
+    return dict(opening_knowledge_version=opening,
+        closing_knowledge_version=facts.deliveries[-1].version if facts.deliveries else None)
+
+
+def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts: HostFacts, external: Mapping[str, Any] | None,
+            labels: Mapping[str, object] | None, *, digests: bool) -> dict:
     steps = writer.steps()
     timeline = build_timeline(steps, writer.readings(), binding)
     clock = clock_readings(timeline, binding)
@@ -103,8 +120,10 @@ def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, ex
     events = [*core_events(timeline, binding), *operation_events(inputs.operations, inputs.end),
         *host_events(facts, resolve, inputs.memory)]
     human = frozenset(e['payload'].get('rung') for e in writer.events() if e['source'] == 'human' and e['kind'] == 'milestone')
-    metrics = compute_metrics(timeline, inputs.operations, events, facts, binding, inputs.carry, human, external, inputs.end)
+    metrics = compute_metrics(timeline, inputs.operations, events, facts, binding, inputs.carry, human, external,
+        inputs.end, manifest_schema=inputs.manifest['schema'], memory_schema=inputs.memory.schema if inputs.memory else None)
     run = run_facts(inputs.manifest, inputs.host, inputs.actors, labels)
+    run.update(_knowledge_versions(inputs, facts, digests=digests))
     writer.replace_run_facts(run)
     writer.replace_host_rows(facts.tool_rows(), facts.request_rows())
     writer.set_metadata(dict(labels=run['labels']))
@@ -193,7 +212,7 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
             known = writer.steps()
             steps, readings = _read_new_steps(inputs, binding, known, facts)
             writer.append_steps(steps, readings)
-            derived = _derive(writer, inputs, binding, facts, external, labels)
+            derived = _derive(writer, inputs, binding, facts, external, labels, digests=state == 'final')
             writer.set_metadata(dict(last_seq=inputs.last_seq or 0, inputs=inputs.digests if state == 'final' else {},
                 pending_seqs=[op.seq for op in inputs.operations if op.status == 'pending'], **derived))
     except BaseException:

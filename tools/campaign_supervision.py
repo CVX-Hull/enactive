@@ -24,10 +24,12 @@ import traceback
 
 from harness.computer.launch import close_group
 from harness.computer.protocol import read_json
+from harness.curator.knowledge import Repository
 from harness.trace.stores import CURATOR_READ_LOCK
 from tools.campaign_package import RUNNER_DIRECTORY, preflight  # the curator runner's own files, in the run directory
 from tools.campaign_player import write_new
 from tools.campaign_watch import PAUSE_RECORDED, UNSPECIFIED
+from tools.curator_host import live_runner
 
 ROOT = Path(__file__).resolve().parents[1]
 PAUSE_REPLY = .75
@@ -239,6 +241,16 @@ def run_supervised(directory: Path, *, runs: Path | None = None, popen=subproces
         runner_config = Path(curator_runner).resolve(strict=True)
         if not runner_config.is_file():
             raise ValueError('The curator runner configuration must be a regular file')
+        try:
+            config = live_runner.read_config(runner_config, ROOT/'.runtime')
+        except (live_runner.ConfigError, OSError, ValueError) as exc:
+            raise ValueError(f'The curator runner configuration is invalid: {exc}') from exc
+        # The lineage's gate state directory; the gate creates it lazily after launch, so it need not exist yet.
+        state = Repository(config['knowledge_root'], live_runner.shadow.GAME).state
+        if not any(value.startswith('live=') for value in curator_drafts):
+            curator_drafts = (*curator_drafts, f'live={state}')
+        if not any(value.startswith('live=') for value in curator_results):
+            curator_results = (*curator_results, f'live={state/"gate.jsonl"}')
     profile, route, _ = preflight(directory)
     secret = credential(route['api_key_env'])
     if not secret:

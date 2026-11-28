@@ -57,6 +57,7 @@ from harness.curator import hygiene as curator_hygiene  # noqa: E402
 from harness.curator.gate import journal  # noqa: E402
 from harness.curator.knowledge import KnowledgeError, Repository  # noqa: E402
 from harness.curator.runner import (  # noqa: E402
+    FLEX_DEFERRALS,
     FLEX_DEFERRED,
     HYGIENE_SUBCAP_EXHAUSTED,
     SPEND_EXHAUSTED,
@@ -183,6 +184,20 @@ def read_config(path: Path, runtime: Path) -> dict:
                 service_tier=service_tier, provider=provider, hygiene=hygiene, upstream=upstream,
                 prices=_path(data['prices'], 'prices') if 'prices' in data else shadow.DEFAULT_PRICES,
                 settings=settings, host=host)
+
+
+def limits(config: dict) -> dict:
+    """The configured spend and hygiene limits the runner's status file reports, USD and shares as exact strings."""
+    hygiene = config['hygiene']
+    return dict(cap_usd=str(config['cap']),
+                session_cap_usd=None if config['session_cap'] is None else str(config['session_cap']),
+                service_tier=config['service_tier'], flex_deferral_limit=FLEX_DEFERRALS,
+                hygiene=dict(enabled=hygiene.enabled, min_windows=hygiene.min_windows,
+                             max_unexamined_steps=hygiene.max_unexamined_steps,
+                             pass_cap_usd=str(hygiene.pass_cap_usd), max_spend_share=str(hygiene.max_spend_share),
+                             max_requests=hygiene.max_requests, wall_seconds=hygiene.wall_seconds,
+                             host_wall_seconds=hygiene.wall_seconds - 30,
+                             max_consecutive_failures=hygiene.max_consecutive_failures))
 
 
 def _session_spend(session: Path) -> Decimal:
@@ -584,7 +599,7 @@ def main(argv: list[str] | None = None) -> int:
                 directory, run.name, snapshot=staged(run), session_call=sessions,
                 hygiene_call=hygiene_sessions,
                 hygiene_check=lambda: curator_hygiene.hygiene_trigger(repo.records()),
-                hygiene_settings=config['hygiene'],
+                hygiene_settings=config['hygiene'], limits=limits(config),
                 look=TagLook(repo), settings=config['settings'], run=run, deliver=deliver)
         except (ConfigError, RunnerError, KnowledgeError, shadow.ShadowError, OSError, ValueError) as error:
             print(f'curator_runner: {error}', file=sys.stderr)

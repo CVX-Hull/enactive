@@ -384,7 +384,8 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
             runner = Runner(tmp_path / 'runner', run.name, snapshot=staged(run), session_call=sessions,
                             hygiene_call=hygiene_sessions,
                             hygiene_check=lambda: dict(triggered=False, digest='d', reasons=[], counts={}),
-                            look=TagLook(repo), settings=Settings(trigger_steps=2, ceiling_steps=2, poll_seconds=0.1, watch_seconds=0.1))
+                            look=TagLook(repo), settings=Settings(trigger_steps=2, ceiling_steps=2, poll_seconds=0.1, watch_seconds=0.1),
+                            limits=live_runner.limits(config))
             writer(op='new_actor')
             for expected_version in ('v1', 'v2'):
                 for _ in range(2):
@@ -392,6 +393,15 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
                 assert runner.poll()
                 assert repo.published() == expected_version
             assert writer(op='close')['wal'] == 0
+        status = runner.status()
+        assert status['schema'] == 'curator-runner-status/2'
+        assert status['limits'] == dict(
+            cap_usd='2.00', session_cap_usd='1.00', service_tier='flex', flex_deferral_limit=3,
+            hygiene=dict(enabled=True, min_windows=5, max_unexamined_steps=10, pass_cap_usd='0.30',
+                         max_spend_share='0.10', max_requests=10, wall_seconds=90, host_wall_seconds=60,
+                         max_consecutive_failures=2))
+        assert status['failures'] == dict(sessions=0, snapshots=0, hygiene=0, flex_deferrals=0)
+        json.dumps(status)  # the status file's content stays JSON-serializable
         # Before grooming, `v2` retired `f1` so `guide` carries 1 stale citation.
         assert groom.stale_records(repo, 'v2') == 1
         # Verify flex tier & prefix-suffix reservation mode reached the proxy ledger.

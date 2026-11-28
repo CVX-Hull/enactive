@@ -1,5 +1,6 @@
 """Live export uses the verified target and reports provider failures without stopping curation."""
 from decimal import Decimal
+import json
 from pathlib import Path
 from threading import Lock
 from types import SimpleNamespace
@@ -83,3 +84,20 @@ def test_invalid_target_context_is_refused_by_live_and_trace_readers(tmp_path, c
 def test_trace_keeps_the_read_identifier_mode():
     assert _arguments('player_knowledge_read', dict(id_or_title='fact', by='id', operator='private')) == dict(
         id_or_title='fact', by='id')
+
+
+def test_runner_limits_record_configured_caps_and_hygiene_bounds_as_exact_strings(tmp_path):
+    config = tmp_path/'runner.json'
+    config.write_text(json.dumps(dict(
+        schema='curator-runner-config/2', knowledge_root=str(tmp_path/'runtime'/'knowledge'/'live'), arm='terra',
+        cap_usd='4.00', session_cap_usd='0.60', service_tier='flex',
+        hygiene=dict(pass_cap_usd='0.25', max_spend_share='0.05', wall_seconds=120))))
+    limits = live_runner.limits(live_runner.read_config(config, tmp_path/'runtime'))
+    assert limits == dict(
+        cap_usd='4.00', session_cap_usd='0.60', service_tier='flex', flex_deferral_limit=live_runner.FLEX_DEFERRALS,
+        hygiene=dict(enabled=True, min_windows=5, max_unexamined_steps=10, pass_cap_usd='0.25',
+                     max_spend_share='0.05', max_requests=10, wall_seconds=120, host_wall_seconds=90,
+                     max_consecutive_failures=2))
+    config.write_text(json.dumps(dict(schema='curator-runner-config/2', arm='terra', cap_usd='1',
+                                      knowledge_root=str(tmp_path/'runtime'/'knowledge'/'live'))))
+    assert live_runner.limits(live_runner.read_config(config, tmp_path/'runtime'))['session_cap_usd'] is None

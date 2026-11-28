@@ -447,6 +447,7 @@ def test_interleaved_hygiene_respects_cooldown_backlog_digest_and_two_failure_sh
     hygiene_outcomes.append(lambda label: Outcome('aborted', (), session_id=label))
     assert runner.poll() and len(hygiene_calls) == 2 and runner.hygiene_failures() == 1
     assert status(world)['state'] == 'polling' and runner.session_failures() == 0
+    assert status(world)['failures']['hygiene'] == 1
 
     # Wait 5 more confirmed windows, fail hygiene a second time -> hygiene permanently disabled, ingestion continues.
     world.outcomes = ['accepted'] * 5
@@ -754,7 +755,7 @@ def test_the_status_file_at_a_sessions_start_and_end(world):
     world.outcomes = [capture]
     runner = world.runner()
     runner.poll()
-    assert at_start['schema'] == 'curator-runner-status/1' and at_start['state'] == 'in-session'
+    assert at_start['schema'] == 'curator-runner-status/2' and at_start['state'] == 'in-session'
     assert at_start['current']['window'] == dict(session=RUN, actor='001', first=1, last=40)
     assert at_start['examined'][0]['outcome'] == 'in-session' and at_start['cursor'] == {}
     assert at_start['covered_prefix']['end'] is None and at_start['lag'] == 42 and at_start['backlog'] == 42
@@ -766,7 +767,21 @@ def test_the_status_file_at_a_sessions_start_and_end(world):
     assert end['examined'][0]['outcome'] == 'accepted' and end['examined'][0]['session_id'] == 'curator-1'
     assert end['cursor'] == {'001': 40} and end['lag'] == 2 and end['backlog'] == 2
     assert end['last_confirmed']['version'] == 'v1' and end['unexamined'] is None
-    assert end['failures'] == dict(sessions=0, snapshots=0)
+    assert end['failures'] == dict(sessions=0, snapshots=0, hygiene=0, flex_deferrals=0)
+    assert end['limits'] is None  # nothing configured them
+
+
+def test_the_status_file_reports_configured_limits_and_the_flex_deferral_count(world):
+    limits = dict(cap_usd='4.00', session_cap_usd=None, service_tier='flex', flex_deferral_limit=live.FLEX_DEFERRALS,
+                  hygiene=dict(enabled=True, min_windows=5))
+    world.reading = read({'001': 20})
+    world.outcomes = [lambda _: Outcome('aborted', (), stop=live.FLEX_DEFERRED)]
+    runner = Runner(world.directory, RUN, snapshot=world.snapshot, session_call=world.session, look=world.look,
+                    settings=world.settings, clock=world.clock, sleep=lambda seconds: None, limits=limits)
+    assert runner.poll()
+    now = status(world)
+    assert now['schema'] == 'curator-runner-status/2' and now['limits'] == limits
+    assert now['failures'] == dict(sessions=0, snapshots=0, hygiene=0, flex_deferrals=1)
 
 
 def test_the_tag_look_lists_each_version_of_a_real_repository_with_its_stamp(tmp_path):

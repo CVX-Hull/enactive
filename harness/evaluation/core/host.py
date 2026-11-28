@@ -21,6 +21,7 @@ after it, for a reviewer who judges whether a delivered record was used. It judg
 from __future__ import annotations
 
 from bisect import bisect_right
+from collections import Counter
 from dataclasses import dataclass, field
 import json
 import math
@@ -110,6 +111,7 @@ class DeliveryEvent:
     kind: str
     request_id: str | None
     text_bytes: int
+    version: str | None
 
 
 @dataclass
@@ -127,6 +129,10 @@ class HostFacts:
     omitted: dict[tuple[str, str], int] = field(default_factory=dict)
     images: dict[tuple[str, str], int] = field(default_factory=dict)  # images the conversation held, kept or omitted
     deliveries: list[DeliveryEvent] = field(default_factory=list)
+    knowledge_delivery_events: int = 0
+    knowledge_delivery_outcomes: Counter[str] = field(default_factory=Counter)
+    applied_cuts: int = 0
+    uncovered_cuts: int = 0
     _starts: dict[str, list[tuple[float, int]]] = field(default_factory=dict)
     _prefix: dict[int, tuple[int, float]] = field(default_factory=dict)
     _keys: list[int] | None = None
@@ -328,14 +334,25 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                 if _number(fields.get('tokens')):
                     facts.estimates[actor].append(int(fields['tokens']))
             elif kind == 'knowledge-delivery':
-                if is_delivered_exposure(fields, host_telemetry):
+                facts.knowledge_delivery_events += 1
+                exposed = is_delivered_exposure(fields, host_telemetry)
+                outcome = fields.get('outcome', 'delivered' if exposed else None)
+                if outcome in ('delivered', 'empty-suppressed', 'refused', 'undelivered'):
+                    facts.knowledge_delivery_outcomes[outcome] += 1
+                if exposed:
                     delivery = fields.get('kind')
                     receiving = fields.get('receiving_player_request_id')
                     if not isinstance(receiving, str):
                         receiving = fields.get('request_id')
                     text = fields.get('text')
+                    version = fields.get('version')
                     facts.deliveries.append(DeliveryEvent(actor, delivery, receiving if isinstance(receiving, str) else None,
-                        len(text.encode('utf-8')) if isinstance(text, str) else 0))
+                        len(text.encode('utf-8')) if isinstance(text, str) else 0,
+                        version if isinstance(version, str) and version else None))
+            elif kind == 'context-cut' and fields.get('outcome') == 'cut':
+                facts.applied_cuts += 1
+                uncovered = fields.get('uncovered_turns')
+                facts.uncovered_cuts += type(uncovered) is int and uncovered > 0
             elif kind == 'control-accepted':
                 facts.controls.append(event)
             elif kind == 'player-finish':
