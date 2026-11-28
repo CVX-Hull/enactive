@@ -25,6 +25,7 @@ from harness.evaluation.core.records import loads
 from .catalog import TEXT_LIMIT, RunInfo
 from .telemetry import HostProjection, Step, Steps, count, identifier, read, usd_text
 from .views import page
+from .knowledge import source_read
 
 #: Findings that are story milestones; the summary lists the rest.
 STORY_FINDINGS = ('stall', 'death', 'custody_stop', 'handoff', 'run_end')
@@ -108,7 +109,7 @@ def placed(step: Step | None, near: Step | None, wall: float | None, decision: i
 
 STEP_FIELDS: dict[str, Any] = dict(tool=None, intent=None, intent_source=None, intent_omitted_characters=0, keys=[], status=None,
     latency_ms=None, request_id=None, tool_call_id=None, operation_id=None, actor=None, reported_provider=None,
-    reported_cost_usd=None, prompt_tokens=None, input_tokens=None, cache_read=None, cache_write=None, output_tokens=None,
+    applied_service_tier=None, source_read=None, reported_cost_usd=None, prompt_tokens=None, input_tokens=None, cache_read=None, cache_write=None, output_tokens=None,
     arguments_preview=None, arguments_omitted_characters=0, result=None)
 
 
@@ -134,9 +135,9 @@ def host_call(call: ToolCall, host: HostProjection, step: Step | None, near: Ste
         keys=keys[step.seq] if step is not None and step.seq in keys and 'actions' in call.arguments else action_keys(call.arguments),
         status='refused' if call.refused else 'error' if call.error else 'ok' if call.finished else 'pending', latency_ms=latency,
         request_id=identifier(call.request_id), tool_call_id=identifier(call.tool_call_id), operation_id=identifier(call.operation_id),
-        actor=call.actor, arguments_preview=text, arguments_omitted_characters=omitted, result=result)
+        actor=call.actor, source_read=source_read(call), arguments_preview=text, arguments_omitted_characters=omitted, result=result)
     if response is not None:
-        out.update(reported_provider=response.reported_provider,
+        out.update(reported_provider=response.reported_provider, applied_service_tier=response.applied_service_tier,
             reported_cost_usd=None if response.reported_usd is None else usd_text(response.reported_usd),
             prompt_tokens=response.prompt_tokens, input_tokens=response.input_tokens, cache_read=response.cache_read,
             cache_write=response.cache_write, output_tokens=response.output_tokens)
@@ -175,11 +176,33 @@ def from_host(host: HostProjection, steps: Steps, keys: dict[int, list[str]]) ->
         anchor = anchor_at(anchors, step.wall)
         attached[anchor] = attached.get(anchor, 0) + 1
         items.append(dict(id=entry_id(anchor, min(attached[anchor], FINDING_SUB - 1)), **recorded_step(step, keys)))
-    for mark in host.cuts:
-        items.append(dict(id=entry_id(trace_anchor(mark.actor_index, mark.line)), entry_kind='context_cut',
+    cuts = {(mark.actor, mark.fields['request_id']): mark for mark in host.cuts
+            if mark.fields['outcome'] == 'applied' and mark.fields['request_id'] is not None}
+    briefings = {}
+    for mark in host.deliveries:
+        key = mark.actor, mark.fields['receiving_player_request_id']
+        cut = cuts.get(key)
+        joined = cut is not None and mark.fields['delivery_kind'] == 'post_cut_briefing' and mark.fields['outcome'] == 'delivered'
+        delivery_id = entry_id(trace_anchor(mark.actor_index, mark.line))
+        joined_cut_id = entry_id(trace_anchor(cut.actor_index, cut.line)) if joined else None
+        if joined:
+            briefing = {name: mark.fields[name] for name in ('knowledge_version', 'leads_count', 'index_count', 'delta_counts', 'summary')}
+            briefings.setdefault(joined_cut_id, dict(briefing, delivery_id=delivery_id,
+                briefing_tokens=cut.fields['briefing_tokens'], source_ids_count=cut.fields['source_ids_count']))
+        items.append(dict(id=delivery_id, entry_kind='knowledge_delivery', joined_cut_id=joined_cut_id,
             **placed(None, steps.nearest(mark.wall), mark.wall, None), actor=mark.actor, **mark.fields))
-    for mark in host.updates:
-        items.append(dict(id=entry_id(trace_anchor(mark.actor_index, mark.line)), entry_kind='knowledge_update',
+    for mark in host.cuts:
+        if mark.fields['outcome'] != 'applied':
+            continue
+        identity = entry_id(trace_anchor(mark.actor_index, mark.line))
+        items.append(dict(id=identity, entry_kind='context_cut', briefing=briefings.get(identity),
+            **placed(None, steps.nearest(mark.wall), mark.wall, None), actor=mark.actor, **mark.fields))
+    for wait in host.coverage_waits:
+        wall = wait['start_wall']
+        items.append(dict(wait, order=entry_id(trace_anchor(wait['actor_index'], wait['line'])), entry_kind='coverage_wait',
+            **placed(None, steps.nearest(wall), wall, None)))
+    for mark in host.agenda_events:
+        items.append(dict(id=entry_id(trace_anchor(mark.actor_index, mark.line)), entry_kind='agenda_change',
             **placed(None, steps.nearest(mark.wall), mark.wall, None), actor=mark.actor, **mark.fields))
     return items, anchors
 
@@ -253,18 +276,20 @@ def feed(info: RunInfo, connection: sqlite3.Connection, after: int, limit: int) 
     host = read(info)
     steps, keys = Steps(connection), step_keys(connection)
     items, anchors = from_host(host, steps, keys) if host is not None else from_record(connection, steps, keys)
-    items.sort(key=lambda item: (item['id'], item['entry_kind']))
+    items.sort(key=lambda item: (item.get('order', item['id']), item['entry_kind']))
     # Two entries can only share a number past the room behind one anchor; the later takes the next free one. The IDs
     # are settled before any finding is placed, so no finding can change one.
     previous = -1
     for item in items:
-        item['id'] = item['order'] = previous = max(item['id'], previous + 1)
+        item['order'] = previous = max(item.get('order', item['id']), previous + 1)
+        if isinstance(item['id'], int):
+            item['id'] = item['order']
     items += story_findings(connection, steps, anchors)
     items.sort(key=lambda item: (item['order'], item['entry_kind'] == 'finding'))
     previous = -1
     for item in items:
         item['order'] = previous = max(item['order'], previous + 1)
-    counts = {kind: 0 for kind in ('step', 'context_cut', 'knowledge_update', 'finding')}
+    counts = {kind: 0 for kind in ('step', 'context_cut', 'coverage_wait', 'knowledge_delivery', 'agenda_change', 'finding')}
     for item in items:
         counts[item['entry_kind']] += 1
     rows, size = [], 0

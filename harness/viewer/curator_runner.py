@@ -1,4 +1,4 @@
-"""Read-only, bounded projection of the curator runner's status file (`curator-runner-status/1`).
+"""Read-only, bounded projection of the curator runner's status file (current /2 and archived /1).
 
 The runner (`harness/curator/runner.py`) owns the file and its format and replaces it whole at each poll and
 at each session's start and end. This reader opens it for reading at request time, with no lock, and writes
@@ -18,8 +18,10 @@ from pathlib import Path
 
 from .catalog import ID_LIMIT, LIST_LIMIT
 from .curator import read_file, read_rooted
+from .telemetry import usd
 
-SCHEMA = 'curator-runner-status/1'
+SCHEMA = 'curator-runner-status/2'
+ARCHIVED_SCHEMA = 'curator-runner-status/1'
 OWN = ('curator-runner', 'status.json')  # where the runner writes it in a run package
 UNKNOWN = 'unknown'
 STATES = ('polling', 'in-session', 'stopped', 'ended')
@@ -51,7 +53,7 @@ PLACE = {'actor': _text, 'step': _count, 'operation': _text, 'ordinal': _count}
 POSITION = {**PLACE, 'read_wall': WALLS}
 WINDOW = {'session': _text, 'actor': _text, 'first': _count, 'last': _count}
 STAMP = {'session': _text, 'actor': _text, 'last_step': _count}  # a `curator-coverage/2` stamp
-EXAMINED = {'label': _text, 'window': WINDOW, 'session_id': _text, 'outcome': _text, 'advanced': _flag,
+EXAMINED = {'session_kind': _text, 'label': _text, 'window': WINDOW, 'session_id': _text, 'outcome': _text, 'advanced': _flag,
             'started_wall': _number, 'ended_wall': _number}
 RANGE = {'actor': _text, 'first': _count, 'last': _count}
 STATUS = {
@@ -60,13 +62,32 @@ STATUS = {
     'position': POSITION, 'as_of': POSITION,
     'snapshot': {'hold_seconds': _number, 'transaction_seconds': _number, 'staging_seconds': _number,
                  'read_wall': WALLS},
-    'current': {'label': _text, 'window': WINDOW, 'started_wall': _number},
+    'current': {'session_kind': _text, 'label': _text, 'window': WINDOW, 'started_wall': _number},
     'covered_prefix': {'end': PLACE, 'restore': {'version': _text, 'restored_from': _text, 'counted_through': _text}},
     'lag': _count, 'stamp_distance': _count, 'backlog': _count,
     'last_confirmed': {'version': _text, 'label': _text, 'window': WINDOW, 'coverage': STAMP},
     'latest_version': {'version': _text, 'coverage': STAMP},
     'failures': {'sessions': _count, 'snapshots': _count},
 }
+
+
+def _money(value):
+    return value if usd(value) is not None else UNKNOWN
+
+
+def _share(value):
+    amount = usd(value)
+    return value if amount is not None and amount <= 1 else UNKNOWN
+
+
+def _tier(value):
+    return value if value in ('default', 'priority', 'flex') else UNKNOWN
+
+
+LIMITS = {'cap_usd': _money, 'session_cap_usd': _money, 'service_tier': _tier, 'flex_deferral_limit': _count,
+          'hygiene': {'enabled': _flag, 'min_windows': _count, 'max_unexamined_steps': _count,
+                      'pass_cap_usd': _money, 'max_spend_share': _share, 'max_requests': _count,
+                      'wall_seconds': _number, 'host_wall_seconds': _number, 'max_consecutive_failures': _count}}
 
 
 def _withheld(value: object) -> bool:
@@ -83,7 +104,7 @@ def _project(value, kind):
         return UNKNOWN
     out, omitted = {}, {}
     for key, sub in kind.items():
-        item = value.get(key, UNKNOWN)
+        item = value.get(key, None if key == 'session_kind' else UNKNOWN)
         if _withheld(item):
             omitted[key], out[key] = len(item), None
         else:
@@ -116,7 +137,15 @@ def _baselines(document: dict) -> dict:
 
 
 def projection(document: dict) -> dict:
-    out = _project(document, STATUS)
+    current = document['schema'] == SCHEMA
+    shape = dict(STATUS, failures=dict(STATUS['failures'], hygiene=_count, flex_deferrals=_count))
+    out = _project(document, shape)
+    out['status_schema'] = document['schema']
+    out['limits'] = _project(document.get('limits'), LIMITS) if current else None
+    if not isinstance(out['failures'], dict):
+        out['failures'] = dict.fromkeys(shape['failures'], out['failures'])
+    if not current:
+        out['failures'].update(hygiene=None, flex_deferrals=None)
     # The runner writes only `unknown` here: steps finished after its last read are never known to it.
     out['after_last_read'] = UNKNOWN
     baselines = _baselines(document)
@@ -131,21 +160,22 @@ def projection(document: dict) -> dict:
     return out
 
 
-def status(path: Path | None, now: float) -> dict:
+def status(path: Path | None, now: float, *, examined_ids: set[str] | None = None) -> dict:
     """The payload of the configured status file. One in a run package's own place is read from that package's root."""
     if path is None:
         return dict(source_status='not_configured', snapshot=None, read_wall=now, status=None)
     if path.parts[-2:] == OWN:
-        return run_status(path.parent.parent, now)
-    return payload(*read_file(path), now)
+        return run_status(path.parent.parent, now, examined_ids=examined_ids)
+    return payload(*read_file(path), now, examined_ids=examined_ids)
 
 
-def run_status(run_dir: Path, now: float) -> dict:
+def run_status(run_dir: Path, now: float, *, examined_ids: set[str] | None = None) -> dict:
     """The payload of a run package's own status file."""
-    return payload(*read_rooted(run_dir, *OWN), now)
+    return payload(*read_rooted(run_dir, *OWN), now, examined_ids=examined_ids)
 
 
-def payload(state: str, snapshot: dict | None, data: bytes | None, now: float) -> dict:
+def payload(state: str, snapshot: dict | None, data: bytes | None, now: float, *,
+            examined_ids: set[str] | None = None) -> dict:
     """The route's payload: `source_status`, the bytes read (`snapshot`), when this read happened and the projection."""
     if state != 'available' or data is None:
         return dict(source_status=state, snapshot=snapshot, read_wall=now, status=None)
@@ -153,6 +183,11 @@ def payload(state: str, snapshot: dict | None, data: bytes | None, now: float) -
         document = json.loads(data.decode('utf-8'))
     except (ValueError, UnicodeError, RecursionError):
         return dict(source_status='malformed', snapshot=snapshot, read_wall=now, status=None)
-    if not isinstance(document, dict) or document.get('schema') != SCHEMA:
+    if not isinstance(document, dict) or document.get('schema') not in (SCHEMA, ARCHIVED_SCHEMA):
         return dict(source_status='unsupported', snapshot=snapshot, read_wall=now, status=None)
+    examined = document.get('examined')
+    if examined_ids is not None and isinstance(examined, list):
+        examined_ids.update(value for row in examined if isinstance(row, dict)
+                            if isinstance(value := row.get('session_id'), str) and value not in ('', UNKNOWN)
+                            and not _withheld(value))
     return dict(source_status='available', snapshot=snapshot, read_wall=now, status=projection(document))

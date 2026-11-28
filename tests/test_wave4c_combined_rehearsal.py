@@ -11,7 +11,7 @@ Exercises the combined stack together with zero CDDA launches and zero live prov
   `already_in_context` reminder recall, `context_cut` hysteresis + `cut_result: "best_effort"` +
   ephemeral `recent_intents`, halving `tail-notice`, `"undelivered"` live knowledge update, and
   `spend-reserve-reached` handshake + orderly `player_finish`);
-- `spectator-view/3` (`#464` read-only curator draft/gate views + `from_drafts` + API-scoped JSON
+- `spectator-view/4` (`#464` read-only curator draft/gate views + `from_drafts` + API-scoped JSON
   `404`/`405` envelopes, `#957` `cut_result`/`spend-reserve-reached`/`tail-notice`/compact `returned_hits`,
   and `"undelivered"` update feed entry) plus `tools.host_analysis` roll-ups.
 """
@@ -29,7 +29,7 @@ import sys
 import time
 
 import pytest
-from starlette.testclient import TestClient
+from tests.test_viewer_api import TestClient
 
 from harness.computer.store import SessionStore
 
@@ -179,7 +179,7 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     assert [u.get('outcome') for u in rehearsal['actor2_updates']] == ['undelivered'], rehearsal['actor2_updates']
 
     # 4. Complete `campaign-run/14` run directory with real `player-host-inputs/5` frozen manifests
-    #    so evaluator, `spectator-view/3`, and `host_analysis` verify snapshots and inspect both actors.
+    #    so evaluator, `spectator-view/4`, and `host_analysis` verify snapshots and inspect both actors.
     manifest = dict(
         schema='campaign-run/14', session=SESSION_ID, source_commit='c' * 40,
         labels=dict(arm='rehearsal', start='S1', scenario='Wilderness / Campground / Survivor',
@@ -233,7 +233,7 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
         proxy=dict(settled=True, revoked=False, breaches=0), sandbox=dict(survivors=[]), summary=None,
     )))
 
-    # 6. Evaluate and verify `spectator-view/3` (`#464` + `#957` + `"undelivered"`) and `tools.host_analysis`.
+    # 6. Evaluate and verify `spectator-view/4` (`#464` + `#957` + `"undelivered"`) and `tools.host_analysis`.
     eval_root = tmp_path / 'evaluations'
     evaluate(run_dir, FakeBinding(), eval_root, created_wall=1.0)
     frames_cfg = FrameSources(
@@ -250,7 +250,7 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     summary_resp = client.get(f'/api/view/run/{SESSION_ID}/summary')
     assert summary_resp.status_code == 200
     summary_body = summary_resp.json()
-    assert summary_body['schema'] == 'spectator-view/3'
+    assert summary_body['schema'] == 'spectator-view/4'
     host = summary_body['host_telemetry']
     assert host['context_cuts']['applied'] >= 1
     assert host['context_cuts']['by_result']['best_effort'] >= 1
@@ -262,8 +262,8 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
 
     feed_items = client.get(f'/api/view/run/{SESSION_ID}/feed').json()['items']
     assert any(i['entry_kind'] == 'context_cut' and i.get('cut_result') == 'best_effort' for i in feed_items)
-    assert any(i['entry_kind'] == 'knowledge_update' and i.get('outcome') == 'undelivered' for i in feed_items)
-    assert any(i['entry_kind'] == 'knowledge_update' and i.get('outcome') == 'delivered' for i in feed_items)
+    assert any(i['entry_kind'] == 'knowledge_delivery' and i.get('outcome') == 'undelivered' for i in feed_items)
+    assert any(i['entry_kind'] == 'knowledge_delivery' and i.get('outcome') == 'delivered' for i in feed_items)
 
     telem = client.get(f'/api/view/run/{SESSION_ID}/telemetry').json()
     assert any(c.get('cut_result') == 'best_effort' for c in telem['cuts'])
@@ -282,20 +282,20 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     assert len(read_calls) == 1 and read_calls[0]['returned_ids'] == ['water-purification']
 
     # `#464` curator draft & gate views + API-scoped JSON 404/405 envelopes.
-    draft_sources = client.get('/api/view/frame/curator-draft-sources').json()
-    assert draft_sources['schema'] == 'spectator-frame/1'
+    draft_sources = client.get('/api/view/curator-sources/draft-sources').json()
+    assert draft_sources['schema'] == 'spectator-view/4'
     assert [i['label'] for i in draft_sources['items']] == ['rehearsal-drafts']
-    drafts_body = client.get('/api/view/frame/curator-drafts', params=dict(source='rehearsal-drafts')).json()
-    assert drafts_body['source_status'] == 'available'
+    drafts_body = client.get('/api/view/curator-sources/drafts', params=dict(source='rehearsal-drafts')).json()
+    assert drafts_body['schema'] == 'spectator-view/4' and drafts_body['source_status'] == 'available'
     assert [d['id'] for d in drafts_body['items']] == ['draft-water-01']
-    gate_results = client.get('/api/view/frame/curator-results', params=dict(source='rehearsal-gate')).json()
-    assert gate_results['source_status'] == 'available'
+    gate_results = client.get('/api/view/curator-sources/results', params=dict(source='rehearsal-gate')).json()
+    assert gate_results['schema'] == 'spectator-view/4' and gate_results['source_status'] == 'available'
     assert any('draft-water-01' in (r.get('from_drafts') or ()) for r in gate_results['items'])
 
     r404 = client.get('/api/view/does-not-exist')
-    assert r404.status_code == 404 and r404.json()['schema'] == 'spectator-view/3' and r404.json()['error'] == 'not_found'
+    assert r404.status_code == 404 and r404.json()['schema'] == 'spectator-view/4' and r404.json()['error'] == 'not_found'
     r405 = client.post('/api/view/runs')
-    assert r405.status_code == 405 and r405.json()['schema'] == 'spectator-view/3' and r405.json()['error'] == 'method_not_allowed'
+    assert r405.status_code == 405 and r405.json()['schema'] == 'spectator-view/4' and r405.json()['error'] == 'method_not_allowed'
 
     # `#957` `tools.host_analysis` roll-up on the real `player-host/13` trace, plus `#1026` zero curator leakage.
     from harness.trace import projection
@@ -426,7 +426,7 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
     assert len(articles) == 1 and articles[0]['lead'] == 'Updated stand-in lead after grooming.'
     assert articles[0]['body'][0]['facts'] == ['f2']
 
-    # Pass the real `tools.curator_host.groom` receipt directly into `spectator-view/3`.
+    # Pass the real `tools.curator_host.groom` receipt directly into `spectator-view/4`.
     eval_root = tmp_path / 'seatbelt-evaluations'
     evaluate(run, CddaBinding(), eval_root, created_wall=1.0)
     client = TestClient(create_app(
@@ -434,7 +434,8 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
         frame_sources=FrameSources(curator_grooming=out / 'grooming-summary.json'),
     ))
     viewer_summary = client.get(f'/api/view/run/{SESSION_ID}/summary').json()
-    assert viewer_summary['schema'] == 'spectator-view/3'
+    assert viewer_summary['schema'] == 'spectator-view/4'
     assert viewer_summary['boundary_grooming']['source_status'] == 'available'
     assert viewer_summary['boundary_grooming']['status'] == 'completed'
     assert viewer_summary['boundary_grooming']['published_after'] == 'v3'
+    assert viewer_summary['boundary_grooming']['stale_records'] == 0

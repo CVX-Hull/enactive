@@ -256,9 +256,27 @@ def record(target, value, typed=True, legacy=False):
         add_ids(target, 'links', value.get('links'))
 
 
-def source_anchor(catalog, runs, source_id):
-    found = frame.resolve(catalog, runs, [], dict(chunk='-', frame=source_id))
-    return {k: found[k] for k in ('run', 'source_id', 'available', 'reason')}
+def source_anchor(catalog, runs, source_id, *, location=False):
+    owner = next((r for r in runs if r.session == source_id.rpartition('-')[0]), None)
+    found = frame.source_location(catalog, runs, owner, source_id)
+    return found if location else {k: found[k] for k in ('run', 'source_id', 'available', 'reason')}
+
+
+def source_read(call):
+    """The operator's projection of the player-facing source read result."""
+    value = call.result
+    if call.tool != 'player_source' or not isinstance(value, dict) or value.get('schema') != 'player-source-read/2':
+        return None
+    origin = value.get('origin')
+    admission = origin.get('admission') if isinstance(origin, dict) else origin
+    source = value.get('source') if isinstance(value.get('source'), dict) else {}
+    candidates = (value.get('source_id'), source.get('source_id'), call.arguments.get('source_id'))
+    aliases = (admission, value.get('player_alias'), value.get('alias'), call.arguments.get('player_alias'),
+               call.arguments.get('alias'), *candidates)
+    alias = next((s for s in aliases if isinstance(s, str) and ALIAS.fullmatch(s)), None)
+    real = next((s for s in candidates if isinstance(s, str) and SOURCE.fullmatch(s)), None)
+    return dict(source_id=real, player_alias=alias, non_clickable=True,
+                origin='current' if admission == 'current' else 'ancestor' if admission == 'ancestor' or alias else None)
 
 
 def anchors(catalog, runs, values):
@@ -464,8 +482,12 @@ def projection(catalog, info, connection, actor, request_id, after, limit, entry
             projected['result'].update(fields(result, ('resolution', 'resolved_from')))
         projected['operation'] = None if operation is None else dict(**fields(dict(status=operation.status, reason=operation.reason), ('status','reason')),
             receipts=[fields(r, ('status', 'disposition', 'reason')) for r in operation.receipts[:20]], receipts_omitted=max(0,len(operation.receipts)-20))
+        reading = source_read(call)
+        if reading is not None:
+            projected.update(reading)
         source_ids = [x for x in (projected['source_id'], projected['step'].get('source_id') if projected['step'] else None) if x]
-        projected['anchors'] = anchors(catalog, runs, source_ids)
+        projected['anchors'] = [source_anchor(catalog, runs, v, location=reading is not None)
+                                for v in dict.fromkeys(source_ids)]
         calls.append(projected)
     selected_context = None
     if request_id:

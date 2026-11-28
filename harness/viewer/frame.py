@@ -1,26 +1,17 @@
-"""Payload builders for the spectator's frame: `spectator-frame/1` (ADR 009's spectator direction;
-docs/contracts/spectator-view.md).
-
-The frame is a health strip, the container inventory and the four #397 forgetting episodes over sealed traces. Every
-builder is a pure read: sidecar container indexes (`data/containers/*.json`), tracked probe episodes
-(`data/evaluation/probes/*/episodes.json`) and the catalog's evaluation stores. Nothing here writes, and nothing it
-computes reaches the player or the curator (ADR008). A slot without its data says so
-(`no-data`, or `not-yet-measured` with the phase that delivers it) instead of showing a number.
-"""
+"""Read-only inventory and probe episodes for the spectator archive."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 import json
 from pathlib import Path
-import sqlite3
 
 from harness.evaluation.core.probes import ProbeError, episodes as validate_episodes
 from harness.trace.sidecar import INDEX_SCHEMA, ManifestError, validate
 
 from .catalog import Catalog, RunInfo, ViewError
-from . import curator_runner, views
+from . import views
+from .curator import read_rooted
 
-API = 'spectator-frame/1'
 DATA_ROOT = Path(__file__).resolve().parents[2] / 'data'
 
 
@@ -36,24 +27,15 @@ class FrameSources:
     curator_drafts: tuple[tuple[str, Path], ...] = ()
 
 
-# The health strip's slots (ADR 009's spectator direction) and the phase that first delivers each. `actor_cadence` is measured from sealed
-# actor sessions and `curator_lag` from the curator runner's status file; the rest have no measured source here.
-CURATOR_AND_MEMORY = 'curator-and-memory'
-PROGRAMS_AND_MONITOR = 'programs-and-monitor'
-NOT_YET = (
-    ('gate_pass_rate', 'Gate pass rate', CURATOR_AND_MEMORY),
-    ('snapshot_freshness', 'Snapshot freshness', CURATOR_AND_MEMORY),
-    ('program_delegation_share', 'Program delegation share', PROGRAMS_AND_MONITOR),
-    ('monitor_alerts', 'Monitor alerts', PROGRAMS_AND_MONITOR),
-    ('spend_against_cap', 'Spend against cap', CURATOR_AND_MEMORY),
-)
-
-
-def read_json(path: Path, what: str):
+def read_json(root: Path, *parts: str):
+    what = "/".join(parts)
     try:
-        return json.loads(path.read_text())
-    except (OSError, ValueError) as exc:
-        raise ViewError(500, 'bad_data_file', f'{what}: {exc}') from exc
+        state, _, data = read_rooted(root, *parts)
+        if state != 'available':
+            raise ViewError(500, 'bad_data_file', f'{what}: {state}')
+        return json.loads(data)
+    except (ValueError, RecursionError) as exc:
+        raise ViewError(500, 'bad_data_file', f'{what}: malformed JSON') from exc
 
 
 # Containers ---------------------------------------------------------------------------------------
@@ -65,7 +47,7 @@ def container_manifests(sources: FrameSources) -> list[dict]:
     seen: set[str] = set()
     paths = sorted(sources.containers.glob('*.json')) if sources.containers.is_dir() else []
     for path in paths:
-        index = read_json(path, path.name)
+        index = read_json(sources.containers, path.name)
         if not isinstance(index, dict) or index.get('schema') != INDEX_SCHEMA or not isinstance(index.get('containers'), list):
             raise ViewError(500, 'bad_data_file', f'{path.name}: expected {INDEX_SCHEMA}')
         for manifest in index['containers']:
@@ -105,64 +87,6 @@ def container(sources: FrameSources, container_id: str) -> dict:
     raise ViewError(404, 'unknown_container', container_id)
 
 
-def container_runs(catalog: Catalog, manifests: list[dict]) -> list[tuple[dict, RunInfo]]:
-    """The catalog's runs that belong to a container: an actor session whose ID a manifest records."""
-    by_session = {m['inputs']['session_id']: m for m in manifests
-                  if isinstance(m['inputs'], dict) and isinstance(m['inputs'].get('session_id'), str)}
-    return [(by_session[info.session], info) for info in catalog.runs() if info.session in by_session]
-
-
-# Health strip -------------------------------------------------------------------------------------
-
-def actor_cadence(catalog: Catalog, runs: list[tuple[dict, RunInfo]]) -> dict:
-    slot = dict(id='actor_cadence', label='Actor cadence')
-    measured = [(manifest, info) for manifest, info in runs if info.survival is not None and info.survival.get('hours')]
-    if not measured:
-        return dict(slot, state='no-data', detail='no catalog run belongs to a container index, or none has a game-time reading')
-    steps, readable, unreadable = 0, [], 0
-    for manifest, info in measured:
-        try:
-            connection = catalog.connect(info)
-            try:
-                steps += connection.execute('SELECT COUNT(*) FROM steps').fetchone()[0]
-            finally:
-                connection.close()
-        except (ViewError, sqlite3.Error):
-            unreadable += 1  # one unreadable store leaves it out of the figure rather than failing the strip
-            continue
-        readable.append((manifest, info))
-    if not readable:
-        return dict(slot, state='no-data', detail=f'{unreadable} container runs have unreadable evaluation stores')
-    hours = sum(info.survival['hours'] for _, info in readable)
-    decisions = sum(info.decisions for _, info in readable)
-    return dict(slot, state='measured', source='derived', runs=len(readable), unreadable_runs=unreadable,
-        decisions=decisions, steps=steps, game_hours=hours,
-        decisions_per_game_hour=decisions / hours if hours else None,
-        steps_per_game_hour=steps / hours if hours else None, dollars=sum(info.dollars for _, info in readable))
-
-
-def curator_lag(sources: FrameSources, now: float) -> dict:
-    """The curator runner's own lag (finished operations after its covered prefix), as its status file states it."""
-    slot = dict(id='curator_lag', label='Curator lag')
-    read = curator_runner.status(sources.curator_runner_status, now)
-    status = read['status']
-    if status is None:
-        return dict(slot, state='no-data', detail=f"curator runner status: {read['source_status'].replace('_', ' ')}")
-    if type(status['lag']) is not int:
-        return dict(slot, state='no-data', detail='the curator runner does not state its lag')
-    latest = status['latest_version']
-    return dict(slot, state='measured', source='recorded', lag=status['lag'], backlog=status['backlog'],
-        runner_state=status['state'], latest_version=latest['version'] if isinstance(latest, dict) else latest)
-
-
-def health(catalog: Catalog, sources: FrameSources, now: float) -> dict:
-    manifests = container_manifests(sources)
-    runs = container_runs(catalog, manifests)
-    slots = [actor_cadence(catalog, runs), curator_lag(sources, now)]
-    slots += [dict(id=slot_id, label=label, state='not-yet-measured', phase=phase) for slot_id, label, phase in NOT_YET]
-    return dict(slots=slots, containers=len(manifests), runs=len(runs))
-
-
 # Episodes -----------------------------------------------------------------------------------------
 
 def resolve(catalog: Catalog, runs: list[RunInfo], manifests: list[dict], anchor: dict | None) -> dict | None:
@@ -193,18 +117,31 @@ def resolve(catalog: Catalog, runs: list[RunInfo], manifests: list[dict], anchor
         out['text'] = anchor['text']
     if source_id is None:
         out['reason'] = 'no_frame'
-    elif info is None:
+    else:
+        location = source_location(catalog, runs, info, source_id)
+        out.update(available=location['available'], reason=location['reason'])
+    return out
+
+
+def source_location(catalog: Catalog, runs: list[RunInfo], info: RunInfo | None, source_id: str,
+                    connection=None) -> dict:
+    out = dict(run=info.run if info else None, session=info.session if info else None, seq=None,
+               source_id=source_id, available=False, reason=None)
+    if info is None:
         out['reason'] = 'run_not_in_catalog'
-    elif next(r for r in runs if r.run == info.run).session != info.session:
+    elif next((r for r in runs if r.run == info.run), info).session != info.session:
         out['reason'] = 'ambiguous_run'  # the route's run name would select another session's run
     else:
         try:
-            connection = catalog.connect(info)
+            own = connection if connection is not None else catalog.connect(info)
             try:
-                views.frame(catalog, info, connection, source_id)
-                out['available'] = True
+                row = own.execute('SELECT seq FROM steps WHERE source_id=? ORDER BY seq LIMIT 1', (source_id,)).fetchone()
+                out['seq'] = None if row is None else row[0]
+                out['reason'] = views.frame_available(catalog, info, own, source_id)
+                out['available'] = out['reason'] is None
             finally:
-                connection.close()
+                if connection is None:
+                    own.close()
         except ViewError as error:
             out['reason'] = error.code
     return out
@@ -216,7 +153,7 @@ def episodes(catalog: Catalog, sources: FrameSources) -> dict:
     lineages = []
     paths = sorted(sources.probes.glob('*/episodes.json')) if sources.probes.is_dir() else []
     for path in paths:
-        document = read_json(path, f'{path.parent.name}/{path.name}')
+        document = read_json(sources.probes, path.parent.name, path.name)
         try:
             found = validate_episodes(document)
         except ProbeError as exc:
@@ -224,8 +161,7 @@ def episodes(catalog: Catalog, sources: FrameSources) -> dict:
         items = []
         for episode in found:
             items.append(dict(id=episode['id'], title=episode['title'], fact=episode.get('fact'), lost_at=episode['lost_at'],
-                probe=episode['probe'], record=episode['record'],
-                observed=resolve(catalog, runs, manifests, episode['observed']),
+                probe=episode['probe'], observed=resolve(catalog, runs, manifests, episode['observed']),
                 needed=resolve(catalog, runs, manifests, episode['needed']),
                 acted_without=resolve(catalog, runs, manifests, episode['acted_without'])))
         lineages.append(dict(lineage=document.get('lineage'), study=document.get('study'), note=document.get('note'),

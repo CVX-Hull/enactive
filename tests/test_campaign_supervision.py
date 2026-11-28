@@ -21,11 +21,11 @@ COMMIT = 'b' * 40
 
 
 def test_gateway_passes_viewer_routing_errors_as_json(tmp_path):
-    client = TestClient(create_app(Catalog(tmp_path / 'evaluation')))
+    client = TestClient(create_app(Catalog(tmp_path / 'evaluation')), base_url='http://127.0.0.1')
     with watch_fixture(tmp_path) as gateway:
         for method, path, code, error in (
                 ('GET', '/api/view/no-such-route', 404, 'not_found'),
-                ('POST', '/api/view/frame/curator-drafts', 405, 'method_not_allowed')):
+                ('POST', '/api/view/curator-sources/drafts', 405, 'method_not_allowed')):
             # The gateway forwards GET only, including a 405 returned by the upstream viewer.
             upstream = client.request(method, path)
             assert upstream.status_code == code
@@ -33,7 +33,8 @@ def test_gateway_passes_viewer_routing_errors_as_json(tmp_path):
             response, data = gateway.reply(path)
             assert response.status == code and gateway.state['view']['paths'][-1] == path
             assert response.getheader('Content-Type') == 'application/json'
-            assert data == upstream.content and json.loads(data)['error'] == error
+            body = json.loads(data)
+            assert data == upstream.content and body['error'] == error and body['schema'] == 'spectator-view/4'
 
 
 def markers(directory, *, deadline=200):
