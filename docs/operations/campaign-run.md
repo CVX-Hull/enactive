@@ -201,9 +201,15 @@ fit within context capacity (suppressing empty updates and refusing oversized on
 context capacity), and any successor starts from the driver's latest adopted version. The
 [host contract](../contracts/player-host.md#a-newer-version-during-play) specifies
 adoption, verification and the message the player receives.
-Live delivery also sends the runner's verified coverage to the actor. A route
-with context cuts enabled can cut only through eligible covered turns. Play
-continues through ordinary image eviction and handoff while coverage is unavailable.
+Live delivery also sends the runner's verified coverage to the actor. On `player-host/13`
+with context cuts enabled, the host prefers curator-covered turns at `high_mark` /
+`image_peak` and activates a bounded deterministic uncovered-cut fallback above the
+derived Tier-2 pressure ceiling or on strict hard-fit rescue without advancing
+`covered_through_operation_id` (preserving `player_agenda`, `recent_intents`, omitted
+`source_ids` and unchanged disk WAL ingestion;
+[host contract](../contracts/player-host.md#coverage-gated-context-cut)). Play
+continues through ordinary image eviction and handoff while coverage is unavailable or
+after a restore.
 
 Set it only for a run launched with `--curator-runner`
 ([supervision](campaign-supervision.md#freeze-launch-and-inspect)); without the
@@ -290,7 +296,7 @@ player-visible input is determining the
 Every value but `usd` is a positive integer strictly below its corresponding original
 host or mechanical limit. Use the [spend limit rules](#spend-limit) for the dollar
 reserve. Before admission the lead forecasts reserve adequacy for the largest
-already-admitted input burst, pending player and recall requests, control delivery,
+already-admitted input burst, pending player requests, control delivery,
 any permitted successor and the expected finish-up under the original limits.
 Set these values for the planned run in place of the example numbers.
 
@@ -343,7 +349,11 @@ With [live knowledge updates](#live-knowledge-updates) each actor directory also
 holds `knowledge-updates.jsonl` and the adopted versions under `knowledge/`.
 Each actor receives its starting `agenda.json` (`player-agenda-continuation/1`) and
 writes its final committed `agenda-final.json`, which carries across handoffs and is
-persisted to the run directory's `agenda-final.json` for resumed admissions.
+persisted to the run directory's `agenda-final.json` for resumed admissions. When a
+host stops before writing `agenda-final.json` (for example after Pause exhausts
+final-report grace), the driver reconstructs `agenda-final.json` from the last valid
+`player-agenda` telemetry event flushed by the host (which can predate later context
+cuts).
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 
@@ -420,8 +430,7 @@ lead has done both of these:
    provider subtotal and observed unpriced counts stay as recorded. The ledger
    stores a separate planning amount for admission. It uses the larger of the
    declared limit and observed subtotal, plus one possible in-flight player
-   request and, if the package delivers knowledge units, one possible in-flight
-   recall request. These exposures can exist even when no starts were observed.
+   request. This exposure can exist even when no starts were observed.
    The flag is refused for a complete trace.
 2. Identified the separate admission amount in the run's dated record and stated which
    cost evidence was unavailable. The provider's charge remains unknown when the

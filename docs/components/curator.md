@@ -89,7 +89,7 @@ actor uses the covered prefix.
 | [Curator host](../../tools/curator_host) (an adapter) | Workspace-only tools (`validate_submission`, atomic writes), budget phases and a frozen prompt with no game knowledge. [Operations](../operations/curator-hosts.md) |
 | [Shadow runner](../../tools/curator_host/shadow.py) | Replays the seven-day development lineage (#397) and the development-loop sample (#372) under a dollar cap. The runner refuses the held-out lineages (#382, #522) by name. The lead knows #382's from operating them and reviewing admission summaries. The [curator memory study](../design/curator-memory-study-protocol-revised.md#limitations) records that exposure. |
 | [Curator runner](../../harness/curator/runner.py) | Window triggers, the durable record of examined ranges, publication watching, covered prefix and lag, stops, and status. [Runner windows](#runner-windows) |
-| [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/2` file, sessions through the shadow runner's proxy under the runner's cap (including tier-configurable routing and bounded interleaved hygiene passes), its own knowledge repository, signal handling and [delivery to a running actor](#delivery-to-a-running-actor) |
+| [Runner process](../../tools/curator_host/live_runner.py) (an adapter) | The process the guardian starts with `--curator-runner`: its `curator-runner-config/2` file (defaulting `flex`-capable arms to `service_tier: "flex"` on their pinned non-real-time endpoint), sessions through the shadow runner's proxy under the runner's cap (including tier-configurable routing and bounded interleaved hygiene passes), its own knowledge repository, signal handling and [delivery to a running actor](#delivery-to-a-running-actor) |
 | [Boundary grooming](../../tools/curator_host/groom.py) (an adapter) | Runs one grooming session against an existing live runner repository and the sealed trace of its last published admission. Writes a [`curator-boundary-grooming/2` summary](../contracts/curator.md#boundary-grooming-summary-curator-boundary-grooming2). |
 
 ## Projection and evidence readers
@@ -144,10 +144,12 @@ the session and closing the proxy and any active read. Input revocation proceeds
 
 The runner stages at most one snapshot per poll. In admission order, it selects the
 oldest contiguous finished operations beyond one actor's examined cursor. Defaults
-are a 15-second poll, a 20-step trigger and a 40-step ceiling. The ceiling also applies
-at handoff. An ended actor's verified nonempty tail can run below the trigger before
-the successor's range. A repository lock admits one session at a time. After a lock
-refusal the next poll selects again. Backlog never blocks player input.
+are a 15-second poll, a 40-step trigger and a 60-step ceiling (early wake on
+`player_hint`, pause or save remains explicitly deferred until live validation shows
+need). The ceiling also applies at handoff. An ended actor's verified nonempty tail
+can run below the trigger before the successor's range. A repository lock admits one
+session at a time. After a lock refusal the next poll selects again. Backlog never
+blocks player input.
 
 A sealed session advances the cursor on acceptance, no submission, rejection or an
 unknown verdict. Rejection and an unknown verdict count as failures. An aborted or

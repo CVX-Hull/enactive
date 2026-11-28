@@ -17,9 +17,9 @@ The configuration (`curator-runner-config/2`) is one JSON object; only `schema`,
 
     {"schema": "curator-runner-config/2",
      "knowledge_root": ".runtime/knowledge/live-845/first-run",   # inside <runtime-root>/knowledge
-     "arm": "terra", "cap_usd": "4.00", "session_cap_usd": "0.60", "service_tier": "default",
+     "arm": "terra", "cap_usd": "4.00", "session_cap_usd": "0.60", "service_tier": "flex",
      "upstream": "https://openrouter.ai", "prices": "data/curator/openrouter-prices-2026-11-08.json",
-     "trigger_steps": 20, "ceiling_steps": 40, "poll_seconds": 15, "watch_seconds": 5,
+     "trigger_steps": 40, "ceiling_steps": 60, "poll_seconds": 15, "watch_seconds": 5,
      "hygiene": {"enabled": true, "min_windows": 5, "max_unexamined_steps": 10,
                  "pass_cap_usd": "0.30", "max_spend_share": "0.10",
                  "max_requests": 10, "wall_seconds": 90, "max_consecutive_failures": 2},
@@ -149,7 +149,8 @@ def read_config(path: Path, runtime: Path) -> dict:
         raise ConfigError(f'knowledge_root must be inside {Path(runtime).resolve()/"knowledge"}')
     if data['arm'] not in shadow.ARMS:
         raise ConfigError(f'unknown arm {data["arm"]!r}; choose one of {", ".join(sorted(shadow.ARMS))}')
-    service_tier = data.get('service_tier', 'default')
+    arm = shadow.ARMS[data['arm']]
+    service_tier = data.get('service_tier', 'flex' if arm.flex_provider else 'default')
     if not isinstance(service_tier, str) or service_tier not in shadow.SERVICE_TIERS:
         raise ConfigError(f'service_tier must be one of {", ".join(shadow.SERVICE_TIERS)}')
     provider = data.get('provider')
@@ -219,7 +220,7 @@ def session_host_configuration(config: dict, prices: dict, cap: Decimal, *,
         request_timeout_seconds=host['request_timeout_seconds'], wall_seconds=effective_wall - 30,
         max_context_images=0 if text_only else host['max_context_images'],
         workbench_timeout_seconds=60, budget_usd=float(cap),
-        service_tier=config.get('service_tier', 'default'), text_only=text_only,
+        service_tier=config.get('service_tier', 'flex' if arm.flex_provider else 'default'), text_only=text_only,
         provider=config.get('provider'))
 
 

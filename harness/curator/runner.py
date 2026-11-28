@@ -128,8 +128,8 @@ class Settings:
     """The trigger (`trigger_steps`, N), the window's ceiling, the poll interval and the cadence of
     looks at the tags while a session runs."""
 
-    trigger_steps: int = 20
-    ceiling_steps: int = 40
+    trigger_steps: int = 40
+    ceiling_steps: int = 60
     poll_seconds: float = 15.0
     watch_seconds: float = 5.0
 

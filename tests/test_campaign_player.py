@@ -32,6 +32,35 @@ def finished(tmp_path,rows):
     finally:events.close()
 
 
+def agenda_at_cut(cut_count):
+    return dict(schema='player-agenda-continuation/1',cut_count=cut_count,threads=[
+        dict(id='carried-thread',title='Carry across handoff',status='active',created_at_cut=0,updated_at_cut=cut_count)
+    ])
+
+
+def test_host_events_retain_only_the_last_valid_agenda_after_start(tmp_path):
+    malformed=agenda_at_cut(4)
+    malformed['threads'][0]['status']=[]
+    first=dict(type='player-agenda',agenda=agenda_at_cut(1))
+    latest=dict(type='player-agenda',agenda=agenda_at_cut(2))
+    rows=[dict(type='player-agenda',agenda=agenda_at_cut(3)),START,first,latest,
+          dict(type='player-agenda',agenda=malformed),dict(type='player-agenda'),
+          dict(type='settled',ok=True,requests=0,player_requests=0,spent_usd='0',unpriced_requests=0)]
+    path=tmp_path/'host.jsonl'
+    path.write_text(json.dumps(rows[0])+'\n')
+    events=HostEvents(path)
+    try:
+        events.read()
+        assert events.last_agenda is None
+        with path.open('a') as stream:
+            stream.writelines(json.dumps(row)+'\n' for row in rows[1:])
+        result=events.finish()
+        assert events.last_agenda==latest['agenda']
+        assert result['accounting_complete'] and result['spend_complete']
+    finally:
+        events.close()
+
+
 def test_observed_attempts_and_partial_trace(tmp_path):
     """Three requests: two priced by the provider and one unknown. A trace that cannot be read to its
     end is incomplete."""
@@ -184,7 +213,9 @@ if 'WRITE_AGENDA' in prompt and flags['--actor-id'] == 'a'*32:
     agenda = dict(schema='player-agenda-continuation/1', cut_count=1, threads=[
         dict(id='carried-thread', title='Carry across handoff', status='active', created_at_cut=0, updated_at_cut=1)
     ])
-open(flags['--agenda-out'], 'w').write(json.dumps(agenda) + '\\n')
+pause = 'PAUSE_WITH_AGENDA' in prompt or ('PAUSE_SUCCESSOR' in prompt and flags['--actor-id'] == 'c'*32)
+if not pause:
+    open(flags['--agenda-out'], 'w').write(json.dumps(agenda) + '\\n')
 import time
 if updates is not None and flags['--actor-id'] == 'a'*32 and 'STALLED' not in prompt:
     # The first actor's host stands in for the curator runner: it leaves a version whole in the run's
@@ -210,6 +241,15 @@ assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
 emit(type='host-start', telemetry_version=13, schema='player-host/13', spend_limit_usd=route['spend_limit_usd'])
+if pause:
+    if 'PAUSE_WITH_AGENDA' in prompt:
+        for cut in (1, 2):
+            emit(type='player-agenda', agenda=dict(agenda, cut_count=cut, threads=[
+                dict(id='carried-thread', title='Carry across handoff', status='active', created_at_cut=0, updated_at_cut=cut)
+            ]))
+        print('{"type":"player-agenda","agenda":', end='', flush=True)
+    open(flags['--agenda-out'] + '.paused', 'w').close()
+    time.sleep(120)  # the driver stops this fixture when grace expires
 if 'HANG' in prompt: time.sleep(120)  # a host still playing when the driver must stop it
 unpriced = int('WITH_UNPRICED' in prompt)
 if unpriced:
@@ -977,6 +1017,43 @@ def test_exhausted_final_report_grace_stays_the_reason_when_the_stopped_hosts_ac
         result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),fast.monotonic()+300)
     assert result['reason']=='Original final-report grace exhausted',result
     assert result['actors'][0]['orchestration_error'].startswith('ControlError: Host accounting')
+
+
+@pytest.mark.parametrize('after_handoff',[False,True])
+def test_pause_grace_preserves_latest_committed_agenda(tmp_path,after_handoff):
+    prompt='HANDOFF_RACE WRITE_AGENDA PAUSE_SUCCESSOR' if after_handoff else 'PAUSE_WITH_AGENDA'
+    profile,route,application=driver_case(tmp_path,'Frozen mission '+prompt,two_actors=True)
+    paused_actor=tmp_path/'actors'/('002' if after_handoff else '001')
+    channel=application.runtime.channel
+    elapsed=0
+
+    def sleep(seconds):
+        nonlocal elapsed
+        if channel.stopped.is_set():
+            elapsed+=31
+        elif (paused_actor/'agenda-final.json.paused').exists():
+            channel.stopped.set()
+        else:
+            time.sleep(min(seconds,.01))
+
+    clock=SimpleNamespace(monotonic=lambda:time.monotonic()+elapsed,sleep=sleep,time=time.time)
+    with patch('tools.campaign_player.time',clock), patch('tools.campaign_player._handoff_context',return_value='{}'):
+        result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),clock.monotonic()+300)
+
+    assert result['reason']=='Original final-report grace exhausted',result
+    assert len(result['actors'])==(2 if after_handoff else 1)
+    assert application.runtime.add_actor.call_count==len(result['actors'])
+    actor=result['actors'][-1]
+    assert actor['settled'] is None and not actor['accounting_complete'] and not actor['spend_complete']
+    assert not result['spend_complete']
+    assert not (paused_actor/'agenda-final.json').exists()
+    expected=agenda_at_cut(1 if after_handoff else 2)
+    if after_handoff:
+        assert result['actors'][0]['accounting_complete']
+        assert json.loads((paused_actor/'agenda.json').read_text())==expected
+    else:
+        assert (paused_actor/'host.jsonl').read_text().endswith('{"type":"player-agenda","agenda":')
+    assert json.loads((tmp_path/'agenda-final.json').read_text())==expected
 
 
 def test_a_driver_stop_stays_the_reason_even_when_the_stopped_host_settles_cleanly(tmp_path):

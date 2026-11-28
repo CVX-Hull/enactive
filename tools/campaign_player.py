@@ -21,6 +21,7 @@ from harness.computer.launch import close_group
 from harness.computer.protocol import ControlError,canonical,read_json
 from harness.jsonio import strict_loads
 from harness.player.knowledge import Knowledge,version_number
+from harness.player.source_index import empty_agenda, validate_agenda
 from harness.player_client import ADAPTER_CLOSE_REASON
 from tools.campaign_package import EXACT,counted_usd,declared_floor,usd_sum,usd_text
 from tools.configure_player_tools import ROOT,configuration
@@ -310,6 +311,7 @@ class HostEvents:
         self.stream=path.open('rb');self.buffer=b''
         self.requests=set();self.settled=None;self.handoff=None;self.player_finish=None;self.last_response_wall=None
         self.spend_reserve_reached=None
+        self.last_agenda=None
         self.usage={};self.error=None;self.started=False
         # A present key with value None has a finished attempt and unknown provider cost.
         self.costs={}
@@ -384,6 +386,11 @@ class HostEvents:
                 if (self.started or type(value.get('telemetry_version')) is not int or value['telemetry_version']!=13
                         or value.get('schema')!='player-host/13'):raise ControlError('Unsupported/repeated current host trace')
                 self.started=True
+            elif kind=='player-agenda' and self.started:
+                try:
+                    self.last_agenda=validate_agenda(value.get('agenda'))
+                except (ValueError, TypeError):
+                    pass
             elif kind=='spend-reserve-reached':
                 if not self.started:raise ControlError('Host spend reserve event lacks current origin')
                 if self.spend_reserve_reached is None:
@@ -492,13 +499,23 @@ def finish_interruption(channel, *, accepted_finish: bool=True, native_exit_zero
     return dict(reason='Input permanently fenced outside accepted host cleanup',stop=origin)
 
 
+def _final_agenda(path: Path, *, require_valid: bool = False) -> bytes | None:
+    try:
+        if path.is_file():
+            data = path.read_bytes()
+            validate_agenda(strict_loads(data, ControlError))
+            return data
+    except (OSError, ValueError, TypeError, ControlError):
+        if require_valid:
+            raise
+    return None
+
+
 def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
               stopped: threading.Event,deadline: float,live_updates: Path | None=None,
               *,native_exit_zero: Callable[[], bool] | None=None) -> dict:
     """`live_updates` is the directory where newer delivered-knowledge versions arrive during the run,
     or None when the package does not deliver them (`LiveKnowledge`)."""
-    from harness.player.source_index import empty_agenda, validate_agenda
-
     actors=directory/'actors';actors.mkdir(mode=0o700)
     live=None
     total_attempts=0;total_recall_attempts=0;host_seconds_used=0.;records=[];context=None;ending_request=None
@@ -519,6 +536,7 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             reason='The dollar limit leaves nothing for another actor';break
         target=actors/f'{index:03d}'
         child=None;events=None
+        final_agenda=None
         record=dict(index=index,actor_id=None,allocated_seconds=seconds,allocated_usd=usd_text(dollars))
         # Why the driver itself ended this actor, which a later cleanup failure must not replace.
         started=time.monotonic();ending_at=None;stop_reason=None
@@ -615,14 +633,8 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
             if not record['accounting_complete'] or not cleanup['process_absent'] or not cleanup['group_absent']:
                 raise ControlError('Host accounting or exact process-group quiescence is unresolved')
             settled=record['settled']
-            if (target/'agenda-final.json').is_file():
-                try:
-                    next_agenda = (target/'agenda-final.json').read_bytes()
-                    validate_agenda(strict_loads(next_agenda, ControlError))
-                    agenda_bytes = next_agenda
-                except (OSError, ValueError, ControlError):
-                    if stop_reason is None and child.returncode==0 and settled.get('ok') is True:
-                        raise
+            final_agenda=_final_agenda(target/'agenda-final.json',
+                require_valid=stop_reason is None and child.returncode==0 and settled.get('ok') is True)
             if stop_reason is not None:
                 reason=stop_reason;break
             if child.returncode!=0 or settled.get('ok') is not True:
@@ -680,11 +692,19 @@ def run_hosts(directory: Path,profile: dict,route: dict,application,secret: str,
                     # The trace cannot be read to its end: what it showed is recorded, and the spend is incomplete.
                     record.update(accounting_complete=False,trace_error=type(exc).__name__,
                         **events.observations(),**events.spend(False))
-                finally:events.close()
             else:
                 # No trace: a host that was started may have spent; one that never started spent nothing.
                 record.update(accounting_complete=False,observed_attempts=0,observed_recall_attempts=0,
                     reported_usd='0',unpriced_requests=0,unpriced_recall_requests=0,spent_usd='0',spend_complete=child is None)
+            try:
+                if final_agenda is None:
+                    final_agenda=_final_agenda(target/'agenda-final.json')
+                if final_agenda is not None:
+                    agenda_bytes=final_agenda
+                elif events is not None and events.last_agenda is not None:
+                    agenda_bytes=(canonical(events.last_agenda)+'\n').encode('utf-8')
+            finally:
+                if events is not None:events.close()
             if child is not None and outcome=='incomplete' and application.runtime.channel.fault is not None:
                 interruption=finish_interruption(application.runtime.channel,accepted_finish=False)
                 if interruption is not None:
