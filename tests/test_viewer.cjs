@@ -1209,3 +1209,54 @@ test('curator session selects a receipt and resets detail when its snapshot chan
     assert.deepEqual(page.problems.filter(p => !p.startsWith('http 409: /api/view/curator-sources/session')), []);
   } finally { await page.close(); }
 });
+
+test('Watch Fit mode never crops a 960x640 canvas, keeps stage badge off canvas, closes keys on Escape, and inerts story behind inspector (#1064)', {timeout: 30000}, async () => {
+  const page = await openPage(`${fx.url}#watch`, {width: 1280, height: 800});
+  try {
+    await S.ready(page);
+    await S.until(page, () => document.getElementById('feed') && !document.getElementById('feed').hidden);
+    // Simulate a real 960x640 CDDA frame on the canvas and verify Fit + Wide+Fit keep the canvas inside .player-view.
+    const measure = () => page.evaluate(() => {
+      const c = document.getElementById('feed'), v = document.querySelector('.player-view'), b = document.querySelector('.stagetop');
+      c.width = 960; c.height = 640;
+      const cr = c.getBoundingClientRect(), vr = v.getBoundingClientRect(), br = b.getBoundingClientRect();
+      return {cw: cr.width, ch: cr.height, vw: vr.width, vh: vr.height, cTop: cr.top, cBottom: cr.bottom, vTop: vr.top, vBottom: vr.bottom, bTop: br.top, bBottom: br.bottom};
+    });
+    const fit = await measure();
+    assert.ok(fit.ch <= fit.vh + 0.5 && fit.cw <= fit.vw + 0.5, `Fit canvas (${fit.cw}x${fit.ch}) must stay inside .player-view (${fit.vw}x${fit.vh})`);
+    assert.ok(fit.cTop >= fit.vTop - 0.5 && fit.cBottom <= fit.vBottom + 0.5, 'Fit canvas must not crop vertically');
+    assert.ok(fit.bTop >= fit.cBottom - 0.5, `.stagetop (top=${fit.bTop}) must not overlap canvas (bottom=${fit.cBottom})`);
+    await page.click('#feed-wide');
+    const wide = await measure();
+    assert.ok(wide.ch <= wide.vh + 0.5 && wide.cw <= wide.vw + 0.5, `Wide+Fit canvas (${wide.cw}x${wide.ch}) must stay inside .player-view (${wide.vw}x${wide.vh})`);
+    await page.click('#feed-wide');
+    // Keyboard shortcuts popover closes on Escape.
+    await page.click('details.keys > summary');
+    await S.until(page, () => document.querySelector('details.keys')?.open === true);
+    await page.keyboard.press('Escape');
+    await S.until(page, () => document.querySelector('details.keys')?.open === false);
+    // Opening Step Inspector inerts the underlying story list; closing restores it.
+    await page.click('#story .inspect');
+    await S.until(page, () => !!document.getElementById('inspector'));
+    await S.until(page, () => document.querySelector('section.story')?.inert === true);
+    await page.keyboard.press('Escape');
+    await S.until(page, () => !document.getElementById('inspector'));
+    await S.until(page, () => document.querySelector('section.story')?.inert === false);
+    // Opening Source wraps the bar cleanly instead of clipping live pills inside .vfacts.
+    await page.click('details.src-details > summary');
+    await S.until(page, () => document.querySelector('details.src-details')?.open === true);
+    const pillsOk = await page.evaluate(() => {
+      const box = document.querySelector('#viewer-facts').getBoundingClientRect();
+      return ['#pill-spend', '#pill-context', '#pill-curator'].every(sel => {
+        const el = document.querySelector(sel);
+        if (!el) return true;
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.left >= box.left - 1 && r.right <= box.right + 1 && r.right <= window.innerWidth + 1;
+      });
+    });
+    assert.equal(pillsOk, true, 'live header pills must not clip when Source is open');
+    await page.click('details.src-details > summary');
+    assert.equal(await S.overflow(page), 0);
+    assert.deepEqual(page.problems, []);
+  } finally { await page.close(); }
+});

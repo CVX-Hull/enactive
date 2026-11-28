@@ -2941,3 +2941,48 @@ def test_v4_primary_review_regressions_retry_join_settled_wait_and_foreign_statu
     hproj = tel_view.read(hinfo)
     assert hproj is not None and len(hproj.coverage_waits) == 1
     assert hproj.coverage_waits[0]['ended_by'] == 'handoff' and hproj.coverage_waits[0]['active'] is False
+
+
+def test_delivered_knowledge_aliases_opening_version_without_duplicate_missing_row(mission, monkeypatch):
+    """Admissions >= 2 export their starting version (e.g. v8) in delivered-knowledge.json, not curator-runner/delivered/v8.json."""
+    from harness.viewer import delivered as delivered_view
+    client, directory, _, _ = mission
+    opening = json.loads((directory / 'delivered-knowledge.json').read_text())
+    opening['version'] = 'v8'
+    opening['facts'] = [dict(id='f-open', subject='camp', text='Brazier warms shelter', scope=dict(world=None),
+                             tags=['camp'], statement_kind='outcome', citation_source_ids=[])]
+    (directory / 'delivered-knowledge.json').write_text(json.dumps(opening))
+    root = directory / 'curator-runner'
+    root.mkdir(exist_ok=True)
+    (root / 'versions.jsonl').write_text(json.dumps(dict(
+        schema='curator-runner-version/1', version='v8', baseline=True, coverage=None,
+        first_present_ended_wall=BASE, last_absent_began_wall='unknown', restored_from=None)) + '\n')
+    trace = directory / 'actors' / '001' / 'host.jsonl'
+    lines = trace.read_text().splitlines()
+    briefing = json.dumps(dict(type='knowledge-delivery', kind='briefing', outcome='delivered', version='v8',
+        wall_time=iso(BASE + 0.5), monotonic_ms=5.0, receiving_player_request_id='request-1'))
+    trace.write_text('\n'.join([lines[0], briefing, *lines[1:]]) + '\n')
+
+    by_alias = client.get('/api/view/run/mission/delivered-knowledge?version=v8')
+    assert by_alias.status_code == 200
+    body = by_alias.json()
+    assert body['source_status'] == 'available'
+    assert body['selected_version'] == 'initial' and body['recorded_version'] == 'v8'
+    assert body['facts']['total'] == 1 and body['facts']['items'][0]['id'] == 'f-open'
+    versions = [row['version'] for row in body['version_chain']]
+    assert 'v8' not in versions and versions[0] == 'initial'
+    row = body['version_chain'][0]
+    assert row['recorded_version'] == 'v8' and row['baseline'] is True and row['published'] is True
+    assert row['exported'] is True and row['delivery_status'] == 'delivered'
+
+    # Even when numbered exports exceed MAX_VERSIONS and evict v8.json from the bounded listing,
+    # an explicit rooted v8.json on disk must never be silently aliased to delivered-knowledge.json.
+    delivered_dir = root / 'delivered'
+    delivered_dir.mkdir(exist_ok=True)
+    explicit_v8 = dict(opening, facts=[])
+    (delivered_dir / 'v8.json').write_text(json.dumps(explicit_v8))
+    monkeypatch.setattr(delivered_view, 'MAX_VERSIONS', 2)
+    for num in (9, 10, 11):
+        (delivered_dir / f'v{num}.json').write_text(json.dumps(dict(opening, version=f'v{num}', facts=[])))
+    evicted = client.get('/api/view/run/mission/delivered-knowledge?version=v8')
+    assert evicted.status_code == 404 and evicted.json()['error'] == 'unknown_version'
