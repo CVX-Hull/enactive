@@ -992,6 +992,21 @@
       },
       "visibility": "private"
     },
+    "fresh-world-validation-rehearsal-1056": {
+      "availability": "present",
+      "bytes": 71285,
+      "cited_by": [
+        "docs/acceptance/2026-11-27-fresh-world-live-validation-freeze-and-price-proposal-1056.md"
+      ],
+      "files": 7,
+      "manifest_sha256": "bec5dbf3d35600f590e018e4e86effd21fcec3e75d721ee5a09b5e03eea292a8",
+      "note": "Supplemental $0 stand-in artifacts retaining host-config/terra.json, all 3 proxy-ledger.jsonl files, stand-in invocation with --output, and verbose pytest -v log for #1056",
+      "sources": {
+        "results": "scratch/rehearsal-1056-supplement@b6ba747d",
+        "scripts": "scratch/rehearsal-1056-supplement@b6ba747d"
+      },
+      "visibility": "private"
+    },
     "hand-back-verification-across-model-tiers": {
       "availability": "present",
       "bytes": 5389797,
