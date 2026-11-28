@@ -924,6 +924,21 @@
       },
       "visibility": "private"
     },
+    "flex-probe-1047": {
+      "availability": "present",
+      "bytes": 158292,
+      "cited_by": [
+        "docs/acceptance/2026-11-27-flex-tier-probe-1047.md"
+      ],
+      "files": 73,
+      "manifest_sha256": "160b5ef233b0dc62771634a15a24ec35a1d19ffa69739d6a441fc2ee29344914",
+      "note": "#1047 Step B1 2-window #998 flex-tier probe on openai/gpt-6.1-terra medium (pinned openai/flex, curator-host/2, $0.0938 settled)",
+      "sources": {
+        "knowledge": ".runtime/knowledge/flex-probe-1047@8cf67ad3",
+        "shadow": ".runtime/curator-shadow/flex-probe-1047@8cf67ad3"
+      },
+      "visibility": "private"
+    },
     "fresh-evacuee-progress-751": {
       "availability": "present",
       "bytes": 11722796,
@@ -1242,7 +1257,8 @@
       "availability": "present",
       "bytes": 148470359,
       "cited_by": [
-        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md"
+        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md",
+        "docs/acceptance/2026-11-27-flex-tier-probe-1047.md"
       ],
       "files": 1344,
       "manifest_sha256": "d8db290ec245a5ee8b3d70023a43e5ab4233f32d4a925da118ff2a7cd369aa44",
