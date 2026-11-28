@@ -609,6 +609,122 @@
       },
       "visibility": "private"
     },
+    "continuous-memory-1060-admission-01": {
+      "availability": "present",
+      "bytes": 2108025,
+      "cited_by": [
+        "docs/acceptance/2026-11-28-fresh-world-continuous-memory-campaign-1060.md"
+      ],
+      "files": 107,
+      "manifest_sha256": "3e2c0b735f40046e7faec0e625a7b854332e6550b0f7dd9b26ec3372f30a953d",
+      "note": "Issue #1060 Admission 1 (campground-continuous-memory-1056): player_cannot_continue_unassessed at 51s ($0.039383, 16 requests, 0 curator sessions, Stop Rule 7 \u2014 no saved survivor after POINTS tab showed story_teller Survivor 'No point limits are enforced')",
+      "sources": {
+        "build/bridge.dylib": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "build/build.json": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "build/fixture": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "config/curator-runner-config.json": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "knowledge": ".runtime/knowledge/campground-continuous-memory-1056@11ce5d9b",
+        "run": ".runtime/computer-sessions/continuous-memory-1060-a01@11ce5d9b",
+        "study-userdir/config/options.json": ".runtime/user/config/options.json@11ce5d9b",
+        "study-userdir/save/Culebra": ".runtime/user/save/Culebra@11ce5d9b"
+      },
+      "visibility": "private"
+    },
+    "continuous-memory-1060-campaign": {
+      "availability": "present",
+      "bytes": 68686,
+      "cited_by": [
+        "docs/acceptance/2026-11-28-fresh-world-continuous-memory-campaign-1060.md"
+      ],
+      "files": 12,
+      "manifest_sha256": "78862c97da9391f6c86f831b8b80661275cad0cefbb0370c452082c4c9754ad7",
+      "note": "Issue #1060 campaign-level artifacts: empty operator note, pre-launch cross-family review brief and report, frozen build_package.py, curator-runner-config/2 files, frozen prompts, and all 4 supervision logs (Lineage 1 Admission 1 + Lineage 2 Admissions 1-3)",
+      "sources": {
+        "admission-01-prompt-lineage2.txt": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "build_package.py": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "continuation-prompt-template.txt": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "curator-runner-config-lineage2.json": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "curator-runner-config.json": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "logs/a01-supervision.log": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "logs/lineage2-a01-supervision.log": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "logs/lineage2-a02-supervision.log": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "logs/lineage2-a03-supervision.log": ".runtime/campaigns/continuous-memory-1060@781e1fc7",
+        "operator-note.md": ".runtime/campaigns/continuous-memory-1060@781e1fc7",
+        "prelaunch-review-brief.md": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "prelaunch-review.md": ".runtime/campaigns/continuous-memory-1060@11ce5d9b"
+      },
+      "visibility": "private"
+    },
+    "continuous-memory-1060-lineage2-admission-01": {
+      "availability": "present",
+      "bytes": 35943566,
+      "cited_by": [
+        "docs/acceptance/2026-11-28-fresh-world-continuous-memory-campaign-1060.md"
+      ],
+      "files": 421,
+      "manifest_sha256": "f075aac9a00926181fa4cb018d3a1300197f4893a1f6a25558cf8b5bacebbbb9",
+      "note": "Issue #1060 lineage2 Admission 1 (campground-continuous-memory-1060, Marysville / Rowan Vale): verified save at turn 5216074 (+3274s), normal native exit 0, player $0.7808, 4 flex curator windows v0->v6 ($0.2056), boundary grooming v6->v8",
+      "sources": {
+        "build/bridge.dylib": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "build/build.json": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "build/fixture": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "config/curator-runner-config-lineage2.json": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "grooming": ".runtime/campaigns/continuous-memory-1060/groom-lineage2-a01@11ce5d9b",
+        "knowledge": ".runtime/knowledge/campground-continuous-memory-1060@11ce5d9b",
+        "run": ".runtime/computer-sessions/continuous-memory-1060-lineage2-a01@11ce5d9b",
+        "study-userdir/config/lastworld.json": ".runtime/user/config/lastworld.json@11ce5d9b",
+        "study-userdir/config/options.json": ".runtime/user/config/options.json@11ce5d9b",
+        "study-userdir/save/Marysville": ".runtime/user/save/Marysville@11ce5d9b"
+      },
+      "visibility": "private"
+    },
+    "continuous-memory-1060-lineage2-admission-02": {
+      "availability": "present",
+      "bytes": 79015746,
+      "cited_by": [
+        "docs/acceptance/2026-11-28-fresh-world-continuous-memory-campaign-1060.md"
+      ],
+      "files": 950,
+      "manifest_sha256": "3e7123f3b8a4dc6333693a2577a6830d46fcdf78085430b5b441ed1102c79d66",
+      "note": "Issue #1060 lineage2 Admission 2 (campground-continuous-memory-1060, Marysville / Rowan Vale): verified save, normal native exit 0, player $2.2447, 10 flex curator windows v8->v20 ($0.5246), boundary grooming v20->v24",
+      "sources": {
+        "build/bridge.dylib": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "build/build.json": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "build/fixture": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "config/curator-runner-config-lineage2.json": ".runtime/campaigns/continuous-memory-1060@11ce5d9b",
+        "grooming": ".runtime/campaigns/continuous-memory-1060/groom-lineage2-a02@11ce5d9b",
+        "knowledge": ".runtime/knowledge/campground-continuous-memory-1060@11ce5d9b",
+        "run": ".runtime/computer-sessions/continuous-memory-1060-lineage2-a02@11ce5d9b",
+        "study-userdir/config/lastworld.json": ".runtime/user/config/lastworld.json@11ce5d9b",
+        "study-userdir/config/options.json": ".runtime/user/config/options.json@11ce5d9b",
+        "study-userdir/save/Marysville": ".runtime/user/save/Marysville@11ce5d9b"
+      },
+      "visibility": "private"
+    },
+    "continuous-memory-1060-lineage2-admission-03": {
+      "availability": "present",
+      "bytes": 75925111,
+      "cited_by": [
+        "docs/acceptance/2026-11-28-fresh-world-continuous-memory-campaign-1060.md"
+      ],
+      "files": 891,
+      "manifest_sha256": "63ff13a51af4d75d74cfd66bbfb764279a07d60dd83cbeab980c6f37533a7a57",
+      "note": "Issue #1060 lineage2 Admission 3 (campground-continuous-memory-1060, Marysville / Rowan Vale, 781e1fc7): Rowan Vale died at Spring day 64 4:44:58 AM (247,498s / 68.75h, Stop Rule 6), normal native exit 0, player $2.2245, 9 flex curator windows v24->v37 ($0.5643), boundary grooming v37->v39 ($0.0938)",
+      "sources": {
+        "build/bridge.dylib": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "build/build.json": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "build/fixture": ".runtime/computer-builds/11ce5d9b@11ce5d9b",
+        "config/curator-runner-config-lineage2.json": ".runtime/campaigns/continuous-memory-1060@781e1fc7",
+        "grooming": ".runtime/campaigns/continuous-memory-1060/groom-lineage2-a03@781e1fc7",
+        "knowledge": ".runtime/knowledge/campground-continuous-memory-1060@781e1fc7",
+        "run": ".runtime/computer-sessions/continuous-memory-1060-lineage2-a03@781e1fc7",
+        "study-userdir/config/lastworld.json": ".runtime/user/config/lastworld.json@781e1fc7",
+        "study-userdir/config/options.json": ".runtime/user/config/options.json@781e1fc7",
+        "study-userdir/memorial/Marysville": ".runtime/user/memorial/Marysville@781e1fc7",
+        "study-userdir/save/Marysville": ".runtime/user/save/Marysville@781e1fc7"
+      },
+      "visibility": "private"
+    },
     "curated-memory-adoption-463": {
       "availability": "present",
       "bytes": 441043,
