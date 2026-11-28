@@ -60,7 +60,8 @@ function Body({entry, handoffs}) {
     ${read ? html`<section id="inspect-source"><h3>Source read <${Pv} source="recorded" /></h3><dl class="kv wide"><dt>Real frame</dt><dd class="mono wrapany">${shown(read.source_id)}</dd>
       <dt>Player saw</dt><dd>${sourceReadText(read)}</dd><dt>Origin</dt><dd>${shown(read.origin)}</dd>
       ${read.non_clickable === true || read.non_clickable === false ? html`<dt>Click access</dt><dd>${read.non_clickable ? 'non-clickable' : 'clickable'}</dd>` : null}</dl>
-      <p class="note">${read.non_clickable === false ? 'This frame came from the current session with player click access.' : 'This frame was read without player click access (non-clickable).'}</p></section>` : null}
+      ${read.non_clickable === false ? html`<p class="note">This frame came from the current session with player click access.</p>`
+        : read.non_clickable === true ? html`<p class="note">This frame was read without player click access (non-clickable).</p>` : null}</section>` : null}
     <section><h3>Mechanical result <${Pv} source="recorded" /></h3><dl class="kv"><dt>Call</dt><dd>${shown(entry.status)}</dd>
       <dt>Operation</dt><dd>${shown(result && result.status)}</dd><dt>Reason</dt><dd class="wrapany">${shown(result && result.reason)}</dd>
       <dt>Latency</dt><dd>${entry.latency_ms === null ? 'unavailable' : `${Math.round(entry.latency_ms)} ms`}</dd><dt>Result text</dt><dd>${result ? bytes(result.result_bytes) : 'unavailable'}</dd></dl>

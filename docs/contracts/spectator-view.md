@@ -177,8 +177,9 @@ number of ledger rows without a charge. `spent_usd` is null when there are no
 recorded amounts. `spend_complete` requires all sessions settled, no unsettled
 requests and a readable inventory.
 `ingestion_usd` covers recorded `admission` and `ingestion` sessions. `hygiene_usd`
-covers recorded `hygiene` sessions. `hygiene_share` divides the hygiene subtotal by
-recorded spend only when every session and hygiene pass is priced (otherwise `null`).
+covers recorded `hygiene` sessions. `hygiene_share` divides the hygiene subtotal by recorded spend only when
+`spend_complete` is true and every session and hygiene pass is priced (otherwise
+`null`).
 `hygiene_failed` counts failed hygiene passes across all sessions before any list cap.
 `applied_tiers` counts sessions per applied tier, and `deferrals` totals recorded
 flex deferrals (or `null` when none are recorded), with `deferrals_complete` stating

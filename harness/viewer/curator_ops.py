@@ -167,11 +167,13 @@ def _compact(run_dir, group, label):
     host_end = _fields(summary['host_end'], ('reason', 'ok')) if isinstance(summary.get('host_end'), dict) else None
     deferrals = count(summary.get('deferrals'))
     close_reason = _object(summary.get('sandbox')).get('stopped')
-    statuses = [v for x in _list(summary.get('model_status'))[:12] if (v := _scalar(x)) is not None]
+    raw_statuses = _list(summary.get('model_status'))
+    statuses = [v for x in raw_statuses[:12] if (v := _scalar(x)) is not None]
+    saw_429 = any(v == 429 and type(v) is int for v in raw_statuses)
     if deferrals is None and (close_reason == 'flex-capacity-deferred'
                               or host_end is not None and host_end['reason'] == 'flex-capacity-deferred'):
         deferrals = 1
-    elif deferrals is None and host_end is not None and host_end['reason'] is not None and 429 not in statuses:
+    elif deferrals is None and host_end is not None and host_end['reason'] is not None and not saw_429:
         deferrals = 0
     row = dict(id=session_id or _safe(f'{group}:{label}') or label, group=group, label=label, session_id=session_id,
         session_kind=_kind(summary), window=_fields(summary['window'], ('session', 'actor', 'first', 'last'))

@@ -2921,6 +2921,11 @@ def test_v4_primary_review_regressions_retry_join_settled_wait_and_foreign_statu
     assert updated['spend']['hygiene_failed'] == 3
     h2_row = next(r for r in updated['sessions'] if r['label'] == 'h2')
     assert h2_row['deferrals'] is None
+    (sessions / 'h4').mkdir(parents=True)
+    (sessions / 'h4' / 'summary.json').write_text(json.dumps(dict(session_kind='hygiene', session_id='own-h4',
+        host_end=dict(reason='done', ok=True), model_status=[200] * 12 + [429])))
+    h4_row = next(r for r in curator_ops.run_curator(info, sources, BASE, is_live=True)['sessions'] if r['label'] == 'h4')
+    assert h4_row['deferrals'] is None and len(h4_row['model_status']) == 12
     handoff_dir = tmp_path / 'handoff-wait'
     hrun = Run(handoff_dir, session='e' * 32)
     ha = hrun.actor()
