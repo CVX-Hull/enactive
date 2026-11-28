@@ -977,6 +977,36 @@
       },
       "visibility": "private"
     },
+    "fresh-world-validation-preflight-1056": {
+      "availability": "present",
+      "bytes": 92919,
+      "cited_by": [
+        "docs/acceptance/2026-11-27-fresh-world-live-validation-freeze-and-price-proposal-1056.md"
+      ],
+      "files": 10,
+      "manifest_sha256": "cb40b319c5a1733578b12acf704e55686d646ea4943e8a30ea22bb2d9bd75447",
+      "note": "Offline $0 stand-in rehearsal, Admission 1+2 campaign-run/14 preflight, curator-runner-config/2 40/60 flex + hygiene checks, and 647 Python/Node tests on b6ba747d for #1056",
+      "sources": {
+        "results": "scratch/rehearsal-1056@b6ba747d",
+        "scripts": "scratch/rehearsal-1056@b6ba747d"
+      },
+      "visibility": "private"
+    },
+    "fresh-world-validation-rehearsal-1056": {
+      "availability": "present",
+      "bytes": 71285,
+      "cited_by": [
+        "docs/acceptance/2026-11-27-fresh-world-live-validation-freeze-and-price-proposal-1056.md"
+      ],
+      "files": 7,
+      "manifest_sha256": "bec5dbf3d35600f590e018e4e86effd21fcec3e75d721ee5a09b5e03eea292a8",
+      "note": "Supplemental $0 stand-in artifacts retaining host-config/terra.json, all 3 proxy-ledger.jsonl files, stand-in invocation with --output, and verbose pytest -v log for #1056",
+      "sources": {
+        "results": "scratch/rehearsal-1056-supplement@b6ba747d",
+        "scripts": "scratch/rehearsal-1056-supplement@b6ba747d"
+      },
+      "visibility": "private"
+    },
     "hand-back-verification-across-model-tiers": {
       "availability": "present",
       "bytes": 5389797,
