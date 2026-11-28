@@ -130,6 +130,7 @@ function Metadata({title, data, labels}) {
    (curator-runner-status/2, or an archived /1), read by the viewer at each request. Delivered versions are Memory's; the two
    are not merged. */
 export const RUNNER_STATUS = {available:'read.', not_configured:'no curator runner status file is known for this run.',
+  other_run:'belongs to another run: not used for this run.',
   missing:'missing: the runner has not written it, or no runner was started.', unreadable:'unreadable: it cannot be read as a regular file.',
   too_large:'unreadable: it exceeds the 16 MiB input limit.', empty:'unreadable: the file is empty.',
   malformed:'unreadable: it is not complete JSON (partly written); the next read tries again.',

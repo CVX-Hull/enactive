@@ -187,7 +187,8 @@ def payload(state: str, snapshot: dict | None, data: bytes | None, now: float, *
         return dict(source_status='malformed', snapshot=snapshot, read_wall=now, status=None)
     if not isinstance(document, dict) or document.get('schema') not in (SCHEMA, ARCHIVED_SCHEMA):
         return dict(source_status='unsupported', snapshot=snapshot, read_wall=now, status=None)
-    if expected_sessions is not None and document.get('session') not in expected_sessions:
+    session = document.get('session')
+    if expected_sessions is not None and not (isinstance(session, str) and session in expected_sessions):
         return dict(source_status='other_run', snapshot=snapshot, read_wall=now, status=None)
     examined = document.get('examined')
     if examined_ids is not None and isinstance(examined, list):

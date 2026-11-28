@@ -288,9 +288,9 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `tools.calls` | Calls per tool, with refusals and error results per tool | calls | — |
 | `knowledge.reads` | Recorded `player_knowledge_read` and `player_knowledge_query` read events | — | No host trace: `no_host` |
 | `knowledge.deliveries` | Recorded deliveries plus empty suppressions, with keyed rows for recorded outcomes | Delivery events | No host trace: `no_host` |
-| `context.uncovered_cuts` | Applied cuts with positive recorded `uncovered_turns` | Applied cuts | `no_host` or `no_cuts` |
+| `context.uncovered_cuts` | Applied cuts with positive recorded `uncovered_turns` | Applied cuts recording `uncovered_turns` | `no_host`, `no_cuts` or `unrecorded_uncovered_turns` |
 | `agenda.calls` | Recorded `player_agenda` calls excluding refusals | — | No host trace: `no_host` |
-| `source.ancestor_reads` | `player-source-read/2` results with `clickable: false` | `player_source` calls | `no_host` or `no_source_reads` |
+| `source.ancestor_reads` | `player-source-read/2` results whose recorded `origin.admission` names an ancestor admission (not `current`) | `player_source` calls | `no_host` or `no_source_reads` |
 | `memory.records` (legacy) | Writes by record kind | Writes | `no_host` or `no_writes` |
 | `memory.writes` / `memory.reads` (legacy) | Append calls; query, read and context calls | — | — |
 | `memory.retrieved_beyond_carry` (legacy) | Distinct record IDs returned by any read that were not in the reading actor's handoff context ÷ distinct records written (capped at 1) | records written | No writes: null |

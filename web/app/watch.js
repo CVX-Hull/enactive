@@ -339,7 +339,7 @@ function StepCard({entry}) {
   return html`${entry.intent ? html`<span class="intent">${entry.intent}</span>` : html`<span class="intent plain">${toolLabel(entry.tool)}${keys ? '' : ' · no input'}</span>`}
     <span class="cardrow">${entry.intent ? html`<${Pv} source="player_claim" />` : null}${kind ? html`<span class=${`toolchip ${kind}`}>${toolLabel(entry.tool)}</span>` : null}
       <span class="tool">${kind ? '' : toolLabel(entry.tool)}${keys ? html`${kind ? '' : ' · '}<b class="keys-sent">${keys}</b>` : null}</span>
-      ${read ? html`<span class="tag alias" data-alias=${read.player_alias || ''}>${sourceReadText(read)}</span><span class="tag quiet" title="The player read this frame by its alias; the operator sees the real one">non-clickable</span>` : null}
+      ${read ? html`<span class="tag alias" data-alias=${read.player_alias || ''}>${sourceReadText(read)}</span>${read.non_clickable === true ? html`<span class="tag quiet" title="The player read this frame without click access; the operator sees the real one">non-clickable</span>` : read.non_clickable === false ? html`<span class="tag quiet" title="The player read this clickable current-session frame">clickable</span>` : null}` : null}
       ${entry.status === 'error' || entry.status === 'refused' ? html`<span class="state alert">${entry.status}</span>` : entry.status === 'pending' ? html`<span class="state clear">pending</span>` : null}</span>
     <span class="meta num">${meta}</span>`;
 }

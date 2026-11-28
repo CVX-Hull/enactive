@@ -831,12 +831,24 @@ def test_uncovered_cuts_distinguishes_missing_field_and_opening_knowledge_refuse
     assert (cut_row.value, cut_row.count, cut_row.denominator, cut_row.missing) == (None, 0, 0, 'unrecorded_uncovered_turns')
     with open_readonly(path) as connection:
         assert read_run_facts(connection)['opening_knowledge_version'] is None
-    # Malformed snapshot also leaves opening version unknown rather than aborting live evaluation.
+    # Malformed snapshot or bare schema prefix also leaves opening version unknown rather than aborting live evaluation.
     (directory / 'delivered-knowledge.json').unlink()
     (directory / 'delivered-knowledge.json').write_text('{broken')
     live_path = evaluate(directory, FakeBinding(), tmp_path / 'live-evals', state='live')
     with open_readonly(live_path) as connection:
         assert read_run_facts(connection)['opening_knowledge_version'] is None
+    (directory / 'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/', version='v99')))
+    live_path = evaluate(directory, FakeBinding(), tmp_path / 'live-evals-2', state='live')
+    with open_readonly(live_path) as connection:
+        assert read_run_facts(connection)['opening_knowledge_version'] is None
+    # Mixed cuts (one with uncovered_turns=0, one missing) keep denominator=1 and still report unrecorded_uncovered_turns.
+    mixed = Run(tmp_path / 'mixed-cuts')
+    ma = mixed.actor()
+    mixed.request(ma)
+    mixed.host[ma].append(mixed.event(ma, 'context-cut', outcome='cut', uncovered_turns=0))
+    mixed.host[ma].append(mixed.event(ma, 'context-cut', outcome='cut'))
+    mixed_row = metrics_of(evaluate(mixed.finish(), FakeBinding(), tmp_path / 'mixed-evals'))['context.uncovered_cuts']
+    assert (mixed_row.value, mixed_row.count, mixed_row.denominator, mixed_row.missing) == (0, 0, 1, 'unrecorded_uncovered_turns')
 
 
 def test_current_manifest_with_legacy_write_retains_legacy_metrics(tmp_path):

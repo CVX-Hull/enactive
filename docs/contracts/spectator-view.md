@@ -415,7 +415,8 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
   select a request or narrower entry/page instead of treating that as empty data.
 
 For a `player_source` call with a `player-source-read/2` result, the call projection
-includes `player_alias`, `non_clickable: true` and the recorded origin. The separate
+includes `player_alias`, `non_clickable` (reflecting the recorded `clickable` boolean,
+or `null` when unrecorded) and the recorded origin. The separate
 `anchors` array resolves a real source ID against its catalog admission and
 reports whether the verified frame is available. An alias alone cannot supply a
 frame link.
@@ -541,7 +542,7 @@ The runner replaces it atomically at polls and session boundaries. The file reco
 the curator's progress. Exports and actual deliveries are recorded separately in
 [delivered knowledge](#delivered-knowledge) and the [story feed](#story-feed).
 
-The reader returns `source_status` (`available`, `not_configured`, `missing`,
+The reader returns `source_status` (`available`, `not_configured`, `other_run`, `missing`,
 `unreadable`, `too_large`, `empty`, `malformed` or `unsupported`), `snapshot`
 (`sha256` and `bytes` when available), `read_wall` and `status`. When the file
 is unavailable, `status` is null. For a readable status, `status_schema` identifies

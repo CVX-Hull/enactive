@@ -413,8 +413,8 @@ def coverage_waits(actor, index, events, responses, *, is_last_actor: bool = Tru
     for event in events:
         fields = event.fields
         request_id = identifier(fields.get('request_id'))
-        if event.type == 'settled' and opening is not None:
-            finish(event, 'settled')
+        if event.type in ('settled', 'handoff') and opening is not None:
+            finish(event, event.type)
             opening = None
             continue
         if event.type == 'context-cut':

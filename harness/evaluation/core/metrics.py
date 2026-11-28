@@ -146,7 +146,7 @@ def _knowledge_context_metrics(facts: HostFacts) -> list[MetricRow]:
     rows.extend(_row('knowledge.deliveries', count, count, total, key=outcome)
         for outcome, count in sorted(facts.knowledge_delivery_outcomes.items()))
     uncovered_missing = (no_host or ('no_cuts' if facts.applied_cuts == 0
-        else 'unrecorded_uncovered_turns' if facts.cuts_with_uncovered_field == 0 else None))
+        else 'unrecorded_uncovered_turns' if facts.cuts_with_uncovered_field < facts.applied_cuts else None))
     uncovered_value = (facts.uncovered_cuts if facts.present and (facts.cuts_with_uncovered_field > 0 or facts.applied_cuts == 0)
         else None)
     rows.append(_row('context.uncovered_cuts', uncovered_value, facts.uncovered_cuts,

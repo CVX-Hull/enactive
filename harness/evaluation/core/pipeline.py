@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+import re
 import stat
 import time
 from typing import Any, Mapping
@@ -99,7 +100,7 @@ def _read_opening_knowledge(run_dir: Path) -> tuple[str | None, str | None]:
     dir_fd: int | None = None
     fd: int | None = None
     try:
-        dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY)
+        dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         fd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=dir_fd)
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             return None, None
@@ -122,7 +123,8 @@ def _read_opening_knowledge(run_dir: Path) -> tuple[str | None, str | None]:
         return None, None
     schema = snapshot.get('schema')
     version = snapshot.get('version')
-    if not (isinstance(schema, str) and schema.startswith('delivered-knowledge/') and isinstance(version, str) and version):
+    if not (isinstance(schema, str) and re.fullmatch(r'delivered-knowledge/[1-9][0-9]*', schema)
+            and isinstance(version, str) and version):
         return None, None
     return version, hashlib.sha256(data).hexdigest()
 

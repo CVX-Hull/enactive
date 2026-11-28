@@ -167,10 +167,11 @@ def _compact(run_dir, group, label):
     host_end = _fields(summary['host_end'], ('reason', 'ok')) if isinstance(summary.get('host_end'), dict) else None
     deferrals = count(summary.get('deferrals'))
     close_reason = _object(summary.get('sandbox')).get('stopped')
+    statuses = [v for x in _list(summary.get('model_status'))[:12] if (v := _scalar(x)) is not None]
     if deferrals is None and (close_reason == 'flex-capacity-deferred'
                               or host_end is not None and host_end['reason'] == 'flex-capacity-deferred'):
         deferrals = 1
-    elif deferrals is None and summary and ('model_status' in summary or host_end is not None or 'sandbox' in summary):
+    elif deferrals is None and host_end is not None and host_end['reason'] is not None and 429 not in statuses:
         deferrals = 0
     row = dict(id=session_id or _safe(f'{group}:{label}') or label, group=group, label=label, session_id=session_id,
         session_kind=_kind(summary), window=_fields(summary['window'], ('session', 'actor', 'first', 'last'))
@@ -181,7 +182,7 @@ def _compact(run_dir, group, label):
                             'requested_service_tier', 'requests', 'published_before', 'published_after')),
         cost_usd=None if amount is None else usd_text(amount), cap_usd=_money(summary.get('cap_usd', start.get('cap_usd'))),
         settled=settled, unsettled_requests=unsettled, applied_service_tiers=sorted(tiers), deferrals=deferrals,
-        model_status=[v for x in _list(summary.get('model_status'))[:12] if (v := _scalar(x)) is not None],
+        model_status=statuses,
         verdicts_summary=_outcomes(summary), drafts_summary=_drafts_summary(summary), host_end=host_end)
     return row
 
@@ -195,6 +196,18 @@ class SessionIndex:
 
 _lock = threading.Lock()
 _cache: OrderedDict[Path, tuple[tuple, SessionIndex]] = OrderedDict()
+
+
+def _session_failed(row: dict) -> bool:
+    """Match runner terminal failure classification across aborted, error, failed host end, and rejected verdicts."""
+    if row['session_state'] in ('aborted', 'failed'):
+        return True
+    if isinstance(row['run_state'], str) and row['run_state'].startswith('error:'):
+        return True
+    if row['host_end'] and row['host_end'].get('ok') is False:
+        return True
+    verdicts = row.get('verdicts_summary') or {}
+    return bool(verdicts.get('rejected'))
 
 
 def _spend(rows, unread):
@@ -212,16 +225,16 @@ def _spend(rows, unread):
     ing = usd_sum(ing_amounts)
     hygiene_all_priced = len(hyg_amounts) == len(hygiene)
     all_priced = len(amounts) == len(rows)
-    hygiene_failed = sum(1 for r in hygiene if (r['host_end'] and r['host_end'].get('ok') is False)
-                         or r['session_state'] == 'failed')
+    spend_complete = settled == len(rows) and unsettled == 0 and not unread
+    hygiene_failed = sum(1 for r in hygiene if _session_failed(r))
     tiers = Counter(tier for r in rows for tier in r['applied_service_tiers'])
     known_deferrals = [r['deferrals'] for r in rows if type(r['deferrals']) is int]
     return dict(sessions_total=len(rows), sessions_settled=settled, sessions_unsettled=len(rows) - settled,
         spent_usd=usd_text(spent) if amounts else None, unsettled_requests=unsettled,
-        spend_complete=settled == len(rows) and unsettled == 0 and not unread,
+        spend_complete=spend_complete,
         ingestion_usd=usd_text(ing) if ing_amounts else None,
         hygiene_usd=usd_text(hyg) if hyg_amounts else None,
-        hygiene_share=float(hyg / spent) if spent and all_priced and hygiene_all_priced
+        hygiene_share=float(hyg / spent) if spent and spend_complete and all_priced and hygiene_all_priced
         and (hygiene or len(ingestion) == len(rows)) else None,
         ingestion_sessions=len(ingestion), hygiene_sessions=len(hygiene), hygiene_failed=hygiene_failed,
         applied_tiers=dict(tiers),

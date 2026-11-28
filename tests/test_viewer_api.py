@@ -2799,7 +2799,7 @@ def test_v4_run_curator_filters_lineage_and_withholds_unlisted_session_fields(mi
     assert [row['label'] for row in data['sessions']] == ['w1', 'w2', 'w3']
     assert data['spend']['ingestion_usd'] == '0.12685395' and data['spend']['hygiene_usd'] == '1.5'
     assert data['spend']['deferrals'] == 2 and data['spend']['applied_tiers'] == dict(flex=1, priority=1)
-    assert data['spend']['hygiene_share'] == pytest.approx(1.5 / 1.6714952)
+    assert data['spend']['hygiene_share'] is None  # w3 is unsettled, so share stays unknown until spend is complete
     assert data['gate_verdicts']['total_lineage'] == data['drafts']['total_lineage'] == 3
     assert [row['session'] for row in data['gate_verdicts']['items']] == ['session-a', 'examined-only']
     assert [row['id'] for row in data['drafts']['items']] == ['draft-examined', 'draft-own']
@@ -2902,3 +2902,37 @@ def test_v4_primary_review_regressions_retry_join_settled_wait_and_foreign_statu
     assert payload['gate_verdicts']['items'] == [] and payload['gate_verdicts']['total_lineage'] == 1
     assert payload['spend']['hygiene_usd'] is None and payload['spend']['hygiene_share'] is None
     assert payload['spend']['hygiene_failed'] == 1
+
+    # 3. Malformed non-string session in fallback status returns other_run cleanly (no TypeError);
+    #    recorded handoff closes coverage_wait; aborted/rejected hygiene passes count as failed;
+    #    model_status=[] alone does not fabricate deferrals=0.
+    foreign_status.write_text(json.dumps(dict(schema='curator-runner-status/2', session=['not', 'a', 'string'], state='polling',
+        examined=[dict(session_id='foreign-session-id', session_kind='admission')])))
+    bad_payload = curator_ops.run_curator(info, sources, BASE, is_live=True)
+    assert bad_payload['runner']['source_status'] == 'other_run'
+    assert bad_payload['gate_verdicts']['items'] == []
+    (sessions / 'h2').mkdir(parents=True)
+    (sessions / 'h2' / 'summary.json').write_text(json.dumps(dict(session_kind='hygiene', session_id='own-h2',
+        session_state='aborted', model_status=[])))
+    (sessions / 'h3').mkdir(parents=True)
+    (sessions / 'h3' / 'summary.json').write_text(json.dumps(dict(session_kind='hygiene', session_id='own-h3',
+        session_state='sealed', verdicts=[dict(status='rejected')])))
+    updated = curator_ops.run_curator(info, sources, BASE, is_live=True)
+    assert updated['spend']['hygiene_failed'] == 3
+    h2_row = next(r for r in updated['sessions'] if r['label'] == 'h2')
+    assert h2_row['deferrals'] is None
+    handoff_dir = tmp_path / 'handoff-wait'
+    hrun = Run(handoff_dir, session='e' * 32)
+    ha = hrun.actor()
+    hr1 = hrun.request(ha)
+    hrun.host[ha].append(hrun.event(ha, 'context-cut', outcome='held-back', reason='uncovered', request_id=hr1, tokens_before=41000))
+    hrun.host[ha].append(hrun.event(ha, 'handoff', request_id=hr1))
+    hrun.finish()
+    # Strip trailing settled event so only handoff is recorded at end of trace.
+    htrace = handoff_dir / 'actors' / '001' / 'host.jsonl'
+    htrace.write_text('\n'.join(l for l in htrace.read_text().splitlines() if json.loads(l).get('type') != 'settled') + '\n')
+    evaluate(handoff_dir, FakeBinding(), root)
+    hinfo = Catalog(root, runs_dirs=(tmp_path,)).find('e' * 32)
+    hproj = tel_view.read(hinfo)
+    assert hproj is not None and len(hproj.coverage_waits) == 1
+    assert hproj.coverage_waits[0]['ended_by'] == 'handoff' and hproj.coverage_waits[0]['active'] is False
