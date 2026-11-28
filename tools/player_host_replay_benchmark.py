@@ -1408,6 +1408,13 @@ def _simulate_lag_actor(trace: dict, snapshots: dict, projected_start: dict,
                     chosen_k, proj = k_be, proj_be
                     outcome = 'cut'
 
+            if chosen_k == 0 and uncut.tokens >= policy.hard_limit:
+                for k in range(1, eligible + 1):
+                    p = eval_prefix(k)
+                    if p.tokens < min(uncut.tokens, policy.hard_limit):
+                        chosen_k, proj, outcome = k, p, 'rescue'
+                        break
+
             tier_threshold = {
                 'arm1a_immediate_60k': policy.high,
                 'arm1d_tiered_90k': 90_000,
@@ -1437,12 +1444,7 @@ def _simulate_lag_actor(trace: dict, snapshots: dict, projected_start: dict,
             if chosen_k == 0 and armed and last_plan_key != plan_key:
                 last_plan_key = plan_key
             if chosen_k == 0 and uncut.tokens >= policy.hard_limit:
-                for k in range(1, eligible + 1):
-                    p = eval_prefix(k)
-                    if p.tokens < min(uncut.tokens, policy.hard_limit):
-                        chosen_k, proj, outcome = k, p, 'rescue'
-                        break
-                if chosen_k == 0 and arm != 'arm0_baseline':
+                if arm != 'arm0_baseline':
                     for k in range(eligible + 1, max_uncovered_cuttable + 1):
                         p = eval_prefix(k)
                         if p.tokens < min(uncut.tokens, policy.hard_limit):
@@ -1584,7 +1586,7 @@ def lag_markdown(result: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--evidence', type=Path, help='sealed evidence directory (default is the main checkout store)')
-    parser.add_argument('--lineage', choices=(*LINEAGES, 'all'), default='896-b')
+    parser.add_argument('--lineage', choices=(*LINEAGES, 'all'), default=None)
     parser.add_argument('--lag-replay', action='store_true', help='run #1037 curator-lag and flex/429 replay matrix')
     output = parser.add_mutually_exclusive_group()
     output.add_argument('--json', action='store_true')
@@ -1592,14 +1594,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     evidence = args.evidence if args.evidence is not None else default_store()
     if args.lag_replay:
-        target = '998' if args.lineage == 'all' else args.lineage
+        target = '998' if args.lineage in (None, 'all') else args.lineage
         result = lag_replay(evidence, lineage=target)
         print(json.dumps(result, indent=2, default=str) if args.json else lag_markdown(result), end='' if not args.json else '\n')
         return 0
+    selected_lineage = '896-b' if args.lineage is None else args.lineage
     lineages = {name: benchmark(evidence, lineage=name) for name in
-                (LINEAGES if args.lineage == 'all' else (args.lineage,))}
+                (LINEAGES if selected_lineage == 'all' else (selected_lineage,))}
     result = (dict(schema='player-host-replay-benchmark/2', lineages=lineages)
-              if args.lineage == 'all' else lineages[args.lineage])
+              if selected_lineage == 'all' else lineages[selected_lineage])
     if args.json:
         print(json.dumps(result, indent=2, default=str))
     else:

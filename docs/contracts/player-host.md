@@ -462,7 +462,7 @@ flowchart TB
   T -->|"No"| V
   T -->|"Yes"| L{"Covered prefix meets target,<br/>best-effort k = E, or<br/>covered strict-fit rescue?"}
   L -->|"Yes"| K["Cut applied (target, best_effort, or rescue)<br/>Fresh briefing, cut marker, surviving turns"]
-  L -->|"No"| U{"Above Tier-2 ceiling or hard-fit<br/>with cuttable uncovered prefix?"}
+  L -->|"No"| U{"Above Tier-2 ceiling or hard-fit<br/>and an uncovered prefix qualifies?"}
   U -->|"Yes"| K
   U -->|"No (when armed)"| H["Held back (edge-reported)<br/>History unchanged, reason recorded"]
   H --> V

@@ -840,3 +840,22 @@ test('uncovered best-effort retains the largest fitting reducing prefix even whe
   assert.ok(applied.some(c => c.request_id === 'request-5' && c.cut_result === 'best_effort'
     && c.removed_turns === 1 && c.uncovered_turns === 1), JSON.stringify(cutEvents(events)));
 });
+
+test('covered hard-fit rescue evaluates k < min_free even when coveredNormal is armed with eligible >= min_free', async t => {
+  // Exact B1 condition: coveredNormal is armed (eligible = 2 >= min_free = 2), uncut exceeds hardLimit,
+  // k=2 restores omitted images and STILL exceeds hardLimit, while k=1 fits strictly below hardLimit!
+  const smallModel = {...model, contextWindow:5_180, maxTokens:1_000}; // hardLimit = 4,180
+  const {result, events} = await play(t, async (n, {publish}) => {
+    if (n === 4) await publish(publication(2));
+    if (n === 5) return reply();
+    return observe(n, n === 3 ? 2 : 1, 16);
+  }, {
+    maxImages:3, block:3,
+    contextCut:{high_mark:2_300, low_mark:1, min_free:2},
+    routeOverrides:{model:smallModel, context_reserve_tokens:1_100},
+  });
+  assert.equal(result.ok, true);
+  const [cut] = cutEvents(events).filter(c => c.outcome === 'cut');
+  assert.deepEqual([cut.request_id, cut.cut_result, cut.removed_turns, cut.uncovered_turns],
+    ['request-5', 'rescue', 1, 0]);
+});
