@@ -4,6 +4,7 @@
 // strip or Pause (those live in control.js).
 import {useState, useEffect} from './ui.js';
 
+export const API = 'spectator-view/4';
 export const recordedPage = location.pathname === '/recorded/';
 const VIEW_TIMEOUT_MS = 4000;
 export const SUMMARY_MS = 2000;
@@ -22,6 +23,7 @@ const EMPTY_RUN = {summary: null, steps: [], feed: [], feedMeta: null, feedFinal
 export const store = {
   viewerOk: true, viewerSeen: false, lastOk: null,
   runs: null, runId: null, // runId: the selected run's session, the only name two runs never share
+  runsTotal: 0, skippedNonCurrent: 0,   // older-core stores the viewer did not list
   ...EMPTY_RUN,            // cursor: null = following live; otherwise a step seq. inspect: a feed entry ID. held: the view is frozen
   control: {ok: null, status: null, frameUrl: null},
   stageLive: false,        // the Watch stage is showing the live control-path frame
@@ -52,8 +54,12 @@ export function useStore() {
 
 /* ---------------------------------------------------------------- fetching */
 export class ViewerDown extends Error {}
+/** A route that answered, but with nothing for this question (a 404 or 409): it greys nothing else. */
+export class RouteError extends Error {
+  constructor(message, status) { super(message); this.status = status; }
+}
 
-export async function viewerGet(path, schema = 'spectator-view/3') {
+export async function viewerGet(path, schema = API) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), VIEW_TIMEOUT_MS);
   let response;
@@ -69,8 +75,8 @@ export async function viewerGet(path, schema = 'spectator-view/3') {
   if (!response.ok) {
     if (response.status >= 500) { markViewer(false); throw new ViewerDown('Viewer unavailable'); }
     markViewer(true);
-    if (response.status === 413) throw new Error('Response too large (HTTP 413); select a request or fewer entries.');
-    throw new Error(body && body.error ? String(body.error) : `The viewer has nothing here (HTTP ${response.status})`);
+    if (response.status === 413) throw new RouteError('Response too large (HTTP 413); select a request or fewer entries.', 413);
+    throw new RouteError(body && body.error ? String(body.error) : `The viewer has nothing here (HTTP ${response.status})`, response.status);
   }
   if (!body || body.schema !== schema) {
     markViewer(false);
@@ -89,8 +95,9 @@ export const runPath = (run, tail) => `run/${encodeURIComponent(run)}/${tail}`;
 export const framePath = (run, sourceId) => `/api/view/${runPath(run, `frame/${encodeURIComponent(sourceId)}`)}`;
 
 /** Fetch one viewer route into component state, again on an interval if it has one. A one-shot read (`every` 0) that
- *  failed is repeated when the viewer returns; one that succeeded is of something that does not change, and is kept. */
-export function useView(path, every = 5000, schema = 'spectator-view/3', refresh = 0) {
+ *  failed is repeated when the viewer returns; one that succeeded is of something that does not change, and is kept.
+ *  The error stays with this route: a 404 or 409 here is a calm notice in its own panel and greys nothing else. */
+export function useView(path, every = 5000, schema = API, refresh = 0) {
   const [state, setState] = useState({path: null, data: null, error: null});
   useEffect(() => {
     if (!path) return undefined;
@@ -102,7 +109,7 @@ export function useView(path, every = 5000, schema = 'spectator-view/3', refresh
         if (!dead) setState({path, data, error: null});
       } catch (error) {
         failed = true;
-        if (!dead) setState(s => ({path, data: s.path === path ? s.data : null, error}));
+        if (!dead) setState(s => ({path, data: s.path === path && !(error instanceof RouteError) ? s.data : null, error}));
       }
       if (!dead && every) timer = setTimeout(run, every);
     };
@@ -174,8 +181,10 @@ export function selectRun(session) {
   generation++;
   set({runId: session, ...EMPTY_RUN});
   announce();
+  // The new run's data is wanted now, not at the next tick of the old run's poll.
+  if (!loopInFlight) { clearTimeout(runTimer); void loop(); }
 }
-/** The session of a run that a recorded anchor names by its run name, as the viewer's own routes resolve it. */
+/** The session of a run named by its session or by its run name, as the viewer's own routes resolve one. */
 export function sessionOf(name) {
   const runs = store.runs || [];
   const found = runs.find(r => r.session === name) || runs.find(r => r.run === name);
@@ -183,11 +192,14 @@ export function sessionOf(name) {
 }
 
 let runsTimer = null, runTimer = null;
+/** True while one poll of the selected run is running: there is never a second chain of polls beside it. */
+let loopInFlight = false;
 async function loadRuns() {
   try {
     const listing = await pages('runs', 0, generation);
     const runs = listing ? listing.items : store.runs || [];
     const patch = {runs};
+    if (listing) Object.assign(patch, {runsTotal: listing.last.total ?? runs.length, skippedNonCurrent: listing.last.skipped_non_current || 0});
     const live = runs.find(r => r.state === 'live');
     const shown = runs.some(r => r.session === store.runId);
     if (!store.runId || !shown || (!ownerPicked && live && live.session !== store.runId)) {
@@ -200,17 +212,33 @@ async function loadRuns() {
   runsTimer = setTimeout(loadRuns, store.viewerOk ? RUNS_MS : 3000);
 }
 async function loop() {
-  if (store.runId) {
-    const token = generation;
-    try { await pollRunOnce(store.runId, token); } catch { /* outage or missing run: keep what we have, greyed */ }
+  if (loopInFlight) return;
+  loopInFlight = true;
+  clearTimeout(runTimer);
+  try {
+    if (store.runId) {
+      const token = generation;
+      try { await pollRunOnce(store.runId, token); } catch { /* outage or missing run: keep what we have, greyed */ }
+    }
+  } finally {
+    loopInFlight = false;
+    clearTimeout(runTimer);
+    runTimer = setTimeout(loop, SUMMARY_MS);
   }
-  runTimer = setTimeout(loop, SUMMARY_MS);
+}
+/** A page that becomes visible polls at once, unless a poll is already running; either way one chain continues. */
+function onVisible() {
+  if (document.visibilityState !== 'visible' || loopInFlight) return;
+  clearTimeout(runTimer);
+  void loop();
 }
 export function startPolling() {
   clearTimeout(runsTimer); clearTimeout(runTimer);
   void loadRuns().then(() => { void loop(); });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { clearTimeout(runTimer); void loop(); } });
+  document.addEventListener('visibilitychange', onVisible);
 }
+/** For the browser tests: whether a poll of the selected run is running now. */
+export const pollState = () => ({inFlight: loopInFlight});
 
 /* ---------------------------------------------------------------- playhead */
 /** Epoch seconds of the run's first step. */
@@ -233,6 +261,8 @@ export function cursorIndex() {
   if (!store.steps.length) return -1;
   return store.cursor === null ? store.steps.length - 1 : indexOfSeq(store.cursor);
 }
+/** The step the playhead is on, or null. */
+export const cursorStep = () => store.steps[cursorIndex()] || null;
 export function setCursorIndex(index) {
   const steps = store.steps;
   if (!steps.length) return;

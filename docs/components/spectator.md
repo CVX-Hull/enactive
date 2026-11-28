@@ -49,7 +49,7 @@ its exit leaves status, frames and Pause unchanged. The
 | [Server](../../harness/server.py) | Selected `127.0.0.1` host/origin checks, bounded JSON, passive `/api/status` and `/api/source/ID` routes, independent Pause and the actor tool routes. It serves no page and no derived view. |
 | [Gateway](../../tools/campaign_watch.py) | The page origin and static files, relayed status and source reads, Pause with a reason, and bounded forwarding of view reads. Its exit ends supervision, so it stays minimal. |
 | [Page](../../web/) | Source presentation, labels, resource status, Pause feedback and the viewer's views. Served by the gateway. |
-| Viewer (`harness/viewer`) | Read-only evaluator views, projections of the run package's host traces, delivered knowledge and curator runner files, and operator-selected curator records ([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view3)). |
+| Viewer (`harness/viewer`) | Read-only evaluator views, projections of the run package's host traces, delivered knowledge and curator runner files, and operator-selected curator records ([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view4)). |
 | [Supervisor](../../tools/campaign_supervision.py) | Starts and stops the custodian, gateway, keep-awake and viewer children; the guardian owns the custody deadline and the Pause receipt ([procedure](../operations/campaign-supervision.md)). |
 | [Custodian](../../tools/campaign_run.py) | Frozen admission validation, exact native target, store/server lifetime and final cleanup/accounting receipt. |
 | [Preparation](../../tools/prepare_game.py) | Project-local windowed options, normal mouse input, wrapper/userdir and shared exclusion before changes. |
@@ -97,25 +97,23 @@ The viewer lists only its own live run as `live`. Another run whose store is sti
 `live`, because its final `evaluate-run` pass never ran, is listed as `unfinished`, so the
 page follows the [current live run (#435)](https://github.com/CVX-Hull/enactive/issues/435).
 
-The page is one [Mission Control](../contracts/spectator-view.md#the-page-mission-control)
-bar over three tabs. Each value keeps its provenance, and a run without a source for a
-panel says so there.
+The [Mission Control](../contracts/spectator-view.md#the-page-mission-control)
+bar keeps run selection, essential run figures, control status and Pause in a
+compact row. Four run tabs organize one selected run:
 
-- **Watch** answers “what is happening?”: the screen, the timeline and the
-  [story feed](../contracts/spectator-view.md#story-feed) share one step. The player's
-  intent is shown as its own unverified claim, beside the tool, the keys and the mechanical
-  result. Context cuts, knowledge updates and alerts are milestones in the same list.
-- **Memory & Curator** answers “what does the player know, and what is the curator doing?”:
-  the selected run's [runner status](../contracts/spectator-view.md#curator-runner-status)
-  and [curator spend](../contracts/spectator-view.md#host-telemetry-and-curator-spend), then
-  every [exported version](../contracts/spectator-view.md#delivered-knowledge), whether its
-  delivery is recorded, and a reader whose citations open Watch at their step. Its
-  *Curator drafts & gate results* panel appears when the operator configures a source.
-- **Diagnostics** answers “what did it cost, and did it run well?”: the parts of the loop's
-  spend, each on its own basis and marked partial where one is missing or open, context and
-  cache, routing, and [custodian receipt facts](../contracts/spectator-view.md#recorded-custodian-receipt)
-  beside the evaluator's outcome. A normally exited process and an unresolved input
-  acknowledgement can occur in the same run. The live Pause conditions use their own sources.
+- **Watch** aligns the screen, four-lane continuity timeline and working-state agenda dock with the
+  [story feed](../contracts/spectator-view.md#story-feed), including player intent,
+  mechanical results, context cuts, coverage waits, deliveries and findings.
+- **Memory** browses [exported knowledge](../contracts/spectator-view.md#delivered-knowledge),
+  world-state groups, recorded deliveries, usage/claims and citations that can open a verified frame.
+- **Curator** shows [runner progress, spend, sessions, grooming and run-filtered
+  gate results and drafts](../contracts/spectator-view.md#run-curator-sessions).
+- **Diagnostics** shows Pause conditions, spend, context, routing, findings and
+  [custodian receipt facts](../contracts/spectator-view.md#recorded-custodian-receipt)
+  alongside the evaluator's outcome.
+
+**All Runs** holds Lineage, Compare, Explore, Changes, Failures and Archive.
+The page supports deep links to tabs, runs, steps, versions and curator sessions through URL hashes.
 
 **The control path's frame is never lost to the viewer.** The bar shows its own frame in
 full by default. The viewer page may make it small, and may hide it only while Watch has
@@ -129,29 +127,19 @@ See [recorded browser entry](../operations/start-observe.md#recorded-browser-ent
 The gateway forwards `GET /api/view/*` under the
 [viewer forwarding limits and failure rules](../contracts/spectator-view.md#control-path-and-viewer).
 
-**Recorded sources.** A closed section of Memory & Curator holds what is not part of one
-run's story. *Delivery by request* lets the operator select an actor and request, inspect
-knowledge selection and delivery, and follow an ID into the digest-verified frozen snapshot.
-It also shows explicit reads, fallible public reports and their mechanical results.
-Source links use recorded IDs and the frame verifier. Missing links, ages and journals
-stay unavailable. See the [recorded knowledge contract](../contracts/spectator-view.md#recorded-knowledge-and-public-reports).
-*Player records* shows the player's own hints or records and its handoffs. Forgetting
-episodes from the [seven-day development lineage (#397)](../acceptance/2026-11-07-seven-day-397.md)
-can open Watch at a recorded step or explain why its frame is unavailable. *Containers*
-shows the sidecar inventory and manifests.
+**Recorded sources.** *Delivery by request* shows knowledge selection and
+delivery for an actor and request, digest-verified snapshot entries, explicit
+reads and public reports. Source links use recorded IDs and frame verification.
+See the [recorded knowledge contract](../contracts/spectator-view.md#recorded-knowledge-and-public-reports).
+The [archive API](../contracts/spectator-view.md#archive) serves player records,
+forgetting episodes and the container inventory. A forgetting episode can open
+Watch at a verified frame or report why the frame is unavailable.
 
-The curator panel's [draft view](../contracts/spectator-view.md#curator-drafts) shows
-active and archived lifecycle metadata from explicitly configured state directories.
-From configured terminal session receipts, *Curator sessions* shows recorded metadata, draft
-collection events and paged gate results. See the [session contract](../contracts/spectator-view.md#recorded-curator-sessions).
-Operator-configured result journals show submission and restore statuses and versions at a
-fixed digest and byte cutoff, with draft IDs recorded by the gate. These journals establish neither run association, a semantic
-verdict, the current published head nor lag. Missing, empty, unsupported, malformed and
-changed sources remain distinct. See the [result contract](../contracts/spectator-view.md#recorded-curator-results).
-The curator runner's status shows no figure when its file is missing or partly written, and
-steps after its last successful read are unknown.
-The page reads the [spectator frame routes](../contracts/spectator-view.md#spectator-frame-spectator-frame1)
-independently of Pause.
+Configured lineage-wide [drafts](../contracts/spectator-view.md#curator-drafts),
+[session receipts](../contracts/spectator-view.md#recorded-curator-sessions) and
+[gate results](../contracts/spectator-view.md#recorded-curator-results) are
+available through the Curator Sources API. The selected run's Curator endpoint
+filters drafts and verdicts using its own session IDs.
 
 ## Assurance and evidence
 

@@ -1,5 +1,6 @@
-// Spectator viewer views against the fixture API: content and provenance on each tab, the sections behind Diagnostics
-// and Memory, the run picker, polling, and the greyed viewer-unavailable state.
+// Spectator viewer views against the fixture API: content and provenance on each tab, the sections behind Diagnostics,
+// Memory and All runs, the run picker, polling (one chain, incremental `after=`), route-local errors, and the greyed
+// viewer-unavailable state.
 const {test, before, after, beforeEach, afterEach} = require('node:test');
 const assert = require('node:assert/strict');
 const S = require('./fixtures/spectator/support.cjs');
@@ -71,6 +72,35 @@ test('Watch: steps arrive incrementally with after= and the timeline and story f
   const ids = await page.$$eval('#story .card', n => n.map(c => c.dataset.entry));
   assert.equal(new Set(ids).size, ids.length);
   assert.match(await text('#playinfo'), /\(live\)/);
+});
+
+test('a hidden page that becomes visible again never starts a second chain of polls', async () => {
+  const summaries = async () => (await requests()).filter(r => /^run\/[^/]+\/summary$/.test(r)).length;
+  await S.settle(page, 1000);
+  // Many visibility changes, some of them while a poll is in flight.
+  await page.evaluate(async () => {
+    Object.defineProperty(document, 'visibilityState', {configurable: true, get: () => 'visible'});
+    for (let i = 0; i < 12; i++) { document.dispatchEvent(new Event('visibilitychange')); await new Promise(r => setTimeout(r, 40)); }
+  });
+  const from = await summaries();
+  await S.settle(page, 6000);
+  const polls = await summaries() - from;
+  // One chain polls about every two seconds: three or four in six seconds. Two chains would make six or more.
+  assert.ok(polls >= 2 && polls <= 4, `${polls} summary polls in 6 s`);
+  assert.equal(await page.evaluate(async () => typeof (await import('/app/data.js')).pollState().inFlight), 'boolean');
+});
+
+test('a route that has nothing for one panel says so there, and greys nothing else', async () => {
+  await page.setRequestInterception(true);
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.endsWith('/telemetry')) return request.respond({status: 409, contentType: 'application/json', body: JSON.stringify({schema: 'spectator-view/4', error: 'telemetry_unavailable'})});
+    request.continue();
+  });
+  await go('#diagnostics');
+  await waitFor(() => /telemetry_unavailable/.test(document.getElementById('app').innerText) && document.querySelector('#kpi-spend'));
+  assert.equal(await page.$eval('#viewer', n => n.classList.contains('down')), false, 'the viewer is up');
+  assert.equal(await page.$eval('#kpi-spend', n => getComputedStyle(n).opacity), '1', 'other panels are not greyed');
+  assert.equal(await page.$('.banner.down'), null);
 });
 
 test('polling: summary is requested about every two seconds, and a recorded run\'s story only once', async () => {
@@ -169,7 +199,8 @@ test('two sessions that share a run name are two runs in the picker', async () =
 test('run picker lists runs from /api/view/runs and switches the run', async () => {
   await waitFor(() => document.querySelectorAll('#runpick option').length === 30);
   const options = await page.$$eval('#runpick option', n => n.map(o => o.textContent));
-  assert.ok(options.some(o => /^ceil09 · ceiling · live$/.test(o)));
+  assert.ok(options.some(o => /^ceil09 · ceiling · a03 · live$/.test(o)));
+  assert.equal(await page.$eval('#runpick', s => s.selectedOptions[0].parentElement.label), 'Lineage ceiling-line', 'runs are grouped by lineage');
   assert.ok(options.some(o => / · lost$/.test(o)), 'a run lost to infrastructure is marked');
   assert.equal(await page.$eval('#runpick', n => n.value), S.SESSIONS.ceil09, 'the live run is selected first');
   await S.pick(page, 'aidA1');
@@ -209,25 +240,34 @@ test('Diagnostics tools: table, transition matrix, filtered calls and the frame 
   await waitFor(() => document.querySelector('#more-calls .chart.trans canvas') && document.querySelector('.calls tbody tr'));
   await page.select('select[aria-label="Status filter"]', 'refused');
   await waitFor(() => document.querySelectorAll('.calls tbody tr').length === 1);
-  assert.ok((await requests()).some(r => /calls\?tool=&status=refused/.test(r)));
+  assert.ok((await requests()).some(r => /calls\?tool=&status=refused&after=0&limit=50$/.test(r)));
   await page.select('select[aria-label="Status filter"]', 'ok');
-  await waitFor(() => document.querySelectorAll('.calls tbody tr').length > 50);
+  await waitFor(() => document.querySelectorAll('.calls tbody tr').length === 50);
+  // Calls are paged: the next page continues from where the viewer said.
+  await page.$$eval('#calls-pager button', b => b[1].click());
+  await waitFor(() => /from 51/.test(document.getElementById('calls-pager').innerText));
+  assert.ok((await requests()).some(r => /calls\?tool=&status=ok&after=50&limit=50$/.test(r)));
+  await page.$$eval('#calls-pager button', b => b[0].click());
+  await waitFor(() => /from 1\b/.test(document.getElementById('calls-pager').innerText));
   await page.$eval('.calls tbody tr button', b => b.click());
   await waitFor(() => document.querySelector('.frame.small img'));
   assert.match(await page.$eval('.frame.small img', i => i.getAttribute('src')), /^\/api\/view\/run\/.+\/frame\//);
 });
 
-test('Memory player records: audit labels, cited frames, handoffs and their identity check', async () => {
-  await go('#memory/player');
-  await waitFor(() => document.querySelector('#more-sources .chips button'));
-  const body = await text('#more-sources');
+test('archived player records keep audit labels and cited frames; handoffs and their identity check are in Memory', async () => {
+  await go('#runs/archive/player');
+  await waitFor(() => document.querySelector('#app .chips button'));
+  const body = await text('#app');
   assert.match(body, /Ongoing indefinite survival/);
   assert.match(body, /confirm: identity or world error/);
-  assert.ok(await page.$('#more-sources .pv.human'));
-  await page.$eval('#more-sources .chips button', b => b.click());
+  assert.ok(await page.$('#app .pv.human'));
+  await page.$eval('#app .chips button', b => b.click());
   await waitFor(() => document.querySelector('.frame.small img'));
-  assert.match(await text('#more-sources'), /Identity check/);
-  assert.match(await text('#more-sources'), /Baytown/);
+  assert.ok((await requests()).some(r => r === `archive/run/${S.SESSIONS.ceil09}/memory`), 'the archived store is read from its archive route');
+  await go('#memory/usage');
+  await waitFor(() => document.querySelector('.handoff-detail'));
+  assert.match(await text('.handoff-detail'), /Identity check/);
+  assert.match(await text('.handoff-detail'), /Baytown/);
 });
 
 test('Diagnostics requests: the costliest open a context replayed on request, exact versus reconstructed is labelled', async () => {
@@ -235,6 +275,7 @@ test('Diagnostics requests: the costliest open a context replayed on request, ex
   await waitFor(() => document.getElementById('more-requests'));
   await open('more-requests');
   await waitFor(() => document.querySelector('#more-requests tbody tr button'));
+  assert.match(await text('#more-requests tbody tr:first-child'), /request-100/, 'ranked by the viewer, the costliest first');
   assert.equal((await requests()).some(r => /\/context\//.test(r)), false);
   await page.$eval('#more-requests tbody tr:nth-child(2) button', b => b.click());
   await page.$eval('#more-requests #load-context', b => b.click());
@@ -243,31 +284,32 @@ test('Diagnostics requests: the costliest open a context replayed on request, ex
   assert.ok((await requests()).some(r => /\/context\/request-\d+\?actor=/.test(r)));
 });
 
-test('Across runs: change cards with verdicts, failure modes ranked deaths first, components by arm', async () => {
-  await go('#diagnostics/changes');
-  await waitFor(() => document.querySelectorAll('#more-runs .card').length === 4);
-  assert.match(await text('#more-runs .verdict'), /moved the wrong way/i);
-  const title = async () => text('#more-runs .panel:nth-of-type(2) h2');
+test('All runs: change cards with verdicts, failure modes ranked deaths first, components by arm', async () => {
+  await go('#runs/changes');
+  await waitFor(() => document.querySelectorAll('#app .cards .card').length === 4);
+  assert.match(await text('#app .verdict'), /moved the wrong way/i);
+  const title = async () => text('[data-view="runs"] > .panel:nth-of-type(2) h2');
   const first = await title();
-  await page.$eval('#more-runs .card:nth-child(2)', b => b.click());
+  await page.$eval('#app .cards .card:nth-child(2)', b => b.click());
   await S.settle(page, 300);
   assert.notEqual(await title(), first);
-  assert.match(await text('#more-runs'), /Computed/);
-  assert.match(await text('#more-runs'), /Recorded/);
-  await go('#diagnostics/failures');
-  await waitFor(() => /^Death/.test(document.querySelector('#more-runs .data tbody tr:first-child')?.innerText || ''));
-  await go('#diagnostics/components');
-  await waitFor(() => [...document.querySelectorAll('#more-runs .data thead th')].some(x => /ceiling/.test(x.textContent)));
-  const heads = await page.$$eval('#more-runs .data thead th', n => n.map(x => x.textContent.replace(/\s+/g, ' ').replace(/n = \d+$/, '').trim()));
+  assert.match(await text('#app'), /Computed/);
+  assert.match(await text('#app'), /Recorded/);
+  await go('#runs/failures');
+  await waitFor(() => /^Death/.test(document.querySelector('#app .data tbody tr:first-child')?.innerText || ''));
+  await go('#runs/compare');
+  const components = '[data-view="runs"] .panel:last-child .data';
+  await waitFor(s => [...document.querySelectorAll(`${s} thead th`)].some(x => /ceiling/.test(x.textContent)), components);
+  const heads = await page.$$eval(`${components} thead th`, n => n.map(x => x.textContent.replace(/\s+/g, ' ').replace(/n = \d+$/, '').trim()));
   for (const arm of ['ceiling', 'zoom-aid', 'game-help-aid', 'reflection-aid']) assert.ok(heads.includes(arm), `${arm} in ${heads}`);
   // Every arm is visible at desktop width without scrolling the table sideways.
-  const fit = await page.$eval('#more-runs .data', t => [t.parentElement.scrollWidth, t.parentElement.clientWidth]);
+  const fit = await page.$eval(components, t => [t.parentElement.scrollWidth, t.parentElement.clientWidth]);
   assert.ok(fit[0] <= fit[1], `components table ${fit[0]} px overflows its ${fit[1]} px panel`);
-  assert.match(await text('#more-runs'), /Excluded: \S+/);
+  assert.match(await text('#app'), /Excluded: \S+/);
 });
 
 test('Explore: filters re-query the viewer; CSV mirrors the cohort; deaths are aligned', async () => {
-  await go('#diagnostics/explore');
+  await go('#runs/explore');
   await waitFor(() => document.getElementById('cohortsum'));
   assert.match(await text('#cohortsum'), /Median \[IQR\]/);
   await page.select('select[data-cf="arm"]', 'ceiling');
@@ -281,13 +323,13 @@ test('Explore: filters re-query the viewer; CSV mirrors the cohort; deaths are a
 });
 
 test('Compare: survival table says "not reached", the split by start re-queries, versions table is shown', async () => {
-  await go('#diagnostics/compare');
-  await waitFor(() => document.querySelector('#more-runs .chart.km canvas'));
-  assert.match(await text('#more-runs table'), /not reached/);
+  await go('#runs/compare');
+  await waitFor(() => document.querySelector('[data-section="compare"] .chart.km canvas'));
+  assert.match(await text('[data-section="compare"] table'), /not reached/);
   await page.$eval('#strat', box => box.click());
-  await waitFor(() => /S2/.test(document.querySelector('#more-runs table').innerText));
+  await waitFor(() => /S2/.test(document.querySelector('[data-section="compare"] table').innerText));
   assert.ok((await requests()).some(r => /compare\?group=start/.test(r)));
-  assert.match(await text('#more-runs'), /Are these runs comparable\?/);
+  assert.match(await text('[data-section="compare"]'), /Are these runs comparable\?/);
 });
 
 test('viewer unavailable greys interpretive panels, says so in the strip and a banner, then recovers', async () => {

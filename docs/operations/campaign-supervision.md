@@ -90,16 +90,22 @@ below own [launch](#freeze-launch-and-inspect) and [cleanup](#failure-and-owned-
    ```
 
    Add `--runs DIR` to let the viewer list archived run directories beside the live run.
-   Repeat `--curator-drafts LABEL=DIR` to let the Curator tab read configured curator
+   Repeat `--curator-drafts LABEL=DIR` to let the viewer read configured curator
    state directories (`drafts/` and `drafts-archive/` manifests, [draft contract](../contracts/spectator-view.md#curator-drafts)).
    Repeat `--curator-sessions LABEL=FILE` to select terminal curator close-out
    receipts by operator-supplied alias ([session contract](../contracts/spectator-view.md#recorded-curator-sessions)).
-   Repeat `--curator-results LABEL=FILE` to let the Curator tab read explicitly selected
+   Repeat `--curator-results LABEL=FILE` to let the viewer read explicitly selected
    current result journals or snapshots. Labels are unique and browser selection never
    accepts a filesystem path. These optional arguments go only to the unsupervised
    viewer; they do not change the frozen player package, credential routing, custody
    or Pause. The [recorded-result contract](../contracts/spectator-view.md#recorded-curator-results)
    owns bounds, source states and snapshot identity.
+
+   With `--curator-runner CONFIG`, supervision validates the configuration before
+   reservation using `live_runner.read_config`. The configured knowledge repository's
+   state directory supplies `--curator-drafts live=DIR` and its `gate.jsonl` supplies
+   `--curator-results live=FILE`. An explicit `live=` label overrides the automatic
+   source for that option. The gate can create the directory after launch.
 
    Add `--curator-runner CONFIG` to run the [curator runner](../components/curator.md#runner-windows)
    beside play, with a `curator-runner-config/2` file
@@ -119,6 +125,7 @@ below own [launch](#freeze-launch-and-inspect) and [cleanup](#failure-and-owned-
    supervisor starts the viewer as an unsupervised child on a free loopback port; if
    the page shows **viewer unavailable**, play, the frame and Pause are unaffected, and
    the cause is in the run directory's `viewer-stderr.txt`. Its exit is never a stop.
+   See [viewer procedures](start-observe.md#viewer-procedures) for run navigation.
 5. Use the page's **Pause** for immediate control and choose its reason (loop,
    fault, spend or other). The page asks for a reason, but the gateway never refuses a
    stop over one: it stops first, then records the reason as given, or `unspecified`

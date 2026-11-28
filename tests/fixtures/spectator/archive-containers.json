@@ -1,5 +1,5 @@
 {
- "schema": "spectator-frame/1",
+ "schema": "spectator-view/4",
  "items": [
   {"id": "fixture-study/s1", "kind": "actor-session", "owner_role": "actor", "lifecycle_state": "sealed",
    "retention_policy": "evidence", "evidence_study": "fixture-study", "index_study": "fixture-study"},

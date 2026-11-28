@@ -1,29 +1,37 @@
-// Recorded sources beside the Memory tab's browser: what one request selected and received, the player's own records,
-// configured curator drafts, journals and receipts, the container inventory and the tracked forgetting episodes.
+// Recorded sources: what one request selected and received and the player's public reports (Memory's Usage & Claims),
+// handoffs, and the archive behind All runs: forgetting episodes, the container inventory, an archived run's pre-journal
+// memory and the operator's configured curator sources for the whole lineage.
 // Read-only: every value comes from the viewer's routes; anchors open Watch or the original frame.
 import {html, useState, useEffect, Panel, Pv, Waiting, Table, Insufficient, Callout, SubNav, bytes, fmtMoney, pct, shortId, trim, label} from './ui.js';
-import {store, framePath, runPath, selectRun, sessionOf, setCursorSeq, useStore, useView} from './data.js';
+import {store, framePath, runPath, selectRun, sessionOf, setCursorSeq, useStore, useView, API} from './data.js';
+import {sourceReadText, toolLabel} from './continuity.js';
 
-const SCHEMA = 'spectator-frame/1';
 const CURATOR_SOURCES = [['curator-drafts', 'Curator drafts'], ['results', 'Gate results'], ['sessions', 'Curator sessions']];
-const RECORDED_SOURCES = [['requests', 'Delivery by request'], ['player', 'Player records'], ['containers', 'Containers'], ['episodes', 'Forgetting episodes']];
-export const SOURCES = [...RECORDED_SOURCES, ...CURATOR_SOURCES];
+const ARCHIVE_SOURCES = [['episodes', 'Forgetting episodes'], ['containers', 'Containers'], ['player', 'Archived player memory']];
 
-/* The shared viewer fetch (outage marking, timeouts) with the frame's own schema. */
-export const useFrame = (path, every = 15000, refresh = 0) => useView(path, every, SCHEMA, refresh);
+/* A slower poll for files the operator configures; the same outage marking and timeouts as every viewer read. */
+export const useFrame = (path, every = 15000, refresh = 0) => useView(path, every, API, refresh);
 
-export function Records({section}) {
-  const current = RECORDED_SOURCES.some(r => r[0] === section) ? section : 'requests';
-  const body = {requests: RecordedKnowledge, player: PlayerRecords, containers: Containers, episodes: Episodes}[current];
-  return html`<div class="s12"><${SubNav} tabs=${RECORDED_SOURCES} base="memory" current=${current} label="Recorded sources" /></div><${body} />`;
+/** The archive and the lineage's operator sources (`#runs/archive/<section>`); unconfigured sources stay hidden. */
+export function Archive({section}) {
+  const drafts = useFrame('curator-sources/draft-sources?limit=1', 0);
+  const results = useFrame('curator-sources/result-sources?limit=1', 0);
+  const sessions = useFrame('curator-sources/session-sources?limit=1', 0);
+  const configured = {'curator-drafts': drafts.data, results: results.data, sessions: sessions.data};
+  const operator = CURATOR_SOURCES.filter(([id]) => configured[id]?.total > 0);
+  const tabs = [...ARCHIVE_SOURCES, ...operator];
+  const current = tabs.some(([id]) => id === section) ? section : 'episodes';
+  const body = {episodes: Episodes, containers: Containers, player: PlayerRecords, 'curator-drafts': CuratorDrafts, results: Curator, sessions: CuratorSession}[current];
+  return html`<div class="s12"><${SubNav} id="archive-nav" tabs=${tabs} base="runs/archive" current=${current} label="Archive and operator sources" /></div>
+    ${operator.length ? html`<p class="note s12 curator-records">Operator curator sources cover the whole lineage, not one run.</p>` : null}<${body} />`;
 }
 
 /* ---------------------------------------------------------------- the player's own records */
 const verdictText = labels => (labels.length ? labels.map(l => `${l.verdict}: ${label(l.code)}`).join('; ') : 'unchecked');
 function PlayerRecords() {
   const {runId: run} = useStore();
-  if (!run) return html`<${Panel} title="Player records" span="s12"><${Insufficient}>Select a run to inspect its records.<//><//>`;
-  return html`<${Memory} run=${run} key=${`memory-${run}`} /><${Handoffs} run=${run} key=${`handoffs-${run}`} />`;
+  if (!run) return html`<${Panel} title="Archived player memory" span="s12"><${Insufficient}>Select a run to inspect its records.<//><//>`;
+  return html`<${Memory} run=${run} key=${`memory-${run}`} />`;
 }
 
 function Hints({data}) {
@@ -39,7 +47,7 @@ function Hints({data}) {
 }
 
 function Memory({run}) {
-  const {data, error} = useView(runPath(run, 'memory'));
+  const {data, error} = useView(`archive/${runPath(run, 'memory')}`, 0);
   const [sel, setSel] = useState(0);
   const [frame, setFrame] = useState(null);
   if (!data) return html`<${Panel} title="Player records" span="s12"><${Waiting} store=${store} what="player records" error=${error} /><//>`;
@@ -65,39 +73,32 @@ function Memory({run}) {
       <p class="note">Each cited frame opens beside the claim, so it can be checked against what the screen showed.</p><//>` : null}`;
 }
 
-function Handoffs({run}) {
+/** Every handoff of the run: what carried over, the agenda the next actor started from, and how fast it resumed. */
+export function Handoffs({run}) {
   const {data, error} = useView(runPath(run, 'handoffs'));
   const [sel, setSel] = useState(0);
   if (!data) return html`<${Panel} title="Handoffs" span="s12"><${Waiting} store=${store} what="handoffs" error=${error} /><//>`;
   const list = data.handoffs || [];
   if (!list.length) return html`<${Panel} title="Handoffs" span="s12"><${Insufficient}>No handoffs in this run.<//><//>`;
   const h = list[Math.min(sel, list.length - 1)];
+  const threads = h.carried_agenda ? h.carried_agenda.threads : [];
   return html`<${Panel} title=${`${list.length} handoff${list.length === 1 ? '' : 's'} in this run`} note="how much carried over and how fast the next actor resumed" span="s7">
-      <${Table} columns=${[{title: 'At decision', num: true, key: 'decision'}, {title: 'Actor', render: x => shortId(x.actor)}, {title: 'Decisions to resume', num: true, render: x => x.decisions_to_resume ?? '—'},
+      <${Table} columns=${[{title: 'At step', num: true, render: x => `#${x.seq}`}, {title: 'Actor', render: x => shortId(x.actor)}, {title: 'Decisions to resume', num: true, render: x => x.decisions_to_resume ?? '—'},
         {title: 'Carry ratio', num: true, render: x => (x.carry_ratio === null || x.carry_ratio === undefined ? '—' : pct(x.carry_ratio, 1))}, {title: 'Carry', num: true, render: x => bytes(x.carry_bytes)},
+        {title: 'Agenda', num: true, render: x => (x.carried_agenda ? `${x.carried_agenda.thread_count} threads` : 'none')},
         {title: 'Identity check', render: x => (x.identity_check.checked ? 'error confirmed' : 'none recorded')}]}
         rows=${list} onPick=${i => setSel(i)} selected=${sel} /><//>
-    <${Panel} title=${`Handoff at decision ${h.decision}`} span="s5">
+    <${Panel} title=${`Handoff at step ${h.seq}`} span="s5" className="handoff-detail">
       <h3>Carry to the next actor <${Pv} source="recorded" detail="context file" /></h3><pre>${h.carry_text || '(none recorded)'}</pre>
       <p class="note">${(h.carried_ids || []).length} records carried · context ${shortId(h.context_id)}</p>
+      <h3>Carried agenda <${Pv} source="player_claim" detail="player_agenda" /></h3>
+      ${threads.length ? html`<ul class="threads compact" data-carried-agenda>${threads.map(t => html`<li data-status=${t.status}><span class="tstat">${t.status}</span><b>${t.title}</b></li>`)}</ul>`
+        : html`<p class="note">No agenda was carried.</p>`}
       ${h.identity_check.errors.length ? h.identity_check.errors.map(e => html`<${Callout}>Identity check <${Pv} source="human" detail=${e.author} />: ${e.verdict} ${label(e.code)}. ${e.note}<//>`) : html`<p class="note">No identity or world error was labelled for this handoff.</p>`}<//>`;
 }
 
 /* ---------------------------------------------------------------- configured curator sources */
 const RESULT_STATUS = {available:'Recorded data available.', empty:'The source is readable and empty.', missing:'The configured file is missing.', unreadable:'The configured source cannot be read as a regular file.', too_large:'The source exceeds the 16 MiB input limit.', unsupported:'The source contains unsupported records.', malformed:'The source contains malformed records.'};
-
-export const isCuratorSource = section => CURATOR_SOURCES.some(([id]) => id === section);
-
-export function CuratorRecords({section}) {
-  const drafts = useFrame('frame/curator-draft-sources?limit=1', 0);
-  const results = useFrame('frame/curator-sources?limit=1', 0);
-  const sessions = useFrame('frame/curator-session-sources?limit=1', 0);
-  const configured = {'curator-drafts': drafts.data, results: results.data, sessions: sessions.data};
-  const tabs = CURATOR_SOURCES.filter(([id]) => configured[id]?.total > 0);
-  if (!tabs.length) return null;
-  const body = tabs.some(([id]) => id === section) && {'curator-drafts': CuratorDrafts, results: Curator, sessions: CuratorSession}[section];
-  return html`<${Panel} title="Curator drafts & gate results" span="s12" className="curator-records"><${SubNav} tabs=${tabs} base="memory" current=${section} label="Curator records" /><//>${body ? html`<${body} />` : null}`;
-}
 
 function ResultRows({data, after, pick, setPick, setAfter, detailAttribute}) {
   const selected = data.items.find(row => row.index === pick);
@@ -126,12 +127,13 @@ function Metadata({title, data, labels}) {
 
 /* ---------------------------------------------------------------- the curator runner's status
    What the curator has done since the version the player started with: the selected run's status file
-   (curator-runner-status/1), read by the viewer at each request. Delivered versions are the browser's; the two are not merged. */
+   (curator-runner-status/2, or an archived /1), read by the viewer at each request. Delivered versions are Memory's; the two
+   are not merged. */
 export const RUNNER_STATUS = {available:'read.', not_configured:'no curator runner status file is known for this run.',
   missing:'missing: the runner has not written it, or no runner was started.', unreadable:'unreadable: it cannot be read as a regular file.',
   too_large:'unreadable: it exceeds the 16 MiB input limit.', empty:'unreadable: the file is empty.',
   malformed:'unreadable: it is not complete JSON (partly written); the next read tries again.',
-  unsupported:'unreadable: it is not curator-runner-status/1.'};
+  unsupported:'unreadable: it is not curator-runner-status/2 or an archived /1.'};
 export const RUNNER_STATES = {polling:'polling', 'in-session':'in a session', stopped:'stopped for the rest of the admission', ended:'ended'};
 
 /* An absent or `unknown` value is unknown, never zero; a recorded null is none; a withheld string says so. */
@@ -205,13 +207,13 @@ export function RunnerDetail({data, error}) {
 
 function CuratorSession() {
   const [sourceAfter, setSourceAfter] = useState(0);
-  const sources = useFrame(`frame/curator-session-sources?limit=500&after=${sourceAfter}`, 5000);
+  const sources = useFrame(`curator-sources/session-sources?limit=500&after=${sourceAfter}`, 5000);
   const [source, setSource] = useState('');
   const [after, setAfter] = useState(0);
   const [snapshot, setSnapshot] = useState(null);
   const [pick, setPick] = useState(null);
   const [refresh, setRefresh] = useState(0);
-  const path = source ? `frame/curator-session?source=${encodeURIComponent(source)}&after=${after}&limit=25${snapshot ? `&snapshot=${snapshot}` : ''}` : null;
+  const path = source ? `curator-sources/session?source=${encodeURIComponent(source)}&after=${after}&limit=25${snapshot ? `&snapshot=${snapshot}` : ''}` : null;
   const result = useFrame(path, 5000, refresh);
   const data = result.error ? null : result.data;
   useEffect(() => { if (data?.snapshot && !snapshot) setSnapshot(data.snapshot.sha256); }, [data, snapshot]);
@@ -241,13 +243,13 @@ const DRAFT_COLUMNS = [{title: 'Draft ID', key: 'id', wrap: true}, {title: 'Buck
 
 function CuratorDrafts() {
   const [sourceAfter, setSourceAfter] = useState(0);
-  const sources = useFrame(`frame/curator-draft-sources?limit=500&after=${sourceAfter}`, 0);
+  const sources = useFrame(`curator-sources/draft-sources?limit=500&after=${sourceAfter}`, 0);
   const [source, setSource] = useState('');
   const [after, setAfter] = useState(0);
   const [snapshot, setSnapshot] = useState(null);
   const [pick, setPick] = useState(null);
   const [refresh, setRefresh] = useState(0);
-  const path = source ? `frame/curator-drafts?source=${encodeURIComponent(source)}&after=${after}&limit=25${snapshot ? `&snapshot=${snapshot}` : ''}` : null;
+  const path = source ? `curator-sources/drafts?source=${encodeURIComponent(source)}&after=${after}&limit=25${snapshot ? `&snapshot=${snapshot}` : ''}` : null;
   const result = useFrame(path, 5000, refresh);
   const data = result.error ? null : result.data;
   const selected = data?.items[pick];
@@ -279,13 +281,13 @@ function CuratorDrafts() {
 /* Recorded results belong to an operator-selected source, independent of any run. */
 function Curator() {
   const [sourceAfter, setSourceAfter] = useState(0);
-  const sources = useFrame(`frame/curator-sources?limit=500&after=${sourceAfter}`, 5000);
+  const sources = useFrame(`curator-sources/result-sources?limit=500&after=${sourceAfter}`, 5000);
   const [source, setSource] = useState('');
   const [after, setAfter] = useState(0);
   const [snapshot, setSnapshot] = useState(null);
   const [pick, setPick] = useState(null);
   const [refresh, setRefresh] = useState(0);
-  const path = source ? `frame/curator-results?source=${encodeURIComponent(source)}&after=${after}&limit=25${snapshot ? `&snapshot=${snapshot}` : ''}` : null;
+  const path = source ? `curator-sources/results?source=${encodeURIComponent(source)}&after=${after}&limit=25${snapshot ? `&snapshot=${snapshot}` : ''}` : null;
   const result = useFrame(path, 5000, refresh);
   const data = result.error ? null : result.data;
   useEffect(() => { if (data && data.snapshot && !snapshot) setSnapshot(data.snapshot.sha256); }, [data, snapshot]);
@@ -313,12 +315,12 @@ const ANCHORS = [['observed', 'Observed'], ['needed', 'Needed'], ['acted_without
 let pending = null;
 
 /** Select the run, wait for its steps to load, put the shared playhead on the step and open Watch there. */
-function openAnchor(anchor, setBusy, setFailed) {
+export function openAnchor(anchor, setBusy, setFailed) {
   if (pending) pending.cancel();
   const from = location.hash;
   setBusy(anchor.source_id);
   setFailed(null);
-  const session = sessionOf(anchor.run);
+  const session = (anchor.session && sessionOf(anchor.session)) || sessionOf(anchor.run);
   if (session === null) { setBusy(null); setFailed(anchor.source_id); return; }
   selectRun(session);
   const end = Date.now() + 90000;
@@ -444,7 +446,13 @@ function QueryHits({hits, choose}) {
   })}</ul>`;
 }
 
-function RecordedKnowledge() {
+/** A `player_source` call names the real frame and the alias the player saw; the alias is never a link. */
+function SourceRead({call}) {
+  if (call.tool !== 'player_source') return null;
+  return html`<p class="wrapany" data-source-read>Source re-read: ${call.source_id || 'frame unavailable'} · <span class="tag alias">${sourceReadText(call)}</span> <span class="tag quiet">non-clickable</span></p>`;
+}
+
+export function RecordedKnowledge() {
   const {runId} = useStore();
   const [actor, setActor] = useState('');
   const [request, setRequest] = useState('');
@@ -481,7 +489,8 @@ function RecordedKnowledge() {
         <${Omissions} value=${{coverage:data.snapshot.coverage,omitted_characters:data.snapshot.omitted_characters}} />
         ${entry && !data.snapshot.items.length ? html`<p>Entry unavailable in this snapshot.</p>` : null}${data.snapshot.items.map(item => html`<details data-reader-entry open=${!!entry}><summary class="wrapany">${item.kind}: ${item.title || item.subject || item.id || 'ID unavailable'}</summary><p class="mono wrapany">${item.id || 'ID unavailable'}</p><p class="wrapany">${item.lead || item.text || ''}</p>${item.body.map(part => html`<p class="wrapany">${part.text} · facts: ${part.facts.join(', ') || 'unavailable'}</p>`)}<${EntryState} item=${item} choose=${choose} /><${Replacements} history=${data.snapshot.history} id=${item.id} /><p class="wrapany">Seen: <${RecordedMarker} value=${item.seen} /> · last confirmed: <${RecordedMarker} value=${item.last_confirmed} />${item.source_ids.length ? ` · source IDs: ${item.source_ids.join(', ')}` : ''}</p><${SourceAnchors} anchors=${item.anchors} clocks=${data.snapshot.frame_clocks} depiction=${item.depiction_source_id} /><${Omissions} value=${item} /></details>`)}
         <p><button type="button" disabled=${after === 0} onClick=${() => setAfter(Math.max(0, after-25))}>Previous entries</button> <button type="button" disabled=${data.snapshot.next === null} onClick=${() => setAfter(data.snapshot.next)}>Next entries</button></p>` : html`<p>Frozen delivered snapshot unavailable (${data.snapshot_status || 'unavailable'}).</p>`}
-      <h3>Recorded calls and results</h3>${data.calls.length ? data.calls.map(c => html`<details><summary class="wrapany">${c.tool} · ${c.status} · ${c.request_id || 'request unavailable'}</summary>
+      <h3>Recorded calls and results</h3>${data.calls.length ? data.calls.map(c => html`<details data-call=${c.tool}><summary class="wrapany">${c.tool} (${toolLabel(c.tool)}) · ${c.status} · ${c.request_id || 'request unavailable'}${c.player_alias ? ` · player saw as ${c.player_alias}` : ''}</summary>
+        <${SourceRead} call=${c} />
         <p class="wrapany">Call: ${c.tool_call_id || 'unavailable'} · intent (unverified): ${c.intent || 'unavailable'} · cites: ${c.cites.join(', ') || 'none recorded'}</p>
         <p class="wrapany">Query: ${c.query || 'unavailable'} · returned IDs: <${EntryButtons} ids=${c.returned_ids} choose=${choose} />${c.result.resolution ? ` · resolution: ${label(c.result.resolution)}${c.result.resolved_from ? ` (${c.result.resolved_from})` : ''}` : ''} · operation: ${c.operation_id || 'unavailable'}</p>
         ${c.returned_hits?.length ? html`<${QueryHits} hits=${c.returned_hits} choose=${choose} />` : null}
@@ -494,14 +503,14 @@ function RecordedKnowledge() {
 }
 
 function Episodes() {
-  const {data, error} = useFrame('frame/episodes');
+  const {data, error} = useFrame('archive/episodes');
   return html`${!data ? html`<${Panel} title="Forgetting episodes" span="s12"><${Waiting} store=${store} what="the forgetting episodes" error=${error} /><//>` :
       !data.lineages.length ? html`<${Panel} title="Forgetting episodes" span="s12"><${Insufficient}>No episodes are tracked.<//><//>` :
       data.lineages.map(lineage => html`<${Panel} title=${`Lineage ${lineage.lineage}`} note=${`study ${lineage.study}`} span="s12"><p class="note">${lineage.note}</p><//>${lineage.episodes.map(episode => html`<${Episode} episode=${episode} />`)}`)}`;
 }
 
 /* ---------------------------------------------------------------- containers */
-const detailPath = id => `frame/containers/${id.split('/').map(encodeURIComponent).join('/')}`;
+const detailPath = id => `archive/containers/${id.split('/').map(encodeURIComponent).join('/')}`;
 
 function ContainerDetail({id}) {
   const {data, error} = useFrame(detailPath(id), 0);
@@ -516,7 +525,7 @@ function ContainerDetail({id}) {
 }
 
 function Containers() {
-  const {data, error} = useFrame('frame/containers?limit=500');
+  const {data, error} = useFrame('archive/containers?limit=500');
   const [pick, setPick] = useState(null);
   if (!data) return html`<${Panel} title="Containers" span="s12"><${Waiting} store=${store} what="the container inventory" error=${error} /><//>`;
   const kinds = Object.entries(data.kinds || {}).map(([k, n]) => `${n} ${k}`).join(' · ');

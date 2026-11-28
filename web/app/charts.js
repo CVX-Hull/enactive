@@ -36,15 +36,28 @@ const requestAxis = (C, range = {}) => ({type: 'value', ...range, name: 'request
   axisLabel: {color: C.muted, fontSize: 10}, axisLine: {lineStyle: {color: C.line}}, axisTick: {show: false}, splitLine: {show: false}});
 
 /* ---------------------------------------------------------------- Diagnostics: context and spend */
-/** Prompt tokens per player request, cached and uncached stacked, with a dashed line at every applied context cut. */
-export function contextOption(requests, cuts) {
+/** A cut the curator did not keep up with: it removed turns no briefing covered (#1037), or it was a rescue. */
+const uncovered = c => (c.uncovered_turns || 0) > 0 || c.cut_result === 'rescue';
+
+/** Prompt tokens per player request, cached and uncached stacked: shaded bands where requests were held waiting for
+ *  coverage, a teal line at each covered cut, an amber one at each uncovered cut, and a faint divider at each handoff. */
+export function contextOption(requests, cuts, waits = [], handoffs = []) {
   const C = palette();
   const known = requests.filter(r => r.prompt_tokens !== null);   // one category per request: stacking needs a category axis
   const at = new Map(known.map((r, i) => [r.index, i]));
+  // A wait or handoff may begin at a request drawn on no category (a recall, or one without usage): the next one drawn.
+  const nearest = index => {
+    if (index === null || index === undefined) return null;
+    if (at.has(index)) return at.get(index);
+    const next = known.findIndex(r => r.index >= index);
+    return next < 0 ? (known.length ? known.length - 1 : null) : next;
+  };
   const marked = cuts.filter(c => at.has(c.index));
   const byIndex = new Map(marked.map(c => [c.index, c]));
+  const bands = waits.map(w => [nearest(w.start_index), w.active ? known.length - 1 : nearest(w.end_index ?? w.start_index), w]).filter(([a, b]) => a !== null && b !== null);
   const area = (name, data, color, extra) => ({name, type: 'line', stack: 'prompt', data, symbol: 'none', lineStyle: {color, width: 1}, itemStyle: {color},
     areaStyle: {color, opacity: 0.35}, emphasis: {disabled: true}, ...extra});
+  const lines = (list, color, type, opacity = 0.95) => ({silent: true, symbol: 'none', animation: false, label: {show: false}, lineStyle: {color, width: 1.5, type, opacity}, data: list});
   return {animation: false, aria: {enabled: true}, textStyle: {fontFamily: 'system-ui, sans-serif'},
     legend: {top: 0, left: 0, icon: 'rect', itemWidth: 12, itemHeight: 8, textStyle: {color: C.fg, fontSize: 11}, data: ['Cache read', 'Not cached']},
     grid: {left: 48, right: 14, top: 30, bottom: 36},
@@ -52,17 +65,24 @@ export function contextOption(requests, cuts) {
       const r = known[ps[0].dataIndex];
       if (!r) return '';
       const cut = byIndex.get(r.index);
+      const wait = bands.find(([a, b]) => ps[0].dataIndex >= a && ps[0].dataIndex <= b);
       return `<b>${esc(r.request_id)}</b>${r.seq === null ? '' : ` · step ${esc(r.seq)}`}<br>${esc(kilo(r.prompt_tokens))} prompt tokens<br>${esc(kilo(r.cache_read))} cache read`
-        + `${cut ? `<br>cut: ${esc(kilo(cut.tokens_before))} → ${esc(kilo(cut.tokens_after))} (${esc(cut.removed_turns)} turns)` : ''}`;
+        + `${cut ? `<br>${uncovered(cut) ? 'uncovered cut' : 'cut'}: ${esc(kilo(cut.tokens_before))} → ${esc(kilo(cut.tokens_after))} (${esc(cut.removed_turns)} turns${cut.uncovered_turns ? `, ${esc(cut.uncovered_turns)} uncovered` : ''})` : ''}`
+        + `${wait ? `<br>coverage wait: ${esc(wait[2].requests)} requests held${wait[2].active ? ', still waiting' : ''}` : ''}`;
     }},
     xAxis: {...requestAxis(C), type: 'category', boundaryGap: false, data: known.map(r => r.index), axisLabel: {color: C.muted, fontSize: 10, interval: Math.ceil(known.length / 8) - 1}},
     yAxis: valueAxis(C, v => (v >= 1000 ? `${v / 1000}k` : v)),
-    series: [area('Cache read', known.map(r => r.cache_read || 0), C.series1, {}), area('Not cached', known.map(r => r.prompt_tokens - (r.cache_read || 0)), C.series2, {
-      markLine: {silent: true, symbol: 'none', animation: false, label: {show: false}, lineStyle: {color: C.teal, width: 1, type: 'dashed', opacity: 0.9}, data: marked.map(c => ({xAxis: at.get(c.index)}))}})]};
+    series: [area('Cache read', known.map(r => r.cache_read || 0), C.series1, {
+        markArea: {silent: true, itemStyle: {color: C.watch, opacity: 0.16}, data: bands.map(([a, b]) => [{xAxis: a}, {xAxis: b}])},
+        markLine: lines(handoffs.map(h => nearest(h.index)).filter(i => i !== null).map(i => ({xAxis: i})), C.muted, 'dotted', 0.7)}),
+      area('Not cached', known.map(r => r.prompt_tokens - (r.cache_read || 0)), C.series2, {
+        markLine: lines(marked.map(c => (uncovered(c) ? {xAxis: at.get(c.index), name: 'uncovered', lineStyle: {color: C.watch, type: 'solid', width: 2}}
+          : {xAxis: at.get(c.index), name: 'covered'})), C.teal, 'dashed')})]};
 }
 
-/** Cumulative spend by request: the provider's own figure where any is recorded, else the configured-rate estimate. */
-export function spendOption(requests, limit) {
+/** Cumulative spend by request: the provider's own figure where any is recorded, else the configured-rate estimate.
+ *  Each curator session is marked at the request nearest its start, with what it cost. */
+export function spendOption(requests, limit, sessions = []) {
   const C = palette();
   const reported = requests.some(r => r.reported_cost_usd !== null);
   let total = 0;
@@ -71,12 +91,19 @@ export function spendOption(requests, limit) {
     return [r.index, +total.toFixed(6)];
   });
   const near = typeof limit === 'number' && total >= limit * 0.5;   // a far-off limit would flatten the curve
+  const placed = sessions.filter(s => typeof s.started_wall === 'number').map(s => {
+    let k = requests.findIndex(r => typeof r.wall === 'number' && r.wall >= s.started_wall);
+    if (k < 0) k = points.length - 1;
+    return k < 0 ? null : {coord: points[k], session: s};
+  }).filter(Boolean);
   return {animation: false, aria: {enabled: true}, textStyle: {fontFamily: 'system-ui, sans-serif'}, grid: {left: 52, right: 18, top: 16, bottom: 36},
     tooltip: {trigger: 'axis', ...tooltipBase(C), axisPointer: {lineStyle: {color: C.muted}}, formatter: ps => `request ${esc(ps[0].value[0])}<br>$${esc(ps[0].value[1].toFixed(4))}`},
     xAxis: requestAxis(C, {min: 0, max: points.length ? points[points.length - 1][0] : 1}),
     yAxis: {...valueAxis(C, v => `$${+v.toFixed(2)}`), ...(near ? {max: Math.ceil(limit)} : {})},
-    series: [{type: 'line', data: points, symbol: 'none', lineStyle: {color: C.series1, width: 2}, itemStyle: {color: C.series1}, areaStyle: {color: C.series1, opacity: 0.1},
-      markPoint: points.length ? {symbol: 'circle', symbolSize: 8, itemStyle: {color: C.series1, borderColor: C.surface, borderWidth: 2}, data: [{coord: points[points.length - 1]}],
+    series: [{name: 'Player', type: 'line', data: points, symbol: 'none', lineStyle: {color: C.series1, width: 2}, itemStyle: {color: C.series1}, areaStyle: {color: C.series1, opacity: 0.1},
+      markPoint: points.length ? {symbol: 'circle', symbolSize: 8, itemStyle: {color: C.series1, borderColor: C.surface, borderWidth: 2},
+        data: [{coord: points[points.length - 1], name: 'total'}, ...placed.map(p => ({coord: p.coord, name: `curator ${p.session.session_kind || 'session'}`, symbol: 'diamond', symbolSize: 10,
+          itemStyle: {color: C.calc, borderColor: C.surface, borderWidth: 1}, label: {show: false}}))],
         label: {show: true, position: 'left', color: C.fg, fontSize: 11, formatter: `$${total.toFixed(2)}`}} : undefined,
       markLine: near ? {silent: true, symbol: 'none', animation: false, lineStyle: {color: C.muted, width: 1, type: 'dashed'}, label: {position: 'insideStartTop', color: C.muted, fontSize: 10, formatter: `limit $${limit}`}, data: [{yAxis: limit}]} : undefined}]};
 }

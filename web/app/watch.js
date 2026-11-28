@@ -1,8 +1,14 @@
-// Watch: the game screen, the timeline playhead and the story feed, on one shared step.
-import {html, useEffect, useLayoutEffect, useMemo, useRef, useState, Panel, Pv, Segmented, Waiting, clockTime, gameClock, keyText, kilo, label, mmss, count, plural, readingNote} from './ui.js';
-import {store, set, framePath, selectedRun, setCursorIndex, setCursorSeq, cursorIndex, goLive, isLive, runStart, setFeedWide, recordedPage} from './data.js';
-import {findingText, pauseMet, vitalBadges} from './supervise.js';
+// Watch: the game screen, the continuity timeline, the player's working state and the story feed, on one shared step.
+import {html, useEffect, useLayoutEffect, useMemo, useRef, useState, Panel, Pv, Segmented, Waiting, clockTime, gameClock, keyText, kilo,
+  label, mmss, count, plural, readingNote, secs, actorNumber} from './ui.js';
+import {store, set, framePath, selectedRun, setCursorIndex, setCursorSeq, cursorIndex, goLive, isLive, runStart, setFeedWide,
+  recordedPage, runPath, useView} from './data.js';
+import {findingText, vitalBadges} from './supervise.js';
 import {Inspector} from './inspector.js';
+import {isAlertEntry, isReadTool, isKnowledgeTool, toolLabel, cutTone, uncoveredCut, deliveryWord, deliveryTone, deltaChips,
+  agendaAt, agendaDiffs, versionAt, cutsUpTo, actorNumbers, sourceReadText} from './continuity.js';
+
+export {isAlertEntry};
 
 /* ---------------------------------------------------------------- the player */
 const SCALE_KEY = 'feed-scale';
@@ -174,13 +180,54 @@ function FeedPlayer({run, step}) {
 
 /* ---------------------------------------------------------------- timeline */
 const TIMELINE_NAME = 'Timeline playhead';
-/** What counts as an alert, on the timeline and in the story alike: a finding, or a call that failed or was refused. */
-export const isAlertEntry = e => e.entry_kind === 'finding' || (e.entry_kind === 'step' && (e.status === 'error' || e.status === 'refused'));
-/** The story entries the timeline marks: three lanes, so a mark is told by its place as well as its colour. */
-const LANES = [['cut', 'Context cut', e => e.entry_kind === 'context_cut' && e.outcome === 'applied'],
-  ['memory', 'Memory update', e => e.entry_kind === 'knowledge_update' && e.outcome === 'delivered'],
-  ['alert', 'Alert', isAlertEntry]];
+/** Four lanes, so a mark is told by its place as well as its colour: who was acting, what happened to the context, what
+ *  reached memory or was read from it, and what went wrong. */
+const LANES = [['actor', 'Actors'], ['context', 'Context'], ['memory', 'Memory'], ['alert', 'Alerts']];
 const VIEW_W = 1000, LANE_H = 10;
+
+/** Where each mark of the feed falls on the steps: indexes, spans and the actor band. */
+function useMarks(steps, feed, summary) {
+  return useMemo(() => {
+    const at = new Map(steps.map((s, i) => [s.seq, i]));
+    const walls = steps.map(s => s.wall);
+    const byWall = wall => {   // the last step at or before a time
+      if (typeof wall !== 'number') return steps.length - 1;
+      let lo = 0, hi = walls.length - 1, found = -1;
+      while (lo <= hi) { const mid = (lo + hi) >> 1; if ((walls[mid] ?? Infinity) <= wall) { found = mid; lo = mid + 1; } else hi = mid - 1; }
+      return Math.max(0, found);
+    };
+    const index = e => at.get(e.seq);
+    const out = {covered: [], uncovered: [], waits: [], brief: [], quiet: [], reads: [], alerts: [], actors: [], handoffs: []};
+    const actorOf = new Map();
+    for (const e of feed) {
+      const i = index(e);
+      if (e.entry_kind === 'step' && e.actor && e.exact_step && e.seq !== null) actorOf.set(e.seq, e.actor);
+      if (i === undefined) continue;
+      if (e.entry_kind === 'context_cut') out[cutTone(e)].push(i);
+      else if (e.entry_kind === 'coverage_wait') out.waits.push([i, e.active ? steps.length - 1 : Math.max(i, byWall(e.end_wall)), !!e.active]);
+      else if (e.entry_kind === 'knowledge_delivery') {
+        if (e.outcome === 'delivered') out.brief.push(i);
+        else if (e.delivery_kind === 'empty_suppressed') out.quiet.push(i);
+      } else if (e.entry_kind === 'step' && (isReadTool(e.tool) || e.tool === 'player_agenda')) out.reads.push(i);
+      if (isAlertEntry(e)) out.alerts.push(i);
+    }
+    const reserve = summary && summary.host_telemetry && summary.host_telemetry.spend_reserve_reached;
+    if (reserve && reserve.count && reserve.latest && steps.length) out.alerts.push(byWall(reserve.latest.wall_time));
+    // The actor band: each step's actor, carried forward over steps no trace entry names.
+    const numbers = actorNumbers(feed);
+    let current = null, start = 0;
+    steps.forEach((s, i) => {
+      const actor = actorOf.get(s.seq) ?? current;
+      if (actor !== current) {
+        if (current !== null) { out.actors.push({actor: current, from: start, to: i}); out.handoffs.push(i); }
+        current = actor; start = i;
+      }
+    });
+    if (current !== null) out.actors.push({actor: current, from: start, to: steps.length - 1});
+    out.actors.forEach(a => { a.name = numbers.get(a.actor) || actorNumber(0); });
+    return out;
+  }, [steps, feed, summary && summary.host_telemetry]);
+}
 
 function Timeline() {
   const steps = store.steps;
@@ -192,10 +239,7 @@ function Timeline() {
   const edge = followsLive ? 'the live edge' : 'the latest recorded step';
   const help = `Left and right arrows move one step. Hold Shift to move ten. Home goes to the first step. End goes to ${edge}.`;
   const place = i => (last ? i / last * VIEW_W : VIEW_W);
-  const marks = useMemo(() => {
-    const at = new Map(steps.map((s, i) => [s.seq, i]));
-    return LANES.map(([, , match]) => store.feed.filter(match).map(e => at.get(e.seq)).filter(i => i !== undefined));
-  }, [store.feed, steps]);
+  const m = useMarks(steps, store.feed, store.summary);
   const onKeyDown = e => {
     const delta = e.shiftKey ? 10 : 1;
     if (e.key === 'ArrowLeft') { e.preventDefault(); setCursorIndex(index - delta); }
@@ -208,120 +252,191 @@ function Timeline() {
     if (!box.width || !steps.length) return;
     setCursorIndex(Math.round(Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)) * last));
   };
-  const head = useRef(null), fill = useRef(null);
-  useEffect(() => {   // sized through the DOM style object: the page CSP forbids inline style attributes
+  const head = useRef(null), fill = useRef(null), names = useRef(null);
+  useEffect(() => {   // placed through the DOM style object: the page CSP forbids inline style attributes
     const share = `${(last ? Math.max(0, index) / last : 1) * 100}%`;
     if (head.current) head.current.style.left = share;
     if (fill.current) fill.current.style.width = share;
+    for (const node of names.current ? names.current.children : []) node.style.left = `${Number(node.dataset.at) * 100}%`;
   });
+  const tick = (i, lane, extra = '') => html`<line class=${extra} x1=${place(i)} x2=${place(i)} y1=${lane * LANE_H + 1} y2=${(lane + 1) * LANE_H - 1} vector-effect="non-scaling-stroke" />`;
+  const dot = (i, lane) => html`<line class="dot" x1=${place(i)} x2=${place(i)} y1=${lane * LANE_H + 4} y2=${lane * LANE_H + 6} vector-effect="non-scaling-stroke" />`;
+  const span = (from, to, lane, klass) => html`<rect class=${klass} x=${place(from)} y=${lane * LANE_H + 1} width=${Math.max(3, place(to) - place(from))} height=${LANE_H - 2} />`;
   const t0 = runStart();
+  const counts = {actor: m.actors.length, context: m.covered.length + m.uncovered.length, memory: m.brief.length + m.quiet.length, alert: m.alerts.length};
   return html`<section class="timeline panel interp" aria-label="Timeline">
     <span id="timeline-help" hidden>${help}</span>
     <div class="tl" id="tl" tabindex="0" role="slider" aria-label=${TIMELINE_NAME} aria-describedby="timeline-help" aria-valuemin="0" aria-valuemax=${last}
       aria-valuenow=${Math.max(0, index)} aria-valuetext=${step ? `Step ${step.seq}${live ? ', live' : ''}` : 'no steps'} onKeyDown=${onKeyDown}
       onPointerDown=${e => { if (e.button) return; e.currentTarget.setPointerCapture(e.pointerId); move(e); }}
       onPointerMove=${e => { if (e.currentTarget.hasPointerCapture(e.pointerId)) move(e); }}>
+      <svg class="tlmarks" viewBox=${`0 0 ${VIEW_W} ${LANE_H * LANES.length}`} preserveAspectRatio="none" aria-hidden="true">
+        <g class="lane-bg">${LANES.map((_, lane) => html`<rect x="0" y=${lane * LANE_H + 1} width=${VIEW_W} height=${LANE_H - 2} />`)}</g>
+        <g class="mark-actor">${m.actors.map((a, k) => span(a.from, a.to, 0, `actor-${k % 2 ? 'b' : 'a'}`))}${m.handoffs.map(i => tick(i, 0, 'handoff'))}</g>
+        <g class="mark-context">${m.waits.map(([from, to, active]) => span(from, to, 1, `wait ${active ? 'active' : ''}`))}${m.covered.map(i => tick(i, 1, 'covered'))}${m.uncovered.map(i => tick(i, 1, 'uncovered'))}</g>
+        <g class="mark-memory">${m.brief.map(i => tick(i, 2, 'brief'))}${m.quiet.map(i => tick(i, 2, 'quiet'))}${m.reads.map(i => dot(i, 2))}</g>
+        <g class="mark-alert">${m.alerts.map(i => tick(i, 3))}</g></svg>
+      <div class="tlactors" ref=${names} aria-hidden="true">${m.actors.map(a => html`<span data-at=${last ? a.from / last : 0}>${a.name}</span>`)}</div>
       <div class="tltrack"><div class="tlfill" ref=${fill}></div></div>
-      <svg class="tlmarks" viewBox=${`0 0 ${VIEW_W} ${LANE_H * 3}`} preserveAspectRatio="none" aria-hidden="true">
-        ${marks.map((list, lane) => html`<g class=${`mark-${LANES[lane][0]}`}>${list.map(i => html`<line x1=${place(i)} x2=${place(i)} y1=${lane * LANE_H + 1} y2=${(lane + 1) * LANE_H - 1} vector-effect="non-scaling-stroke" />`)}</g>`)}</svg>
       <div class="tlhead" ref=${head}></div>
     </div>
     <div class="tlfoot"><span class="num">${step && typeof step.wall === 'number' ? mmss(step.wall - t0) : ''}</span>
-      <span class="legend" id="tl-legend">${LANES.map(([key, name], lane) => html`<span class=${`lg-${key}`}><i></i>${name} <b class="num">${marks[lane].length}</b></span>`)}</span>
+      <span class="legend" id="tl-legend">
+        <span class="lg-actor"><i></i>Actors <b class="num">${counts.actor}</b></span>
+        <span class="lg-cut"><i></i>Cuts <b class="num">${counts.context}</b>${m.uncovered.length ? html` <span class="lg-uncovered">(${m.uncovered.length} uncovered)</span>` : null}</span>
+        <span class="lg-wait"><i></i>Waits <b class="num">${m.waits.length}</b></span>
+        <span class="lg-memory"><i></i>Memory <b class="num">${counts.memory}</b></span>
+        <span class="lg-read"><i></i>Reads <b class="num">${m.reads.length}</b></span>
+        <span class="lg-alert"><i></i>Alerts <b class="num">${counts.alert}</b></span></span>
       <span class="num">${steps.length ? `${count(Math.max(0, index) + 1)} / ${count(steps.length)}` : 'no steps'}</span></div></section>`;
 }
 
+/* ---------------------------------------------------------------- working state */
+const STATUS_ORDER = {active: 0, paused: 1, done: 2, dropped: 3};
+/** The player's committed `player_agenda` as of the playhead, the knowledge version it held then, and what a handoff carried. */
+function AgendaDock({handoffs}) {
+  const s = store.summary;
+  const step = store.steps[cursorIndex()];
+  const seq = step ? step.seq : null;
+  const {state, change, carried} = agendaAt(seq, store.feed, s, handoffs);
+  const version = versionAt(seq, store.feed);
+  const numbers = actorNumbers(store.feed, handoffs);
+  const threads = state ? [...state.threads].sort((a, b) => (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)) : [];
+  const unused = s && s.agenda && !s.agenda.tool_calls && !s.agenda.events_count;
+  const cuts = state ? state.cut_count : cutsUpTo(seq, store.feed);
+  const previous = carried ? numbers.get(carried.actor) : null;
+  const from = previous ? `${previous} → ${actorNumber(Number(previous))}` : '';
+  return html`<section class="dock panel interp" id="agenda-dock" aria-label="Working state">
+    <header><h2>Working state</h2><span class="note num">player_agenda${seq === null ? '' : ` as of step ${seq}`}${change && change.seq !== null ? ` · last change #${change.seq}` : ''}</span>
+      <span class="gap"></span>
+      ${carried ? html`<span class="tag carry" id="dock-carried" title="The next actor started from what this handoff carried">carried at handoff #${carried.seq} · ${from}</span>` : null}
+      ${version ? html`<a class="spill head" id="dock-version" href=${`#memory?version=${encodeURIComponent(version)}`}>${version} → Memory</a>` : null}</header>
+    ${threads.length ? html`<ul class="threads" id="agenda-threads">${threads.map(t => html`<li data-status=${t.status}><span class="tstat">${t.status}</span><b>${t.title}</b>
+        ${carried ? html`<span class="tag carry">carried</span>` : null}${t.notes || t.summary ? html`<span class="note">${t.notes || t.summary}</span>` : null}</li>`)}</ul>`
+      : html`<p class="note" id="agenda-empty">Agenda empty (0 threads · ${plural(cuts, 'cut')})${unused ? ' — player_agenda unused' : ''}</p>`}</section>`;
+}
+
 /* ---------------------------------------------------------------- story feed */
-const FILTERS = [['all', 'All', e => !(e.entry_kind === 'context_cut' && e.outcome !== 'applied')], ['cuts', 'Cuts', e => e.entry_kind === 'context_cut'],
-  ['memory', 'Memory', e => e.entry_kind === 'knowledge_update'], ['alerts', 'Alerts', isAlertEntry]];
+const isContinuity = e => e.entry_kind === 'agenda_change' || (e.entry_kind === 'finding' && e.finding_kind === 'handoff')
+  || (e.entry_kind === 'step' && (isReadTool(e.tool) || e.tool === 'player_agenda' || e.tool === 'player_handoff'));
+const FILTERS = [['all', 'All', () => true], ['cuts', 'Cuts & Waits', e => e.entry_kind === 'context_cut' || e.entry_kind === 'coverage_wait'],
+  ['memory', 'Memory', e => e.entry_kind === 'knowledge_delivery'], ['agenda', 'Agenda & Reads', isContinuity], ['alerts', 'Alerts', isAlertEntry]];
 const WINDOW = 60, MORE = 120;
 
-const searchText = e => {
-  const cutResult = e.entry_kind !== 'context_cut' || e.outcome === 'applied' ? e.cut_result : null;
-  return [e.intent, e.tool, e.summary, e.knowledge_version, e.reason, cutResult, cutResult && label(cutResult),
-    e.finding_kind && findingText({kind: e.finding_kind, payload: e.payload}),
-    (e.keys || []).map(keyText).join(' '), e.seq === null ? '' : `#${e.seq}`].filter(Boolean).join(' ').toLowerCase();
-};
-export const toolText = tool => label(tool || 'recorded step');
+const searchText = e => [e.intent, e.tool, e.tool && toolLabel(e.tool), e.summary, e.knowledge_version, e.reason, e.cut_result, e.cut_result && label(e.cut_result),
+  e.delivery_kind && deliveryWord(e.delivery_kind), e.op, e.agenda && e.agenda.threads.map(t => t.title).join(' '),
+  e.entry_kind === 'coverage_wait' && 'coverage wait', e.entry_kind === 'context_cut' && 'context cut',
+  e.finding_kind && findingText({kind: e.finding_kind, payload: e.payload}), (e.keys || []).map(keyText).join(' '),
+  e.seq === null ? '' : `#${e.seq}`].filter(Boolean).join(' ').toLowerCase();
 export const usd = (value, digits = 4) => (value === null || value === undefined ? null : `$${Number(value).toFixed(digits)}`);
 
 function StepCard({entry}) {
   const keys = (entry.keys || []).map(keyText).join(' ');
+  const read = entry.source_read;
   const meta = [entry.seq === null ? null : `#${entry.seq}${entry.exact_step ? '' : ' (on screen)'}`, entry.latency_ms === null ? null : `${Math.round(entry.latency_ms)} ms`,
-    entry.reported_provider, usd(entry.reported_cost_usd)].filter(Boolean).join(' · ');
-  return html`${entry.intent ? html`<span class="intent">${entry.intent}</span>` : html`<span class="intent plain">${toolText(entry.tool)}${keys ? '' : ' · no input'}</span>`}
-    <span class="cardrow">${entry.intent ? html`<${Pv} source="player_claim" />` : null}<span class="tool">${toolText(entry.tool)}${keys ? html` · <b class="keys-sent">${keys}</b>` : null}</span>${
-      entry.status === 'error' || entry.status === 'refused' ? html`<span class="state alert">${entry.status}</span>` : entry.status === 'pending' ? html`<span class="state clear">pending</span>` : null}</span>
+    entry.reported_provider, entry.applied_service_tier && entry.applied_service_tier !== 'default' ? entry.applied_service_tier : null, usd(entry.reported_cost_usd)].filter(Boolean).join(' · ');
+  const kind = isKnowledgeTool(entry.tool) ? 'knowledge' : entry.tool === 'player_source' ? 'source' : entry.tool === 'player_agenda' ? 'agenda' : entry.tool === 'player_handoff' ? 'handoff' : null;
+  return html`${entry.intent ? html`<span class="intent">${entry.intent}</span>` : html`<span class="intent plain">${toolLabel(entry.tool)}${keys ? '' : ' · no input'}</span>`}
+    <span class="cardrow">${entry.intent ? html`<${Pv} source="player_claim" />` : null}${kind ? html`<span class=${`toolchip ${kind}`}>${toolLabel(entry.tool)}</span>` : null}
+      <span class="tool">${kind ? '' : toolLabel(entry.tool)}${keys ? html`${kind ? '' : ' · '}<b class="keys-sent">${keys}</b>` : null}</span>
+      ${read ? html`<span class="tag alias" data-alias=${read.player_alias || ''}>${sourceReadText(read)}</span><span class="tag quiet" title="The player read this frame by its alias; the operator sees the real one">non-clickable</span>` : null}
+      ${entry.status === 'error' || entry.status === 'refused' ? html`<span class="state alert">${entry.status}</span>` : entry.status === 'pending' ? html`<span class="state clear">pending</span>` : null}</span>
     <span class="meta num">${meta}</span>`;
 }
 function CutCard({entry}) {
-  const applied = entry.outcome === 'applied';
-  const saved = applied && entry.tokens_before !== null && entry.tokens_after !== null ? entry.tokens_before - entry.tokens_after : null;
-  return html`<span class="mtitle">${applied ? 'Context cut' : 'Cut held back'}${applied && entry.cut_result ? ` · ${label(entry.cut_result)}` : ''}${entry.knowledge_version ? ` · ${entry.knowledge_version}` : ''}</span>
-    ${applied ? html`<span class="num">${kilo(entry.tokens_before)} → ${kilo(entry.tokens_after)} tokens${saved === null ? '' : ` (−${kilo(saved)})`}</span>
-      <span class="meta num">${entry.images_before ?? '—'} → ${entry.images_after ?? '—'} imgs · ${entry.removed_turns ?? '—'} turns cut${entry.triggers.length ? ` · ${entry.triggers.map(label).join(', ')}` : ''}</span>`
-    : html`<span class="meta num">${kilo(entry.tokens_before)} tokens · ${label(entry.reason || 'reason unknown')}</span>`}`;
+  const saved = entry.tokens_before !== null && entry.tokens_after !== null ? entry.tokens_before - entry.tokens_after : null;
+  const b = entry.briefing;
+  return html`<span class="mtitle">Context cut${entry.cut_result ? ` · ${label(entry.cut_result)}` : ''}${b && b.knowledge_version ? ` · ${b.knowledge_version}` : entry.knowledge_version ? ` · ${entry.knowledge_version}` : ''}</span>
+    <span class="cardrow"><span class="num">${kilo(entry.tokens_before)} → ${kilo(entry.tokens_after)} tokens${saved === null ? '' : ` (−${kilo(saved)})`}</span>
+      ${uncoveredCut(entry) ? html`<span class="state watch uncovered" title="Turns removed that no briefing covered (#1037)">${plural(entry.uncovered_turns, 'uncovered turn')} · #1037</span>` : null}</span>
+    <span class="meta num">${entry.removed_turns ?? '—'} turns cut · ${entry.images_before ?? '—'} → ${entry.images_after ?? '—'} imgs${(entry.triggers || []).length ? ` · ${entry.triggers.map(label).join(', ')}` : ''}</span>
+    ${b ? html`<span class="joined"><span class="jtitle">Post-cut briefing</span><span class="num">${b.briefing_tokens === null ? 'tokens unrecorded' : `${kilo(b.briefing_tokens)} tok`} · ${plural(b.source_ids_count ?? 0, 'source')}${b.summary ? ` · ${b.summary}` : ''}</span></span>`
+      : html`<span class="meta">No briefing joined to this cut.</span>`}`;
 }
-function UpdateCard({entry}) {
-  const refused = entry.outcome === 'refused';
-  const undelivered = entry.outcome === 'undelivered';
-  const title = refused ? 'Memory update refused' : undelivered ? 'Memory update undelivered' : 'Memory updated';
-  return html`<span class="mtitle">${title}${entry.knowledge_version ? ` · ${entry.knowledge_version}` : ''}</span>
-    <span class="num">${refused ? label(entry.reason || 'reason unknown') : undelivered ? (entry.reason ? label(entry.reason) : entry.summary || 'delivery did not complete') : entry.summary || 'what changed is not recorded'}</span>
-    <span class="meta num">${entry.covered_step !== null ? `covers through step ${entry.covered_step}` : 'coverage unrecorded'}</span>`;
+function WaitCard({entry}) {
+  const ended = entry.active ? null : entry.ended_by === 'cut' ? 'closed by cut' : entry.ended_by === 'superseded' ? 'superseded' : label(entry.ended_by || 'ended');
+  return html`<span class="mtitle">Coverage wait${entry.reason ? ` · ${label(entry.reason)}` : ''}</span>
+    <span class="cardrow"><span class="num">${plural(entry.requests, 'request')} held · ${secs(entry.duration_seconds)} · peak ${kilo(entry.peak_tokens)} tok</span>
+      ${entry.active ? html`<span class="waitbadge">WAITING</span>` : html`<span class="tag">${ended}</span>`}</span>
+    ${entry.restore_possible ? html`<span class="meta">Open at the end of the trace: a restore may resume it.</span>` : null}`;
 }
-function FindingCard({entry}) {
-  return html`<span class="mtitle">${findingText({kind: entry.finding_kind, payload: entry.payload})}</span>
+function DeliveryCard({entry}) {
+  const chips = deltaChips(entry.delta_counts);
+  const preview = entry.delta_preview || [];
+  return html`<span class="mtitle"><span class=${`dkind ${deliveryTone(entry.delivery_kind)}`}>${deliveryWord(entry.delivery_kind)}</span>${entry.knowledge_version ? ` ${entry.knowledge_version}` : ''}${entry.previous_version ? html`<span class="note"> after ${entry.previous_version}</span>` : null}</span>
+    <span class="num">${entry.delivery_kind === 'refused' || entry.delivery_kind === 'undelivered' ? label(entry.reason || entry.summary || 'reason unrecorded') : entry.summary || 'what changed is not recorded'}</span>
+    ${chips.length ? html`<span class="chips">${chips.map(c => html`<span class="tag delta" data-bucket=${c.bucket}>${c.text}</span>`)}</span>` : null}
+    ${preview.length ? html`<span class="meta">${preview.slice(0, 2).map(p => `${label(p.bucket)}: ${p.text || p.title || p.subject || p.id}`).join(' · ')}${preview.length > 2 ? ` · +${preview.length - 2}` : ''}</span>` : null}
+    <span class="meta num">${entry.covered_step !== null && entry.covered_step !== undefined ? `covers through step ${entry.covered_step}` : 'coverage unrecorded'}</span>`;
+}
+const OPS = {upsert: 'Threads updated', set_status: 'Status changed', clear_completed: 'Completed threads cleared'};
+function AgendaCard({entry, diff}) {
+  const changed = diff || [];
+  return html`<span class="mtitle">Agenda · ${OPS[entry.op] || label(entry.op || 'change')}</span>
+    <span class="num">${plural(entry.thread_count, 'thread')} · ${entry.active_count} active</span>
+    ${changed.length ? html`<span class="meta">${changed.slice(0, 3).map(t => `${t.title} (${t.change})`).join(' · ')}${changed.length > 3 ? ` · +${changed.length - 3}` : ''}</span>` : null}`;
+}
+function FindingCard({entry, numbers}) {
+  const handoff = entry.finding_kind === 'handoff';
+  return html`<span class="mtitle">${handoff && numbers ? `Handoff ${numbers.get(entry.payload && entry.payload.actor) || ''} → next actor` : findingText({kind: entry.finding_kind, payload: entry.payload})}</span>
     <span class="cardrow"><${Pv} source=${entry.source} /><span class="meta num">${entry.seq === null ? '' : `#${entry.seq}`}</span></span>`;
 }
-const CARDS = {step: StepCard, context_cut: CutCard, knowledge_update: UpdateCard, finding: FindingCard};
-const KLASS = entry => (entry.entry_kind === 'step' ? (isAlertEntry(entry) ? 'step bad' : 'step') : entry.entry_kind === 'context_cut' ? `cut ${entry.outcome === 'applied' ? '' : 'held'}`
-  : entry.entry_kind === 'knowledge_update' ? 'memory' : `alert ${entry.finding_kind === 'death' || entry.finding_kind === 'custody_stop' ? 'severe' : ''}`);
+const CARDS = {step: StepCard, context_cut: CutCard, coverage_wait: WaitCard, knowledge_delivery: DeliveryCard, agenda_change: AgendaCard, finding: FindingCard};
+const KLASS = e => (e.entry_kind === 'step' ? `step${isAlertEntry(e) ? ' bad' : ''}${isReadTool(e.tool) || e.tool === 'player_agenda' ? ' read' : ''}`
+  : e.entry_kind === 'context_cut' ? `cut ${cutTone(e)}` : e.entry_kind === 'coverage_wait' ? `wait${e.active ? ' active' : ''}`
+  : e.entry_kind === 'knowledge_delivery' ? `memory ${deliveryTone(e.delivery_kind)}` : e.entry_kind === 'agenda_change' ? 'agenda'
+  : e.finding_kind === 'handoff' ? 'handoff' : `alert ${e.finding_kind === 'death' || e.finding_kind === 'custody_stop' ? 'severe' : ''}`);
 
 function StoryFeed() {
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [extra, setExtra] = useState({newer: 0, older: 0});
+  const [focus, setFocus] = useState(null);   // an entry another card pointed to
   const list = useRef(null);
   const index = cursorIndex();
   const step = store.steps[index];
   const seq = step ? step.seq : null;
   const needle = query.trim().toLowerCase();
   const counts = useMemo(() => Object.fromEntries(FILTERS.map(([key, , match]) => [key, store.feed.filter(match).length])), [store.feed]);
+  const diffs = useMemo(() => agendaDiffs(store.feed, store.summary), [store.feed, store.summary && store.summary.agenda]);
+  const numbers = useMemo(() => actorNumbers(store.feed), [store.feed]);
   const rows = useMemo(() => {   // newest first
     const match = FILTERS.find(([key]) => key === filter)[2];
     return store.feed.filter(e => match(e) && (!needle || searchText(e).includes(needle))).reverse();
   }, [store.feed, filter, needle]);
-  const reset = patch => { setExtra({newer: 0, older: 0}); patch(); };
+  const reset = patch => { setExtra({newer: 0, older: 0}); setFocus(null); patch(); };
   // The active entry, or the newest one at or before the playhead when the filter hides it.
   let active = rows.findIndex(e => e.seq === seq && e.entry_kind === 'step');
   if (active < 0) active = rows.findIndex(e => e.seq !== null && seq !== null && e.seq <= seq);
-  const center = Math.max(0, active);
+  const focused = focus === null ? -1 : rows.findIndex(e => e.id === focus);
+  const center = Math.max(0, focused >= 0 ? focused : active);
   const from = Math.max(0, center - WINDOW - extra.newer), to = Math.min(rows.length, center + WINDOW + extra.older);
-  useEffect(() => { setExtra({newer: 0, older: 0}); }, [store.runId]);
-  useEffect(() => {   // keep the active card in view inside the list, without moving the page
-    const box = list.current, card = box && box.querySelector('[aria-current="true"]');
+  useEffect(() => { setExtra({newer: 0, older: 0}); setFocus(null); }, [store.runId]);
+  useEffect(() => {   // keep the active (or pointed-to) card in view inside the list, without moving the page
+    const box = list.current, card = box && (box.querySelector('[data-focus="yes"]') || box.querySelector('[aria-current="true"]'));
     if (!card) { if (box && isLive()) box.scrollTop = 0; return; }
     const top = card.offsetTop, bottom = top + card.offsetHeight;
     if (top < box.scrollTop || bottom > box.scrollTop + box.clientHeight) box.scrollTop = Math.max(0, top - box.clientHeight / 3);
-  }, [seq, filter, needle, store.runId, rows.length === 0]);
-  const held = store.feedMeta ? store.feed.filter(e => e.entry_kind === 'context_cut' && e.outcome === 'held_back').length : 0;
+  }, [seq, filter, needle, store.runId, rows.length === 0, focus]);
+  const show = id => { setFilter('all'); setQuery(''); setExtra({newer: 0, older: 0}); setFocus(id); };
   return html`<section class="story panel interp" aria-label="Story feed">
-    <header class="storyhead"><h2>Story</h2><${Segmented} label="Story filter" className="chipset" value=${filter} onChange=${v => reset(() => setFilter(v))}
+    <header class="storyhead"><h2>Continuity</h2><span class="note num" id="story-count">${needle ? `${count(rows.length)} found` : `${count(rows.length)} shown`}</span>
+      <${Segmented} label="Story filter" className="chipset" value=${filter} onChange=${v => reset(() => setFilter(v))}
         options=${FILTERS.map(([value, text]) => ({value, text, id: `story-${value}`, count: counts[value]}))} />
-      <input type="search" id="story-search" placeholder="Search" aria-label="Search the story" value=${query} onInput=${e => { const v = e.currentTarget.value; reset(() => setQuery(v)); }} />
-      <span class="note num" id="story-count">${needle ? `${count(rows.length)} found` : filter === 'cuts' && held ? `${count(held)} held back` : ''}</span></header>
+      <input type="search" id="story-search" placeholder="Search the story" aria-label="Search the story" value=${query} onInput=${e => { const v = e.currentTarget.value; reset(() => setQuery(v)); }} /></header>
     ${!store.feedMeta ? html`<${Waiting} store=${store} what="the story" />` : html`
-      ${store.feedMeta.source === 'host_trace' ? null : html`<p class="note" id="story-source">No host trace is available for this run, so the story has no intents, costs, context cuts or memory updates.</p>`}
+      ${store.feedMeta.source === 'host_trace' ? null : html`<p class="note" id="story-source">No host trace is available for this run, so the story has no intents, costs, context cuts or memory deliveries.</p>`}
       <ol class="storylist" ref=${list} id="story">
         ${from > 0 ? html`<li class="more"><button type="button" class="btn" onClick=${() => setExtra({...extra, newer: extra.newer + MORE})}>${count(from)} newer</button></li>` : null}
         ${rows.slice(from, to).map(entry => {
           const Card = CARDS[entry.entry_kind];
           const here = entry.seq === seq && entry.entry_kind === 'step';
-          return html`<li key=${entry.id} class="card ${KLASS(entry)} ${here ? 'here' : ''}" aria-current=${here ? 'true' : null} data-entry=${entry.id} data-kind=${entry.entry_kind}>
-            <button type="button" class="cardmain" data-jump=${entry.seq} disabled=${entry.seq === null} onClick=${() => setCursorSeq(entry.seq)}><${Card} entry=${entry} /></button>
-            ${entry.entry_kind === 'step' ? html`<button type="button" class="inspect" aria-label=${`Inspect step ${entry.seq ?? ''}`} onClick=${() => { if (entry.seq !== null) setCursorSeq(entry.seq); set({inspect: entry.id}); }}>Inspect</button>`
-              : entry.entry_kind === 'knowledge_update' && entry.knowledge_version && entry.outcome === 'delivered' ? html`<a class="inspect" href=${`#memory/${encodeURIComponent(entry.knowledge_version)}`}>Open in Memory →</a>` : null}</li>`;
+          const version = entry.entry_kind === 'knowledge_delivery' ? entry.knowledge_version : entry.entry_kind === 'context_cut' && entry.briefing ? entry.briefing.knowledge_version : null;
+          return html`<li key=${entry.id} class="card ${KLASS(entry)} ${here ? 'here' : ''}" aria-current=${here ? 'true' : null} data-entry=${entry.id} data-kind=${entry.entry_kind} data-focus=${focus === entry.id ? 'yes' : null}>
+            <button type="button" class="cardmain" data-jump=${entry.seq} disabled=${entry.seq === null} onClick=${() => setCursorSeq(entry.seq)}><${Card} entry=${entry} diff=${diffs.get(entry.id)} numbers=${numbers} /></button>
+            <div class="acts">${entry.entry_kind === 'step' ? html`<button type="button" class="inspect" aria-label=${`Inspect step ${entry.seq ?? ''}`} onClick=${() => { if (entry.seq !== null) setCursorSeq(entry.seq); set({inspect: entry.id}); }}>Inspect</button>` : null}
+              ${entry.entry_kind === 'context_cut' && entry.briefing ? html`<button type="button" class="inspect" data-briefing=${entry.briefing.delivery_id} onClick=${() => show(entry.briefing.delivery_id)}>Briefing</button>` : null}
+              ${version ? html`<a class="inspect" data-version=${version} href=${`#memory?version=${encodeURIComponent(version)}`}>${version} → Memory</a>` : null}</div></li>`;
         })}
         ${to < rows.length ? html`<li class="more"><button type="button" class="btn" onClick=${() => setExtra({...extra, older: extra.older + MORE})}>${count(rows.length - to)} older</button></li>` : null}
         ${rows.length ? null : html`<li class="more note" role="status">${needle ? 'No entry matches.' : 'Nothing of this kind in this run.'}</li>`}
@@ -331,11 +446,11 @@ function StoryFeed() {
 /* ---------------------------------------------------------------- the tab */
 export function Watch() {
   const s = store.summary, run = store.runId;
+  const handoffs = useView(run ? runPath(run, 'handoffs') : null, s && s.live ? 10000 : 0);
   if (!s) return html`<section class="watchgrid" data-view="watch" aria-label="Watch"><${Panel} title="Watch" span="s12"><${Waiting} store=${store} what="the run" /><//></section>`;
   const step = store.steps[cursorIndex()];
+  const list = handoffs.data ? handoffs.data.handoffs : [];
   return html`<section class="watchgrid" data-view="watch" data-wide=${store.feedWide ? 'yes' : 'no'} aria-label="Watch">
-    <div class="watchleft">
-      ${pauseMet(s) ? html`<a class="pausealert" id="pausealert" href="#diagnostics/pause"><span class="state alert">Pause?</span> ${s.pause.met.join('; ')}. See why →</a>` : null}
-      <${FeedPlayer} run=${run} step=${step} /><${Timeline} /></div>
-    <div class="watchright"><${StoryFeed} /><${Inspector} /></div></section>`;
+    <div class="watchleft"><${FeedPlayer} run=${run} step=${step} /><${Timeline} /><${AgendaDock} handoffs=${list} /></div>
+    <div class="watchright"><${StoryFeed} /><${Inspector} handoffs=${list} /></div></section>`;
 }

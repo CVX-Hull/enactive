@@ -7,8 +7,9 @@ const {spawn} = require('node:child_process');
 const path = require('node:path');
 const S = require('./support.cjs');
 
-const ROUTES = ['#watch', '#memory', '#memory/requests', '#memory/player', '#memory/containers', '#memory/episodes', '#diagnostics', '#diagnostics/metrics',
-  '#diagnostics/readers', '#diagnostics/compare', '#diagnostics/explore', '#diagnostics/changes', '#diagnostics/failures', '#diagnostics/components'];
+const ROUTES = ['#watch', '#memory', '#memory/articles', '#memory/facts', '#memory/usage', '#curator', '#diagnostics', '#diagnostics/metrics',
+  '#diagnostics/readers', '#runs/lineage', '#runs/compare', '#runs/explore', '#runs/changes', '#runs/failures', '#runs/archive', '#runs/archive/containers',
+  '#runs/archive/player'];
 const CONFIGS = [['light', 1280, 'light', false], ['dark', 1280, 'dark', false], ['phone', 390, 'light', true]];
 
 function start(viewer) {

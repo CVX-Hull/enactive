@@ -277,20 +277,22 @@ class ViewerProber(threading.Thread):
                 try:
                     c1, b1 = self._request(f'{base}/runs')
                     c2, b2 = self._request(f'{base}/run/{self.session}/summary')
-                    c3, b3 = self._request(f'{base}/frame/curator-runner?run={self.session}')
+                    c3, b3 = self._request(f'{base}/run/{self.session}/curator')
                     c4, b4 = self._request(f'{base}/nonexistent')
                     c5, b5 = self._request(f'{base}/runs', method='POST')
-                    status_obj = b3.get('status') if isinstance(b3, dict) else None
+                    runner_obj = b3.get('runner') if isinstance(b3, dict) else None
+                    status_obj = runner_obj.get('status') if isinstance(runner_obj, dict) else None
                     pos = status_obj.get('position') if isinstance(status_obj, dict) else None
                     live_ordinal = pos.get('ordinal') if isinstance(pos, dict) else None
                     self.result.update(
-                        runs_ok=c1 == 200 and isinstance(b1, dict) and b1.get('schema') == 'spectator-view/3',
-                        summary_ok=c2 == 200 and isinstance(b2, dict) and b2.get('schema') == 'spectator-view/3' and b2.get('session') == self.session,
-                        runner_status_ok=(c3 == 200 and isinstance(b3, dict) and b3.get('schema') == 'spectator-frame/1'
-                                          and b3.get('source_status') == 'available'
+                        runs_ok=c1 == 200 and isinstance(b1, dict) and b1.get('schema') == 'spectator-view/4',
+                        summary_ok=c2 == 200 and isinstance(b2, dict) and b2.get('schema') == 'spectator-view/4' and b2.get('session') == self.session,
+                        runner_status_ok=(c3 == 200 and isinstance(b3, dict) and b3.get('schema') == 'spectator-view/4'
+                                          and isinstance(runner_obj, dict)
+                                          and runner_obj.get('source_status') == 'available'
                                           and isinstance(live_ordinal, int) and live_ordinal > 0),
-                        not_found_json_ok=c4 == 404 and isinstance(b4, dict) and b4.get('schema') == 'spectator-view/3' and b4.get('error') == 'not_found',
-                        method_not_allowed_json_ok=c5 == 405 and isinstance(b5, dict) and b5.get('schema') == 'spectator-view/3' and b5.get('error') == 'method_not_allowed',
+                        not_found_json_ok=c4 == 404 and isinstance(b4, dict) and b4.get('schema') == 'spectator-view/4' and b4.get('error') == 'not_found',
+                        method_not_allowed_json_ok=c5 == 405 and isinstance(b5, dict) and b5.get('schema') == 'spectator-view/4' and b5.get('error') == 'method_not_allowed',
                         live_ordinal=live_ordinal,
                         error=None,
                     )

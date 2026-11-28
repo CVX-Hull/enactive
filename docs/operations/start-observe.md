@@ -40,32 +40,22 @@ for the control path and its limits.
 outside supervision, and stops it with the other children. It shows the evaluator's
 interpretation of the live run and of archived runs when you pass
 `--runs DIR` to supervision, each reading labelled with its source and confidence
-([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view3)). Its
+([contract](../contracts/spectator-view.md#spectator-view-api-spectator-view4)). Its
 displays inform you and gate nothing; the Pause conditions it computes are advice.
 
 After the supervisor exits, open completed runs through the
 [recorded browser entry](#recorded-browser-entry).
 
-For recorded curator drafts, repeat `--curator-drafts LABEL=DIR` on the supervisor
-command, naming curator state directories holding `drafts/` and `drafts-archive/`.
-Under **Memory & Curator** → **Curator drafts & gate results** → **Curator drafts**,
-select those labels to inspect active and archived draft manifests without reading
-draft body files. See the [draft contract](../contracts/spectator-view.md#curator-drafts).
+Supervision automatically configures the live draft and gate sources from the
+knowledge root in `--curator-runner CONFIG`. See
+[launch options](campaign-supervision.md#freeze-launch-and-inspect) for explicit
+source labels and overrides.
 
-For recorded curator results, repeat `--curator-results LABEL=FILE` on the supervisor
-command, naming existing current result files or snapshots. Under **Memory & Curator** →
-**Curator drafts & gate results** → **Gate results**, select those labels to display
-recorded submission/restore status, `from_drafts` IDs and versions. No source is selected
-by default; labels do not associate a journal with the live player run. Files are read
-only, with a 16 MiB input ceiling and digest-bound paging. Empty, unavailable, unsupported
-and unknown data stay explicit; publication is not factual verification or measured lag.
-See the [result contract](../contracts/spectator-view.md#recorded-curator-results).
-
-For recorded curator sessions, repeat `--curator-sessions LABEL=FILE` with individual
-terminal `close-out.json` files. Select the operator-supplied alias under **Memory & Curator** →
-**Curator drafts & gate results** → **Curator sessions**; the recorded session and its
-draft collection events do not establish a run association or current draft state. See the
-[session contract](../contracts/spectator-view.md#recorded-curator-sessions).
+For additional recorded curator sources, repeat `--curator-drafts LABEL=DIR`,
+`--curator-results LABEL=FILE` or `--curator-sessions LABEL=FILE` on the supervisor
+command. Labels select tracked draft metadata, result journals or snapshots, and
+terminal `close-out.json` receipts. See the
+[source routes](../contracts/spectator-view.md#spectator-view-api-spectator-view4).
 
 If the page says **viewer unavailable**, the run, the frame and
 Pause are unaffected. Read the run directory's `viewer-stderr.txt` for the cause. The
@@ -90,6 +80,14 @@ play and the limits of browser timing evidence.
 
 ## Viewer procedures
 
+The page places run selection, key run figures, control status and Pause in the
+compact **Mission Control** bar. It groups the selected run into **Watch**,
+**Memory**, **Curator** and **Diagnostics**. **All Runs** contains Lineage,
+Compare, Explore, Changes, Failures and Archive. URL hashes such as `#watch`,
+`#memory?version=v2`, `#curator` and `#diagnostics` link directly to sections.
+See the [spectator component](../components/spectator.md#viewer) for details.
+
+
 ### Recorded browser entry
 
 After supervisor shutdown, start the recorded viewer from the project checkout.
@@ -100,11 +98,14 @@ After supervisor shutdown, start the recorded viewer from the project checkout.
 
 Open `http://127.0.0.1:8765/recorded/`. `--root` holds evaluation databases in
 session-named subdirectories. `--runs` names a parent directory of campaign
-packages with their manifests and original sources. For a sealed admission,
+packages with their manifests and original sources. The viewer lists Core 4
+stores and reports the number of sessions skipped for having only non-current
+stores. For a sealed admission,
 point `--runs` to the parent of its package and use a session-named copy of its
-final evaluation files under a separate evaluation root. The viewer opens
-**Watch** with the selected run's recorded screen, timeline and Story Feed; use
-**Memory & Curator** and **Diagnostics** to inspect curated knowledge, spend and telemetry.
+Core 4 final evaluation files under a separate evaluation root. In the redesigned
+browser, **Watch** opens the selected run's screen, timeline and Story Feed.
+Use **Memory** for knowledge, **Curator** for runner progress and grooming, and
+**Diagnostics** for spend and request telemetry.
 
 To include what an admission's boundary grooming spent, add `--curator-grooming FILE` with
 its `grooming-summary.json`. It is shown only for the run that receipt names; without it

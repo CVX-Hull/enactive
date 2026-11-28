@@ -1,7 +1,7 @@
 // Shared UI pieces: htm bound to Preact, provenance chips, formatting, small components.
 import {h, render, Fragment, createPortal} from '../vendor/preact.js';
 import htm from '../vendor/htm.js';
-import {useState as useStateHook} from '../vendor/hooks.js';
+import {useState as useStateHook, useRef as useRefHook, useLayoutEffect as useLayoutEffectHook} from '../vendor/hooks.js';
 export {h, render, Fragment, createPortal};
 export {useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback} from '../vendor/hooks.js';
 export const html = htm.bind(h);
@@ -68,8 +68,30 @@ export function scalar(value) {
   if (value && typeof value === 'object') for (const key of ['hours', 'value', 'count']) if (typeof value[key] === 'number') return value[key];
   return null;
 }
-export const compact = value => (value === null || value === undefined ? '—' : typeof value === 'object' ? JSON.stringify(value) : String(value));
 export const label = text => String(text).replace(/_/g, ' ');
+/** Any recorded value as words: numbers trimmed, a list or an object as its parts, never raw JSON or `null`. */
+export function plainValue(value, depth = 0) {
+  if (value === null || value === undefined) return 'none';
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  if (typeof value === 'number') return Math.abs(value) >= 100 ? count(Math.round(value)) : trim(+value.toFixed(3));
+  if (typeof value === 'string') return label(value);
+  if (Array.isArray(value)) return value.length ? value.slice(0, 8).map(v => plainValue(v, depth + 1)).join(', ') + (value.length > 8 ? ` +${value.length - 8}` : '') : 'none';
+  if (depth > 1) return '…';
+  const parts = Object.entries(value).filter(([, v]) => v !== null && v !== undefined && !(Array.isArray(v) && !v.length));
+  return parts.length ? parts.map(([k, v]) => `${label(k)} ${plainValue(v, depth + 1)}`).join(' · ') : 'none';
+}
+/** Seconds as a short duration: `42 s`, `3 m 05 s`, `1 h 02 m`. */
+export function secs(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return '—';
+  const s = Math.max(0, Math.round(Number(value)));
+  if (s < 60) return `${s} s`;
+  if (s < 3600) return `${Math.floor(s / 60)} m ${String(s % 60).padStart(2, '0')} s`;
+  return `${Math.floor(s / 3600)} h ${String(Math.floor(s % 3600 / 60)).padStart(2, '0')} m`;
+}
+/** A recorded decimal amount (the provider's own text) at cents, or a dash. */
+export const usd2 = text => (text === null || text === undefined || text === '' || !Number.isFinite(Number(text)) ? '—' : `$${Number(text).toFixed(2)}`);
+/** Actors as the trace numbers them: `001`, `002`, in the order they first appear. */
+export const actorNumber = index => String(index + 1).padStart(3, '0');
 export function median(values) {
   const sorted = values.filter(v => v !== null && v !== undefined).sort((a, b) => a - b);
   if (!sorted.length) return null;
@@ -122,8 +144,31 @@ export function Table({columns, rows, onPick, selected, empty = 'Nothing recorde
       onPick && k === 0 ? html`<button type="button" class="link" aria-pressed=${selected === i} onClick=${() => onPick(i, row)}>${c.render ? c.render(row, i) : row[c.key]}</button>` : c.render ? c.render(row, i) : row[c.key]}</td>`)}</tr>`)}</tbody></table></div>`;
 }
 
-export function SubNav({tabs, base, current, label: aria}) {
-  return html`<nav class="subnav" aria-label=${aria}>${tabs.map(([id, text]) => html`<a href=${`#${base}/${id}`} aria-current=${current === id ? 'page' : null}>${text}</a>`)}</nav>`;
+/** A row of parts whose widths are shares of their sum. Widths and colours go through the DOM style object: the page
+ *  policy forbids inline style attributes. `parts` is [{key, value, title, colour}] with colour a CSS custom property. */
+export function ShareBar({parts, label: aria, className = ''}) {
+  const box = useRefHook(null);
+  const sum = parts.reduce((a, p) => a + (p.value || 0), 0) || 1;
+  useLayoutEffectHook(() => {
+    const spans = box.current ? box.current.children : [];
+    parts.forEach((p, i) => {
+      const node = spans[i];
+      if (!node) return;
+      node.style.width = `${((p.value || 0) / sum * 100).toFixed(2)}%`;
+      node.style.background = `var(${p.colour})`;
+    });
+  });
+  return html`<div class="sharebar ${className}" ref=${box} role="img" aria-label=${aria}>${parts.map(p => html`<span key=${p.key} title=${p.title}></span>`)}</div>`;
+}
+/** A colour swatch for a legend, coloured through the DOM style object. */
+export function Swatch({colour}) {
+  const node = useRefHook(null);
+  useLayoutEffectHook(() => { if (node.current) node.current.style.background = `var(${colour})`; }, [colour]);
+  return html`<i class="swatch" ref=${node}></i>`;
+}
+
+export function SubNav({tabs, base, current, label: aria, id}) {
+  return html`<nav class="subnav" id=${id} aria-label=${aria}>${tabs.map(([key, text]) => html`<a href=${`#${base}/${key}`} data-sub=${key} aria-current=${current === key ? 'page' : null}>${text}</a>`)}</nav>`;
 }
 
 export const Verdict = ({verdict}) => {

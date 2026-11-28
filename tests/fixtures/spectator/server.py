@@ -5,12 +5,14 @@ It imitates only the parts of the supervised gateway that the page depends on:
 - sends the gateway's Content-Security-Policy on every response;
 - answers the control path: GET /api/status (computer-status/2), GET /api/source/<id>
   (PNG), POST /api/pause with a reason;
-- answers `/api/view/*` from the JSON files beside this script (real viewer responses for one run and the
-  cross-run routes, trimmed; `refresh.py` regenerates them),
-  or `503 {"viewer": "unavailable"}` while the viewer is switched off; the `frame-*.json` files (the spectator's
-  frame, `spectator-frame/1`) and everything in `synthetic.py` (the story feed, request telemetry, delivered knowledge,
-  host telemetry and curator figures of the live run) are invented, not captured, so `refresh.py` does not touch them.
-  Every other run has no host trace, delivered knowledge or curator, which is how an older run looks.
+- answers `/api/view/*` (`spectator-view/4`) from the JSON files beside this script (real viewer responses for one run
+  and the cross-run routes, trimmed; `refresh.py` regenerates them), or `503 {"viewer": "unavailable"}` while the viewer
+  is switched off. The `archive-*.json` files and everything in `synthetic.py` (the story feed, request telemetry,
+  delivered knowledge, the agenda, host telemetry and every curator figure of the live run) are invented, not captured,
+  so `refresh.py` does not touch them. Every other run has no host trace, delivered knowledge or curator, which is how an
+  older run looks; `ceil08`, an earlier admission of the live run's lineage, has an archived curator status (`/1`, no
+  limits). The operator's curator sources (`/curator-sources/*`) are not configured: a test that needs them answers
+  them itself.
 
 With `--viewer URL` the view routes go to a real viewer process instead (the control path stays stubbed).
 
@@ -40,11 +42,13 @@ sys.path.insert(0, str(HERE))
 import synthetic
 from harness.spectator_assets import PAGE_POLICY as CSP, WEB, static_file
 
+API = synthetic.API
 LIVE_RUN = 'ceil09'
+ARCHIVED_CURATOR = 'ceil08'
 SPEND_LIMIT = 5.0
 SESSION = 'c6c09be0b7d43fba2839147651a4f6a5'    # the live run's real session id
 REASONS = {'loop', 'fault', 'spend', 'other'}
-CUT_RESULTS = {80: 'target', 120: 'rescue', 160: 'target', 200: 'best_effort'}
+EMPTY_SOURCES = dict(schema=API, items=[], total=0, next=None, limit=500)
 
 
 def load(name):
@@ -56,8 +60,8 @@ class State:
         self.upstream = upstream
         self.lock = threading.Lock()
         self.steps = load('steps.json')['items']
-        self.requests = load('requests.json')
-        self.sessions = {row['session']: row['run'] for row in load('runs.json')['items']}
+        self.runs = {row['run']: row for row in load('runs.json')['items']}
+        self.sessions = {row['session']: row['run'] for row in self.runs.values()}
         self.png = (HERE / 'frame.png').read_bytes()
         self.sha = hashlib.sha256(self.png).hexdigest()
         self.visible = len(self.steps) - 4
@@ -92,6 +96,35 @@ class State:
                     player_claims=[])
 
 
+def summary_of(state: State, run: str, session: str, shown: list[dict], traced: bool) -> dict:
+    """One run's summary: the captured live summary, with the `spectator-view/4` fields and this run's own facts."""
+    body = load('summary.json')
+    row = state.runs[run]
+    body.update(run=run, session=session, labels=row['labels'])
+    body['facts']['labels'] = row['labels']
+    body['custodian_receipt'] = None
+    body['facts']['spend_allowance_usd'] = SPEND_LIMIT
+    body['versions'] = dict(body['versions'], core_version=4)
+    body['started_wall'] = shown[0]['wall']
+    body['latest_step_seq'] = shown[-1]['seq']
+    body['routine_findings'] = dict(context_eviction=sum(f['kind'] == 'context_eviction' for f in body['findings']))
+    body['evaluator_freshness'] = {key: body['evaluator'].get(key) for key in ('running', 'passes', 'last_seq', 'last_pass_wall', 'error', 'finished')}
+    body['evaluator_freshness']['last_seq'] = shown[-2]['seq']
+    body['metrics'] = body['metrics'] + synthetic.CORE4_METRICS
+    body['host_telemetry'] = synthetic.host_telemetry(shown) if traced else None
+    body['agenda'] = synthetic.agenda_summary() if traced else dict(initial=None, latest=None, final=None, tool_calls=0, events_count=0, reconstructed=False)
+    body['curator_spend'] = synthetic.curator_spend() if traced else None
+    body['boundary_grooming'] = synthetic.boundary_grooming()
+    if traced:
+        body['findings'] = sorted(body['findings'] + [synthetic.handoff_finding(shown)], key=lambda f: -f['seq_start'])
+    if traced and state.ended:
+        body.update(state='final', live=False, pause=None, evaluator=None, evaluator_freshness=None,
+                    findings=body['findings'] + synthetic.terminal_findings(shown))
+    if not traced:
+        body.update(evaluator=None, evaluator_freshness=None)
+    return body
+
+
 def make_handler(state: State):
     class Handler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.0'
@@ -111,6 +144,9 @@ def make_handler(state: State):
 
         def json(self, status, value):
             self.reply(status, json.dumps(value).encode(), 'application/json')
+
+        def error(self, status, code, detail=''):
+            self.json(status, dict(schema=API, error=code, detail=detail))
 
         # ------------------------------------------------------------ GET
         def do_GET(self):
@@ -166,9 +202,9 @@ def make_handler(state: State):
             if state.upstream:
                 self.forward(state.upstream, self.path); return
             first = lambda key, default=None: (query.get(key) or [default])[0]
+            after, limit = int(first('after', 0) or 0), min(500, int(first('limit', 100) or 100))
             if route == 'runs':
                 body = load('runs.json')
-                after, limit = int(first('after', 0)), min(500, int(first('limit', 100)))
                 rows = body['items'][after:after + limit + 1]
                 if state.no_live or state.ended:
                     rows = [dict(row, state='final') for row in rows]
@@ -177,19 +213,21 @@ def make_handler(state: State):
                     rows = [dict(row, state='unfinished') if index == 0 and after == 0 else row for index, row in enumerate(rows)]
                 body.update(items=rows[:limit], next=after + limit if len(rows) > limit else None, limit=limit)
                 self.json(200, body); return
-            if route in ('frame/curator-sources', 'frame/curator-session-sources', 'frame/curator-draft-sources'):
-                self.json(200, dict(schema='spectator-frame/1', items=[], total=0, next=None, limit=500)); return
-            if route == 'frame/curator-runner':
-                self.json(200, synthetic.runner_status(first('run') in (LIVE_RUN, SESSION))); return
-            if route in ('frame/health', 'frame/containers', 'frame/episodes'):
-                self.json(200, load('frame-' + route.split('/')[1] + '.json')); return
-            if route.startswith('frame/containers/'):
-                wanted = unquote(route[len('frame/containers/'):])
-                found = [c for c in load('frame-container.json') if c['container']['id'] == wanted]
+            if route.startswith('curator-sources/'):
+                if route.rsplit('/', 1)[-1] in ('draft-sources', 'result-sources', 'session-sources'):
+                    self.json(200, EMPTY_SOURCES)
+                else:
+                    self.error(404, 'unknown_source', first('source') or '')
+                return
+            if route in ('archive/containers', 'archive/episodes'):
+                self.json(200, load(route.replace('/', '-') + '.json')); return
+            if route.startswith('archive/containers/'):
+                wanted = unquote(route[len('archive/containers/'):])
+                found = [c for c in load('archive-container.json') if c['container']['id'] == wanted]
                 if found:
                     self.json(200, found[0])
                 else:
-                    self.json(404, {'schema': 'spectator-view/3', 'error': 'unknown_container', 'detail': wanted})
+                    self.error(404, 'unknown_container', wanted)
                 return
             if route == 'improve/changes':
                 self.json(200, load('improve-changes.json')); return
@@ -199,65 +237,46 @@ def make_handler(state: State):
                 self.json(200, load('compare-start.json' if first('group') == 'start' else 'compare-arm.json')); return
             if route == 'explore':
                 self.json(200, load('explore.json')); return
-            match = re.fullmatch(r'run/([^/]+)/(.+)', route)
+            match = re.fullmatch(r'(archive/)?run/([^/]+)/(.+)', route)
             if not match:
-                self.send_error(404); return
-            run, sub = match.groups()
+                self.error(404, 'not_found', 'route not found'); return
+            archive, run, sub = match.groups()
             run = state.sessions.get(run, run)     # a run by session, or by its name, as the viewer resolves one
             session = next((s for s, name in state.sessions.items() if name == run), None)
             if session is None:
-                self.json(404, {'error': 'unknown run'}); return
+                self.error(404, 'unknown_run', run); return
+            if archive:
+                if sub == 'memory':
+                    self.json(200, load('memory.json'))
+                else:
+                    self.error(404, 'not_found', 'route not found')
+                return
             if sub.startswith('frame/'):
                 self.reply(200, state.png, 'image/png'); return
             traced = run == LIVE_RUN
             shown = state.steps[:visible]
-            if sub in ('summary', 'feed', 'telemetry'):
-                body = load('summary.json')
-                body['custodian_receipt'] = None
-                body['facts']['spend_allowance_usd'] = SPEND_LIMIT
-                body['host_telemetry'] = synthetic.host_telemetry(shown) if traced else None
-                if traced:
-                    host = body['host_telemetry']
-                    results = [result for seq, result in CUT_RESULTS.items() if seq <= shown[-1]['seq']]
-                    host['context_cuts']['by_result'] = {result: results.count(result) for result in ('target', 'best_effort', 'rescue')}
-                    host['context_cuts']['latest']['cut_result'] = CUT_RESULTS.get(
-                        int(host['context_cuts']['latest']['request_id'].removeprefix('request-')))
-                    host['tail_notices'] = dict(count=2, by_kind={'context-capacity': 1, 'host-timeout': 0, 'spend-limit': 1})
-                    host['spend_reserve_reached'] = dict(count=1, latest=dict(
-                        actor='actor-1', actor_id='actor-1', wall_time=shown[-1]['wall'],
-                        spent_usd='2.5', spend_limit_usd='5', finish_reserve_usd='2.5', unpriced_bound_usd='0.05'))
-                body['curator_spend'] = synthetic.curator_spend() if traced else None
-                body['boundary_grooming'] = synthetic.boundary_grooming()
-                body.update(run=run, session=session)
-                if traced and state.ended:
-                    body.update(state='final', live=False, pause=None, findings=body['findings'] + synthetic.terminal_findings(shown))
+            body = summary_of(state, run, session, shown, traced)
             if sub == 'feed':
                 items = synthetic.feed(shown, body['findings'], not traced)
-                for item in items:
-                    if item['entry_kind'] == 'context_cut':
-                        item['cut_result'] = CUT_RESULTS.get(item['seq']) if item['outcome'] == 'applied' else None
-                self.json(200, synthetic.feed_page(items, int(first('after', 0)), min(500, int(first('limit', 100))), not traced)); return
+                self.json(200, synthetic.feed_page(items, after, limit, not traced)); return
             if sub == 'telemetry':
-                telemetry = synthetic.telemetry(shown, body, not traced)
-                for cut in telemetry['cuts']:
-                    cut['cut_result'] = CUT_RESULTS.get(cut['seq']) if cut['outcome'] == 'applied' else None
-                telemetry['spend_reserve_reached'] = ([dict(actor='actor-1', actor_id='actor-1', seq=shown[-1]['seq'],
-                    wall=shown[-1]['wall'], spent_usd='2.5', spend_limit_usd='5', finish_reserve_usd='2.5', unpriced_bound_usd='0.05')]
-                    if traced else [])
-                telemetry['spend_reserve_reached_omitted'] = 0
-                telemetry['tail_notices'] = (dict(count=2, by_kind={'context-capacity': 1, 'host-timeout': 0, 'spend-limit': 1})
-                    if traced else dict(count=0, by_kind={'context-capacity': 0, 'host-timeout': 0, 'spend-limit': 0}))
-                self.json(200, telemetry); return
+                self.json(200, synthetic.telemetry(shown, body, not traced)); return
             if sub == 'delivered-knowledge':
-                limit = min(500, int(first('limit', 100)))
-                found = synthetic.delivered(shown, first('version'), first('q', ''), first('scope', 'all'), int(first('after', 0)), limit) \
+                found = synthetic.delivered(first('version'), first('q', '') or '', first('scope', 'all') or 'all', first('kind', '') or '', after, limit) \
                     if traced else synthetic.no_knowledge(limit)
                 if found is None:
-                    self.json(404, {'schema': 'spectator-view/3', 'error': 'unknown_version', 'detail': first('version')}); return
+                    self.error(404, 'unknown_version', first('version')); return
+                self.json(200, found); return
+            if sub == 'curator':
+                self.json(200, synthetic.run_curator(shown, traced and not state.ended, run == ARCHIVED_CURATOR or (traced and state.ended))); return
+            if sub.startswith('curator/session/'):
+                found = synthetic.curator_session(shown, unquote(sub[len('curator/session/'):])) if traced or run == ARCHIVED_CURATOR else None
+                if found is None:
+                    self.error(404, 'unknown_curator_session', sub); return
                 self.json(200, found); return
             if sub == 'summary':
-                if run in ('aidA1', 'aidA2', 'aidA3', 'aidA4'):
-                    body.update(run=run, state='final', live=False, pause=None)
+                if not traced:   # an older run: its stored state, evaluated by no live evaluator
+                    body.update(state=state.runs[run]['state'], live=False, pause=None)
                 if run == 'aidA1':
                     if state.stale:
                         # Summary exposes the stored state separately from live evaluation.
@@ -276,16 +295,13 @@ def make_handler(state: State):
                 body['findings'] = [f for f in body['findings'] if f['seq_start'] <= state.steps[visible - 1]['seq']]
                 self.json(200, body); return
             if sub == 'steps':
-                after = int(first('after', 0))
-                limit = min(500, int(first('limit', 100)))
                 rows = [s for s in state.steps[:visible] if s['seq'] > after]
                 page = rows[:limit]
-                self.json(200, dict(schema='spectator-view/3', items=page, limit=limit,
+                self.json(200, dict(schema=API, items=page, limit=limit,
                                     next=page[-1]['seq'] if len(rows) > limit else None)); return
             if sub == 'requests':
                 body = load('requests.json')
                 horizon = state.steps[visible - 1]['wall']
-                after, limit = int(first('after', 0)), min(500, int(first('limit', 100)))
                 rows = [r for r in body['items'] if r['id'] > after and r['wall'] <= horizon]
                 body.update(items=rows[:limit], limit=limit, next=rows[limit - 1]['id'] if len(rows) > limit else None,
                             markers=[m for m in body['markers'] if m['wall'] is not None and m['wall'] <= horizon])
@@ -299,6 +315,8 @@ def make_handler(state: State):
                 for key in ('tool', 'status'):
                     if first(key):
                         body['items'] = [c for c in body['items'] if c[key] == first(key)]
+                rows = body['items'][after:after + limit + 1]
+                body.update(items=rows[:limit], limit=limit, next=after + limit if len(rows) > limit else None)
                 self.json(200, body); return
             if sub == 'knowledge':
                 body = load('knowledge.json')
@@ -314,9 +332,8 @@ def make_handler(state: State):
                         body['snapshot']['entry_id'] = selected
                         body['snapshot']['items'] = [item for item in body['snapshot']['items'] if item['id'] == selected]
                         body['snapshot']['total'] = len(body['snapshot']['items'])
-                    update = {f'request-{seq}': version for seq, version in synthetic.UPDATES.items()}.get(first('request'))
-                    if update is not None:   # the delivery one story entry names
-                        body['events'] = [synthetic.delivery_event(update)]
+                    if first('request') == 'request-60':   # the delivery one story entry names
+                        body['events'] = [synthetic.delivery_event('v2')]
                     if actor == 'actor-2':
                         body.update(events=[], calls=[], hints=[], finishes=[], journal_available=False)
                     elif traced:
@@ -325,10 +342,19 @@ def make_handler(state: State):
                             snippet='<img src=x onerror=window.hitExecuted=true>', cited_by_articles=['article-passage'])
                         body['calls'].append(dict(read, tool='player_knowledge_query', tool_call_id='query-call',
                             query='passage', returned_hits=[hit], returned_hits_omitted=0))
+                        body['calls'].append(synthetic.source_call(session))
                 self.json(200, body); return
-            if sub in ('tools', 'memory', 'programs', 'handoffs'):
-                self.json(200, load(sub + '.json')); return
-            self.send_error(404)
+            if sub == 'handoffs':
+                body = load('handoffs.json')
+                if traced:
+                    for h in body['handoffs']:
+                        h['carried_agenda'] = synthetic.CARRIED
+                else:
+                    body['handoffs'] = []
+                self.json(200, body); return
+            if sub == 'tools':
+                self.json(200, load('tools.json')); return
+            self.error(404, 'not_found', 'route not found')
 
         # ------------------------------------------------------------ POST
         def do_POST(self):
@@ -367,9 +393,15 @@ def make_handler(state: State):
     return Handler
 
 
+class Server(ThreadingHTTPServer):
+    # The page loads its modules in parallel; the default backlog of five resets some of those connections.
+    request_queue_size = 128
+    daemon_threads = True
+
+
 def serve(port: int = 0, upstream: str | None = None):
     state = State(upstream)
-    server = ThreadingHTTPServer(('127.0.0.1', port), make_handler(state))
+    server = Server(('127.0.0.1', port), make_handler(state))
     return server, state
 
 

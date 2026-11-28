@@ -82,7 +82,11 @@ test('the strip\'s own frame steps aside only while Watch shows the same live fr
   await page.click('#backlive'); await back();
   await page.click('#feed-hold'); await peek('held');
   await page.click('#feed-hold'); await back();
-  await page.click('[data-nav="memory"]'); await peek('another tab');
+  for (const tab of ['memory', 'curator', 'diagnostics']) {
+    await page.click(`[data-nav="${tab}"]`); await peek(`the ${tab} tab`);
+    await page.click('[data-nav="watch"]'); await back();
+  }
+  await page.click('#all-runs-btn'); await peek('All runs');
   await page.click('[data-nav="watch"]'); await back();
   await S.pick(page, 'aidA1'); await peek('another run');
   await S.pick(page, 'ceil09'); await back();
@@ -160,7 +164,7 @@ test('Pause repeats only the facts of the run it would end, never those of the r
     return words;
   };
   await until(() => document.getElementById('pill-spend'));
-  assert.match(await sheetFacts(), /^Session c6c09be0…\. Decision \d+, \$2\.\d\d spent \(provider-reported\)\. Pause permanently ends this run/);
+  assert.match(await sheetFacts(), /^Session c6c09be0…\. Decision \d+, \$\d\.\d\d spent \(provider-reported\)\. Pause permanently ends this run/);
   await S.pick(page, 'aidA1');
   await until(async session => { const {store} = await import('/app/data.js'); return store.summary && store.summary.session === session; }, S.SESSIONS.aidA1);
   await S.settle(page, 2500);
@@ -170,7 +174,7 @@ test('Pause repeats only the facts of the run it would end, never those of the r
   assert.doesNotMatch(archived, /Decision|\$/);
   await S.pick(page, 'ceil09');
   await until(async session => { const {store} = await import('/app/data.js'); return store.summary && store.summary.session === session; }, S.SESSIONS.ceil09);
-  assert.match(await sheetFacts(), /Decision \d+, \$2/);
+  assert.match(await sheetFacts(), /Decision \d+, \$\d\.\d\d spent \(provider-reported\)/);
   assert.deepEqual((await fx.state()).pauses, []);
 });
 
@@ -411,11 +415,17 @@ test('the page works under the gateway policy: CSP header present and nothing vi
   await start();
   const response = await fetch(fx.url);
   assert.equal(response.headers.get('content-security-policy'), "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'");
-  await page.evaluate(() => { location.hash = '#diagnostics/compare'; });
+  for (const hash of ['#runs/compare', '#curator', '#memory']) { await page.evaluate(h => { location.hash = h; }, hash); await S.settle(page, 700); }
   await S.settle(page, 1500);
   assert.deepEqual(page.problems, []);
   const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
   assert.doesNotMatch(html, /<style|\sstyle=|\son[a-z]+=|<script(?![^>]*\ssrc=)/i, 'no inline style, handler or script in the page');
+  // Every control-path element the vanilla control script drives is still in the page, and outside the viewer's mounts.
+  for (const id of ['watch', 'frame', 'frame-note', 'statusline', 'statussub', 'control-freshness', 'status-error', 'pause-result', 'connection', 'current-session-full',
+    'source-details', 'strip-viewer', 'theme', 'pause', 'fillbar', 'pause-hint', 'sheet', 'sheetform', 'sheet-title', 'sheetfacts', 'reasons', 'sheet-error', 'sheetcancel', 'sheetsubmit', 'app'])
+    assert.match(html, new RegExp(`id="${id}"`), id);
+  for (const klass of ['ctl-frame', 'frame-shell', 'src-details', 'src-panel']) assert.match(html, new RegExp(`class="${klass}"`), klass);
+  assert.equal(html.match(/<!-- live only -->/g).length, html.match(/<!-- end live only -->/g).length);
   // The gateway serves only the page, /app/* and /vendor/*.
   assert.equal((await fetch(`${fx.origin}/style.css`)).status, 404);
   for (const asset of ['/app/app.css', '/app/main.js', '/app/control.js', '/vendor/echarts.js', '/vendor/preact.js']) {
@@ -634,7 +644,7 @@ test('keyboard operation: Pause, the story cards and the findings are focusable 
   await page.focus('#pause');
   const outline = await page.$eval('#pause', n => { n.focus(); return getComputedStyle(n).outlineStyle; });
   assert.notEqual(outline, 'none');
-  const cards = await page.$$eval('#story .card > *', n => n.map(x => x.tagName));
+  const cards = await page.$$eval('#story .card > .cardmain, #story .card > .acts > *', n => n.map(x => x.tagName));
   assert.ok(cards.length >= 3 && cards.every(t => t === 'BUTTON' || t === 'A'), 'story cards are buttons and links');
   await page.click('[data-nav="diagnostics"]');
   await until(() => document.querySelector('#findings li'));

@@ -43,6 +43,7 @@
       <div class="ctl-right">
         <button class="themebtn" id="theme" type="button" aria-label="Switch colour theme"><span aria-hidden="true">◐</span><span class="themetext">Theme</span></button>
         <!-- live only -->
+        <div class="ctl-alert" id="viewer-alert"></div>
         <div class="pausewrap">
           <button class="pause" id="pause" type="button" aria-describedby="pause-hint">Pause run…<span class="fillbar" id="fillbar"></span></button>
           <p id="pause-hint" class="pausehint">Hold to pause, or press Enter.</p>
@@ -53,7 +54,8 @@
   </header>
   <nav class="jobs" aria-label="Views"><div class="wrap">
     <a href="#watch" data-nav="watch">Watch</a>
-    <a href="#memory" data-nav="memory">Memory &amp; Curator</a>
+    <a href="#memory" data-nav="memory">Memory</a>
+    <a href="#curator" data-nav="curator">Curator</a>
     <a href="#diagnostics" data-nav="diagnostics">Diagnostics</a>
   </div></nav>
 

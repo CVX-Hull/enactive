@@ -26,7 +26,7 @@ Current actor consumers use `player-computer-result/2`, `player-computer-operati
 callers move together with `player-host/13`, telemetry 13, `campaign-run/14`,
 `player-host-inputs/5`, `player-source-index/1`, `player-source-read/2`, `player-agenda-continuation/1`,
 `delivered-knowledge/4`, `player-knowledge/4`, `knowledge-update-entry/1`, `coverage-update-entry/1`,
-`player-driver/7`, `campaign-receipt/7` and `spectator-view/3`. The live spectator requires
+`player-driver/7`, `campaign-receipt/7` and `spectator-view/4`. The live spectator requires
 `computer-status/2`; its host block carries observed attempts. The evaluator
 reads older versions only for sealed sessions individually pinned to those
 versions in its [closed archive index](../standards/migration.md) (including `#889`'s

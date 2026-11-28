@@ -2683,6 +2683,7 @@ def test_v4_delivered_chain_state_quality_and_kind_filter(mission):
     assert versions['v10']['delivery_status'] == 'exported_not_delivered'
     delivery = client.get(route, params=dict(version='v2')).json()['delivery']
     assert delivery['delivery_kind'] == 'update' and delivery['delta_counts'] == dict(added=2, updated=1, removed=1)
+    assert client.get(route, params=dict(version='', q='', scope='all', kind='')).status_code == 200
     assert client.get(route, params=dict(kind='x' * (ID_LIMIT + 1))).json()['error'] == 'bad_kind'
     relinked(root / 'versions.jsonl', directory / 'outside-published')
     current = {r['version']: r for r in client.get(route).json()['version_chain']}

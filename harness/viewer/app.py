@@ -145,7 +145,7 @@ def create_app(catalog: Catalog, evaluator: LiveEvaluator | None = None, now: Ca
         after, limit = paging(request)
         query = request.query_params
         return reply(delivered.browse(catalog, info, connection, query.get('version') or None, query.get('q') or None,
-            query.get('scope') or None, after, limit, kind=query.get('kind')))
+            query.get('scope') or None, after, limit, kind=query.get('kind') or None))
 
     def steps(request: Request, info: RunInfo, connection) -> Response:
         after, limit = paging(request)
