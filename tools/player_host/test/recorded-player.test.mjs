@@ -24,7 +24,7 @@ const model = {id:'recorded-offline-model',name:'Offline fixture',api:'openai-co
   baseUrl:'https://fixture.invalid/v1',reasoning:false,input:['text','image'],
   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:1000000,maxTokens:1024,
   compat:{supportsDeveloperRole:false,supportsStore:false,supportsUsageInStreaming:true}};
-const configuration = () => ({schema:'player-host/12',endpoint_costs:null,context_cut:null,service_tier:'default',model:structuredClone(model),recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},
+const configuration = () => ({schema:'player-host/13',endpoint_costs:null,context_cut:null,service_tier:'default',model:structuredClone(model),
   api_key_env:'OFFLINE_TEST_KEY',spend_limit_usd:'100',unpriced_request_usd:'0.25',max_context_images:30,context_image_block:1,
   context_reserve_tokens:4096,request_timeout_seconds:2});
 const finish = ['player_finish',{intent:'Report the recorded assessment',disposition:'task_complete',report:'Recorded assessment reply',source_ids:[],control_id:null}];
@@ -115,10 +115,10 @@ function continuationImages(payload) {
 test('actual host keeps current schemas and all 30 original images, refusing a proposal before spend exhaustion',async t=>{
   const {result,packet,payloads,events,calls,expected} = await scenario(t,[
     reply([['computer_observe',{}]]),reply([proposal])],{count:30,spendLimit:'0.000075'});
-  assert.deepEqual(result,{ok:false,reason:'spend-limit',requests:2,finalText:'',control_id:null});
+  assert.deepEqual(result,{ok:false,reason:'spend-limit',requests:2,finalText:'',control_id:null,agenda:{schema:'player-agenda-continuation/1',cut_count:0,threads:[]}});
   assert.equal(payloads.length,2);
   const tools = payloads[0].tools.map(tool=>tool.function);
-  assert.equal(tools.length,Object.keys(expected).length+1,'host alone adds direct finish');
+  assert.equal(tools.length,Object.keys(expected).length+2,'host adds agenda and finish');
   for (const [name,[description,parameters]] of Object.entries(expected)) {
     const actual = tools.find(tool=>tool.name===name);
     assert.equal(actual.description,description);

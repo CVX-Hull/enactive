@@ -20,7 +20,7 @@ def tool_specs() -> dict:
             obj(dict(actions=dict(type='array',items=action_schema(),minItems=1,maxItems=32),source_id={'anyOf':[ID,{'type':'null'}]}),['actions'])),
         'computer_result':('Collect the exact original mechanical operation and image, including late receipts. This never repeats input or restores authority. Use its operation_id after uncertain transport.',obj(dict(operation_id=ID))),
         'computer_stop':('Permanently fence further input for this run. This does not save, quit, win, undo input or permit another actor.',obj({})),
-        'player_source':('Read exact retained PNG bytes by source_id, from this session or explicitly remembered prior-session knowledge. Source availability is not proof you previously read it.',obj(dict(source_id=ID))),
+        'player_source':('Read exact retained PNG bytes by source_id, including current-session frames, frames with omitted pixels, frames trimmed by a context cut, and disclosed same-lineage cited/agenda/depiction frames. Returns player-source-read/2 with status, blinded origin, clickable flag (false on ancestors), and direct clock_label when observed. Source availability is not proof you previously read it.',obj(dict(source_id=ID))),
         'player_knowledge_read':(
             'Read a delivered article or fact by id, slug, revision, state_key, or title. '
             'A state_key returns every current reading with resolution "state_key". '

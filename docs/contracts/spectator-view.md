@@ -193,7 +193,7 @@ request number; neither replaces the other.
 | --- | --- |
 | `step` | `tool`, `intent` (`intent_source` is `player_claim`), `keys`, `status` (`ok`, `error`, `refused` or `pending`), `latency_ms`, `arguments_preview`, the request's `reported_provider`, `reported_cost_usd` and token counts, the identifiers, and `result` (mechanical status, reason and receipt dispositions). One request may issue several calls, each carrying the request's cost |
 | `context_cut` | `outcome` (`applied` or `held_back`), `triggers`, `knowledge_version`, tokens and images before and after, `removed_turns`, `reason`. Applied cuts can also record `cut_result` (`target`, `best_effort`, `rescue`), `cumulative_removed_turns`, `briefing_tokens` and `source_ids_count`. These four fields are `null` when unrecorded. |
-| `knowledge_update` | `knowledge_version`, `previous_version`, `outcome` (`delivered`, `undelivered` or `refused`), `reason`, `request_id`, `covered_step`, the counts the delivered text states, and `summary`. A refused update has `null` counts, never zero; Watch renders `undelivered` updates distinctly and links only `delivered` updates to Memory |
+| `knowledge_update` | `knowledge_version`, `previous_version`, `outcome` (`delivered`, `undelivered`, `empty-suppressed` or `refused`), `reason`, `request_id`, `covered_step`, the counts the delivered text states, and `summary`. A refused or `empty-suppressed` update has `null` counts, never zero; Watch renders `undelivered` updates distinctly and links only `delivered` updates to Memory |
 | `finding` | `finding_kind` (`stall`, `death`, `custody_stop`, `handoff` or `run_end`), `seq_end`, `source`, `payload` |
 
 Intents are unverified player reports, at most 1,024 characters, with the omitted count.
@@ -339,12 +339,12 @@ request ID; hints and finish claims remain actor-wide. An unknown actor/request 
   its text. Selection, delivery and an explicit read are distinct.
   Missing delivery text or a missing join stays unavailable; proximity proves no use.
 - `snapshot_status` is `verified`, `unavailable`, `hash_unavailable` or
-  `hash_mismatch`. Entries are served only after the actor's `player-host-inputs/4`
+  `hash_mismatch`. Entries are served only after the actor's `player-host-inputs/5`
   `frozen.json` names this actor/session and its `delivered-knowledge.json` digest
-  matches (`delivered-knowledge/4` for current `campaign-run/13` packages, or
-  `delivered-knowledge/3` strictly for the five owner-approved `#963`/`#998` sealed
-  sessions until Batch 2 registers them in the closed archive index). Sealed
-  archived sessions before `/12` use `player-host-inputs/3` with `delivered-knowledge/1`;
+  matches (`delivered-knowledge/4` for current `campaign-run/14` packages). Archived
+  `campaign-run/13` sessions listed in `data/evaluation/archive-sessions.json` (the five
+  owner-approved `#963`/`#998` runs) use `player-host-inputs/4` with `delivered-knowledge/3`;
+  sealed archived sessions before `/12` use `player-host-inputs/3` with `delivered-knowledge/1`;
   a sealed `campaign-run/12` run (whose snapshot is `delivered-knowledge/2`) or a run
   with no supported manifest reports explicit `hash_unavailable` and never falls through
   to `delivered-knowledge/1`.

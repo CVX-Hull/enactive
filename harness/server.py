@@ -95,7 +95,14 @@ def serve(application, port: int) -> tuple[LocalServer, threading.Thread]:
                     return
                 if self.path == '/api/player-source':
                     closed(value,{'source_id'})
-                    _, png = application.source(value['source_id'],actor)
+                    try:
+                        _, png = application.source(value['source_id'],actor)
+                    except Exception as exc:
+                        reason = getattr(exc, 'reason', None)
+                        if isinstance(reason, str) and reason in ('unknown-or-out-of-scope', 'missing', 'integrity-failed', 'image-limit'):
+                            self.json_reply(404, dict(schema='player-error/1', error='SourceUnavailable', reason=reason, submission='none'))
+                            return
+                        raise
                     self.reply(200,png,'image/png')
                     return
                 if self.path != '/api/tool':

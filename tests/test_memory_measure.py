@@ -33,7 +33,7 @@ def admission(root: Path, name: str, tag: str, shades: list, size=(8, 8)) -> Pat
     record and returns no frame; 'lost' presses a key whose frame never came back; 'handoff' starts the next actor."""
     run, wall, number, actor = root / name, BASE, 0, 0
     (run / 'sources').mkdir(parents=True)
-    save(run / 'manifest.json', dict(schema='campaign-run/13', context={}, session=tag * 8))
+    save(run / 'manifest.json', dict(schema='campaign-run/14', context={}, session=tag * 8))
     groups = [[]]
     for shade in shades:
         if shade == 'handoff':
@@ -44,7 +44,7 @@ def admission(root: Path, name: str, tag: str, shades: list, size=(8, 8)) -> Pat
         actor += 1
         directory = run / 'actors' / f'{actor:03d}'
         directory.mkdir(parents=True)
-        events = [dict(type='host-start', schema='player-host/12', telemetry_version=12, session=tag * 32,
+        events = [dict(type='host-start', schema='player-host/13', telemetry_version=13, session=tag * 32,
             actor_id=(tag + str(actor)) * 16, wall_time=datetime.fromtimestamp(wall, timezone.utc).isoformat(), monotonic_ms=0)]
         for shade in group:
             wall, number = wall + 1, number + 1

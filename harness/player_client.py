@@ -112,6 +112,31 @@ class PlayerClient:
             self._handoff(name,args,value)
             return value,None,False
         self._handoff(name,args,value)
+        if value.get('schema') == 'player-source-read/2':
+            if value.get('status') != 'available':
+                return value, None, False
+            metadata = value.get('source')
+            if not isinstance(metadata, dict) or metadata.get('schema') != 'computer-source/1':
+                raise ControlError('Unsupported player source metadata')
+            try:
+                png = self._post('/api/player-source', {'source_id': metadata['source_id']}, image=True, maximum=IMAGE_LIMIT)
+                if not isinstance(png, bytes):
+                    reason = png.get('reason') if isinstance(png, dict) else None
+                    if reason not in ('unknown-or-out-of-scope', 'missing', 'integrity-failed', 'image-limit'):
+                        reason = 'missing'
+                    return dict(schema='player-source-read/2', status='unavailable', source_id=value['source_id'],
+                                reason=reason, read_wall=value['read_wall']), None, False
+                if hashlib.sha256(png).hexdigest() != metadata['sha256']:
+                    return dict(schema='player-source-read/2', status='unavailable', source_id=value['source_id'],
+                                reason='integrity-failed', read_wall=value['read_wall']), None, False
+            except ControlError as exc:
+                reason = 'image-limit' if 'byte capacity' in str(exc) else 'integrity-failed'
+                return dict(schema='player-source-read/2', status='unavailable', source_id=value['source_id'],
+                            reason=reason, read_wall=value['read_wall']), None, False
+            except (OSError, ValueError):
+                return dict(schema='player-source-read/2', status='unavailable', source_id=value['source_id'],
+                            reason='missing', read_wall=value['read_wall']), None, False
+            return value, png, False
         metadata=value.get('source')
         png=None
         if isinstance(metadata,dict) and metadata.get('schema') == 'computer-source/1':

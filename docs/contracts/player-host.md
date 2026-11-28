@@ -6,10 +6,11 @@ status: active
 
 # Player host contract
 
-`player-host/12` is the current boundary between the
+`player-host/13` is the current boundary between the
 [campaign driver](../../tools/campaign_player.py) and the program hosting a
-deciding player. The host owns the model/tool loop and player context. The finite
-test driver owns original limits, process-group closure and verified succession.
+deciding player. The host owns the model/tool loop, player context and ephemeral
+working-state agenda. The finite test driver owns original limits, process-group
+closure and verified succession.
 The player receives its user objective and actual tool interface; experiment
 countdowns and final-actor policy stay outside its context.
 
@@ -33,13 +34,15 @@ accepts only the current route/MCP configuration, exits zero without credentials
 or network within ten seconds and writes nothing to stdout. The validator gives
 it only `PATH` and `LANG`.
 
-`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PATH --session SESSION --actor-id ACTOR --pending-control-id none|ID --delivered-knowledge KNOWLEDGE --finish-reserve-usd USD --model ID --effort EFFORT --timeout-seconds S -o FINAL [--knowledge-updates LIST]`
-hosts one actor. Every flag but `--knowledge-updates` occurs exactly once; that
-one occurs at most once, only in a run that
-[delivers newer knowledge versions](#a-newer-version-during-play). Unknown, missing
+`ARGV run --config ROUTE --mcp-config MCP --context CONTEXT --prompt PATH --session SESSION --actor-id ACTOR --pending-control-id none|ID --delivered-knowledge KNOWLEDGE --finish-reserve-usd USD --model ID --effort EFFORT --timeout-seconds S -o FINAL [--agenda AGENDA] [--agenda-out AGENDA_OUT] [--knowledge-updates LIST]`
+hosts one actor. Every required flag occurs exactly once; `--agenda`, `--agenda-out`
+and `--knowledge-updates` occur at most once (`--knowledge-updates` only in a run that
+[delivers newer knowledge versions](#a-newer-version-during-play)). Unknown, missing
 or repeated flags refuse. Frozen regular files other than knowledge are at most 1 MiB each. Delivered text has no hard cap. Session/actor IDs are 32
 lowercase hexadecimal characters. The driver reserves `FINAL`; successful direct
-player reports write it, while handoff/failure leaves it unchanged.
+player reports write it, while handoff/failure leaves it unchanged. `--agenda` supplies
+a validated `player-agenda-continuation/1` starting file (defaulting to empty when omitted),
+and `--agenda-out` writes the committed final `player-agenda-continuation/1` on settlement.
 
 The driver starts a new session with project cwd, stdout JSONL, bounded stderr
 and only `PATH`, `LANG` and the selected credential variable. `S` is the original
@@ -49,11 +52,11 @@ zero requires successful settlement, owned MCP closure and any final-file write.
 
 ## Route envelope
 
-The closed route has `schema:"player-host/12"`, `model`, `api_key_env`,
+The closed route has `schema:"player-host/13"`, `model`, `api_key_env`,
 `spend_limit_usd`, `unpriced_request_usd`, `max_context_images`,
 `context_image_block`, `context_reserve_tokens`, `context_cut`, `request_timeout_seconds`,
-`service_tier`, `endpoint_costs` and the closed `recall` object
-(`model`, `every`, `unpriced_request_usd`, `endpoint_costs`).
+`service_tier` and `endpoint_costs`. Background LLM recall is retired; routes carrying
+`recall` or older `player-host/12` schemas are refused.
 The adapter owns its closed `model` fields. The driver reads only model
 ID/name/cost/context/output fields, credential variable, the two
 dollar amounts and tier.
@@ -156,9 +159,8 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   (retries included, whenever no accepted `orderly_stop` control is projected into the
   request), the host stops with reason `spend-limit` when `spent >= spend_limit_usd`,
   and otherwise admits the attempt only while
-  `spent + in_flight_recall_bound + finish_reserve + unpriced_bound < spend_limit_usd`
-  (equality fails admission). If an in-flight recall reservation is the sole obstruction,
-  the host awaits recall settlement and rechecks once. When ordinary admission still fails
+  `spent + finish_reserve + unpriced_bound < spend_limit_usd`
+  (equality fails admission). When ordinary admission still fails
   while `spent < spend_limit_usd`, the host emits one actor-bound `spend-reserve-reached`
   event and waits up to 2 s for `orderly_stop` on stdin (which the live driver issues
   immediately unless Pause, deadline, or another stop already fired). Clean expiry of the
@@ -167,7 +169,7 @@ response ([R-OVERSPEND](../risks.md#operating-risks)).
   released **only** for a request whose projected context carries the accepted
   `control_id` (superseding any unsent or backoff ordinary request when `orderly_stop`
   arrives). A request already sent finishes; the provider subtotal can pass the limit by
-  the returned charges for final in-flight player and recall requests.
+  the returned charge for a final in-flight player request.
 - **Stop on an unpriced player success.** After a player response that did not fail and whose
   `reported_cost_usd` is null, the host stops with reason `cost-unreported` and
   dispatches no tool call from it. This keys on the cost, not on `usage_available`:
@@ -189,9 +191,12 @@ explicit unknowns, and settlement agrees on the subtotal and both unpriced
 counts. A lost terminal record or a mismatch marks the trace incomplete and
 admits no successor. The observed subtotal still records only provider charges.
 
-### Delivered knowledge and recall
+### Delivered knowledge and player working-state agenda
 
-Every `campaign-run/13` package carries `delivered-knowledge.json` (`delivered-knowledge/4`), including an empty file of that format when no knowledge exists. `private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies its exact bytes into the first actor's frozen inputs (`player-host-inputs/4`). It records the finish reserve there too.
+Every `campaign-run/14` package carries `delivered-knowledge.json` (`delivered-knowledge/4`),
+`source-index.json` (`player-source-index/1`) and `agenda.json` (`player-agenda-continuation/1`),
+including empty files of those formats when no prior knowledge, ancestor frames or agenda exist.
+`private_files` is a closed manifest map of `knowledge-full.json` and `units.json` hashes; neither private file is given to the host or application. The application requires the delivered file; every caller supplies it, including an explicit empty file when there is no knowledge. The driver copies the exact bytes of `delivered-knowledge.json` and `agenda.json` into the actor's frozen inputs (`player-host-inputs/5`). It records the finish reserve there too.
 
 `delivered-knowledge/4` has exactly `schema`, `version`, `commit`, `repository_id`,
 `coverage`, `frame_clocks`, `articles`, `facts` and `history`. `commit` is the 40-hexadecimal commit of
@@ -230,9 +235,9 @@ other:
   Delivered `stale_citations` contains only history record IDs (never raw `state_key` names); a lapsed
   `state_key` `depends_on` pin sets `needs_review: true` without adding the key to `stale_citations`.
 
-`player-host-inputs/4` (`actors/NNN/frozen.json`) has `schema`, `actor_id`,
+`player-host-inputs/5` (`actors/NNN/frozen.json`) has `schema`, `actor_id`,
 `session`, `finish_reserve_usd`, `files` (the SHA-256 of `actor.json`, `route.json`,
-`mcp.json`, `context.txt`, `prompt.txt` and `delivered-knowledge.json`) and
+`mcp.json`, `context.txt`, `prompt.txt`, `delivered-knowledge.json` and `agenda.json`) and
 `knowledge_updates`: `"knowledge-updates.jsonl"` in a run that delivers newer
 versions, else `null`.
 
@@ -250,7 +255,7 @@ and the verified digest of `delivered-knowledge.json`.
 The delivered file carries the selected content without the selection object.
 
 Unless the package sets `live_knowledge_updates`, the host uses the same frozen
-version for briefing and recall throughout the admission, including handoffs. A
+version throughout the admission, including handoffs. A
 later admission can package a newer publication.
 The [withholding unit rule](measurement-tools.md#the-facts-to-judge-judged-facts1)
 defines the export layout. Version changes follow the [migration standard](../standards/migration.md).
@@ -258,52 +263,42 @@ The [journal and knowledge component](../components/player-interface.md#journal-
 describes application reads and evaluation. The [delivery rationale](../design/player-context.md)
 records the prompt measurements and alternatives.
 
-The host appends a bounded briefing to the first user message: its serialized JSON envelope is budgeted within 24,000 characters (at most 64 articles and 24 standalone facts total, clipping individual leads/index lines to 1,000 characters and skipping any oversized entry) in deterministic tier order — recall-selected leads first, then articles by `last_confirmed.order` descending, unbound standalone facts by `seen.order` descending, and world-bound standalone facts by `seen.order` descending (breaking equal-order ties by ascending delivered order) — with kept entries in delivered order, `unlisted_entries` counting omissions, and the coverage stamp. It labels the text as fallible data granting no authority and notes that live same-scope screen observations override memory while off-screen memory stays valid. The system prompt and tool table stay identical across actors. With no articles or facts there is no recall request.
+Both opening and mid-play LLM recall are retired (`player-host/13` makes zero recall
+HTTP requests). The host appends a deterministic bounded briefing to the first user message:
+its serialized JSON envelope is budgeted within 24,000 characters (at most 64 articles and
+24 standalone facts total, clipping individual leads/index lines to 1,000 characters and
+skipping any oversized entry). When the store fits within the cap, entries follow deterministic
+recency tier order (articles by `last_confirmed.order` descending, unbound standalone facts
+by `seen.order` descending, world-bound standalone facts by `seen.order` descending, breaking
+ties by ascending delivered order); on overflow, the host ranks candidates deterministically
+with zero-model `bm25_1hop` against the current prompt, active agenda threads and recent intents.
+Kept entries appear in delivered order with `unlisted_entries` counting omissions and the coverage
+stamp. The envelope labels the text as fallible data granting no authority, states explicit
+knowledge-capability orientation (what arrives automatically — deterministic briefings, cut-marker
+`changes_since` deltas and mid-segment substantive updates with no background reminders — versus
+what is queried or written on demand via `player_knowledge_query`, `player_knowledge_read`,
+`player_source`, `player_hint` and `player_agenda`), and states the three scoped precedence rules
+(live same-scope screen overrides memory; off-screen memory stays valid; descriptive memory
+never drops active goals). The system prompt and tool table stay identical across actors.
 
-Every `recall.every` completed `computer_input` result offers a reminder request beside continued play. The host tracks normalized unclipped lead fingerprints across surviving placements (`already_in_context`); clipped leads and index-only rows stay eligible for full-lead recall. If every entry on the sent recall index is already active in context, the host emits `knowledge-recall` (`status: "not-made", reason: "all-delivered"`) and skips the HTTP fetch. At placement, selected entries are re-filtered against the adopted version and final active-lead state; if none survives, no reminder message is injected and `knowledge-undelivered` (`reason: "already-in-context"`) is recorded. Otherwise a completed selection becomes its own delimited user message in the next player request; it is never joined with control or limit notices and stays where first sent. An empty selection is an explicit silence. If another recall is in flight the opportunity is recorded as not made.
+**Player working-state agenda (`player_agenda`).** The host registers the host-local tool
+`player_agenda` beside `player_finish` (rejecting any MCP tool named `player_agenda` or
+`player_finish`) and allows it after uncertain input alongside read-only tools. It maintains
+a bounded `player-agenda-continuation/1` JSON structure (at most 3,072 serialized UTF-8 bytes
+hard ceiling; `player_agenda` tool writes reserve 16 bytes of cut-counter headroom — 3,056
+bytes — while permitting strictly shrinking writes on a carried agenda near the ceiling;
+at most 8 `active`+`paused` threads, at most 16 total threads, up to 6 single-level `sub_items`
+and up to 8 evidence-grounded `refs` per thread; `done`/`dropped` threads are evicted after
+2 context cuts). Every `ref` must already be earned by the current actor (present in carried
+agenda refs, delivered knowledge IDs/`state_key`s/citations, or observed `source_id`s). When
+non-empty at actor start, the host renders the carried agenda in a separate `BEGIN PLAYER AGENDA`
+block appended after `BEGIN FALLIBLE KNOWLEDGE` in the live opening prompt (never inside the
+knowledge briefing or `knowledge-delivery` telemetry). The
+player agenda is strictly host-local working state: it carries across context cuts, actor
+handoffs and resumed admissions (`--agenda` / `--agenda-out` and `agenda-final.json`), and is
+never copied or projected into curator snapshots or traces.
 
-Recall uses the player's provider and credential variable, with the pinned
-`recall.model`. A recall makes one HTTP attempt with no automatic retry. At fetch
-it emits `request-start` with `recall-N` and `request_role:recall`. Player attempts
-use `request-N`. Both roles share the run's dollar limit, including across handoff.
-Recall runs serially at the configured cadence. Empty knowledge skips it.
-
-Recall pre-checks and rechecks at fetch that an orderly stop is neither pending
-nor accepted and that `spent + in-flight player bound + recall bound + finish reserve`
-is below the route limit. The bound for the proposed recall keeps its possible
-charge outside the dollars reserved for ending. The player's next request
-continues to account for any recall in flight. A spend refusal, unavailable cost,
-failed recall or provider/client failure before fetch disables later recall for
-that actor. A reserve or orderly-stop refusal creates no request ID. An invalid
-selection with a valid provider charge fails that opportunity and permits later
-reminders. Valid charges are counted even when selection is invalid or a
-response stopped for length. Host end or handoff aborts any in-flight recall and
-settles its accounting. Player requests retain the unpriced-success stop.
-Settlement, driver and receipt distinguish unpriced player and recall counts.
-The planning bounds are reported separately from the combined provider subtotal.
-
-The recall request is the recall system prompt and two user messages. The first holds
-only the JSON object `{"index":[...]}` budgeted within 24,000 serialized characters:
-compact title-first rows (`{id, title, status?}` with titles clipped to 120 characters)
-in deterministic tiers (articles by `last_confirmed.order` descending, then unbound
-standalone facts, then world-bound standalone facts, breaking ties by ascending
-delivered order; `unlisted_entries` counts rows omitted on overflow), spending any
-remaining budget on first-sentence `index` snippets in the same order. The second holds
-a JSON object with `kind`, `already_in_context` (`[]` for `briefing`), and
-`first_message` (`briefing`) or `recent_calls` (`reminder`), followed by the latest screen
-for a reminder. Recalls of
-one version, across actors and reminders, therefore share a byte-identical message-1
-prefix that ends at a message boundary, which the provider can reuse from its cache. A route that requests
-strict structured output requires the pinned upstream to support the selection schema. Its
-real-model check covers that capability before use. The [adapter reference](../../tools/player_host/README.md#knowledge-delivery)
-owns provider serialization. The joined, trimmed reply text must contain exactly
-one JSON object with `articles` as its sole key and an array of strings as its value.
-The object may be bare or inside one Markdown code fence, optionally tagged `json`,
-with only whitespace outside the fence.
-
-Recall accepts only IDs and titles on the delivered index (articles and standalone facts). An article named by both ID and title is selected once; a repeated selection entry is invalid. A standalone fact is accepted as a lead carrying its text; IDs/titles absent from the index are refused, including facts filed under articles.
-
-The [host telemetry contract](player-host-telemetry.md#knowledge-delivery-and-recall-events) defines the delivery and recall events.
+The [host telemetry contract](player-host-telemetry.md#knowledge-delivery-and-agenda-events) defines the delivery and agenda events.
 
 ### A newer version during play
 
@@ -341,37 +336,33 @@ An entry that fails, an older one and one passed over
 for a newer are each recorded as refused with a reason when the next request is
 built (or when the actor ends), and the adopted version stays.
 
-An adopted version is the host's version for every later recall, reminder and
-delivery of that actor. Pending knowledge updates are adopted before queued
-reminders are placed: an in-flight recall's index and reply check still use the
-version it was requested from, while placement rebuilds its reminder against the
-adopted version using the selected entries that still exist (dropping it with
-`knowledge-undelivered` reason `superseded` if none remain).
+An adopted version is the host's version for every later delivery of that actor.
+The host maintains two baselines: `lastAnnouncedKnowledge` (updated on every delivered
+mid-segment update or context cut) and `boundaryKnowledge` (`vB`, updated on each
+context cut). Between cuts, the host computes a bounded claim-level substantive delta
+from `lastAnnouncedKnowledge` to the newer version across five priority buckets
+(`corrections`, `state_changes`, `flag_changes`, `added_facts`, and `claim_updates` /
+`article_changes`, comparing article body claims even when `lead` is unchanged, while
+ignoring tag/link/coverage churn and verified 1-to-1 `restated` chains):
 
-The host states the difference in one message of its own, delimited
-`BEGIN FALLIBLE KNOWLEDGE UPDATE (vN)` and `END FALLIBLE KNOWLEDGE UPDATE (vN)`
-around one JSON line, labelled as fallible data granting no authority. It covers
-what a briefing can show, the articles and the facts no article files, with `status`
-markers on any non-`active` or flagged entry (while plain `active` entries keep stable
-serialization bytes):
+- **Zero empty updates.** When the substantive delta is empty, the host adopts the newer
+  version silently, emits `knowledge-delivery` with `outcome: "empty-suppressed"`, and
+  appends no user message (preserving the prompt cache prefix).
+- **Non-empty mid-segment updates.** The host states the bounded substantive delta in one
+  tail message delimited `BEGIN FALLIBLE KNOWLEDGE UPDATE (vN)` and
+  `END FALLIBLE KNOWLEDGE UPDATE (vN)` around one JSON line, labelled as fallible data
+  granting no authority, with explicit `overflow` (`omitted_count`, `read_ids`) if clipped.
+  From an empty store the line carries `index`, budgeted under the same 24,000-character
+  tiered cap as an actor-start briefing.
 
-- `added` and `updated` carry each entry's ID, title, lead (a fact's subject and text)
-  and optional `status` markers. An article is updated when its title, lead, claims or
-  status markers changed; a standalone fact is updated when its text, subject or status
-  markers changed.
-- `removed` carries the ID and title of an entry the version no longer has. A fact
-  that an article now files is not removed.
-- From an empty store the line carries `index`, budgeted under the same 24,000-character
-  tiered cap as an actor-start briefing, in place of a difference.
-
-The message makes no recall request and costs no request of its own. Like a
-reminder, it is appended at the next request boundary as its own message.
-At each request boundary, update adoption and context cutting are planned jointly
-(side-effect-free, newest staged version first): a newer version is admitted only when
-its final projected candidate request satisfies both strict hard fit and the existing
-`context_reserve_tokens` update capacity-warning threshold, committing version, cut,
-placements and telemetry atomically; otherwise it is refused with reason
-`context-capacity` and the driver's next actor starts from that version.
+The message costs no extra model request. It is appended at the next request boundary as
+its own message (coalescing any earlier unsent mid-segment update). At each request boundary,
+update adoption and context cutting are planned jointly (side-effect-free, newest staged
+version first): a newer version is admitted only when its final projected candidate request
+satisfies both strict hard fit and the existing `context_reserve_tokens` update
+capacity-warning threshold, committing version, cut, placements and telemetry atomically;
+otherwise it is refused with reason `context-capacity` and the driver's next actor starts
+from that version.
 
 ### Coverage-gated context cut
 
@@ -415,25 +406,32 @@ back to a `context-capacity` stop. Image block eviction still applies after each
 
 The cut preserves the system prompt and tools. It replaces the first user
 message with the frozen mission prompt and a fallible briefing from the adopted
-version and no recall request, filling `leads` from tiered articles and `index`
-from standalone facts. Its size does not grow with the store: its JSON
-payload is at most 24,000 characters, using the same tiered order, tie-break comparator
-(descending recency, breaking ties by ascending delivered order), 64-article / 24-fact
-caps, 1,000-character snippet clipping, skip-if-oversized rule and `unlisted_entries`
-count as an actor-start briefing. `player_knowledge_read` and `player_knowledge_query`
-still reach every entry.
+version, filling `leads` from tiered articles and `index` from standalone facts
+(with deterministic `bm25_1hop` overflow ranking when over cap). Briefing plus the
+cut marker's `changes_since` delta stay jointly budgeted within 24,000 characters
+(prioritizing `corrections`, `state_changes` and `flag_changes` before routine index
+rows), using the same 64-article / 24-fact caps, 1,000-character snippet clipping,
+skip-if-oversized rule and `unlisted_entries` count as an actor-start briefing.
+`player_knowledge_read` and `player_knowledge_query` still reach every entry.
 The following user message is delimited by `BEGIN CONTEXT CUT` and
 `END CONTEXT CUT`. Its JSON line contains `grants_authority:false`, the cumulative
-`removed_turns`, `covered_through_operation_id`, the coverage `knowledge_version`,
+`removed_turns`, `uncovered_turns` (non-negative integer, `0` on covered cuts, reserved
+for bounded uncovered-cut fallback without forcing a host schema bump),
+`covered_through_operation_id`, the coverage `knowledge_version`,
 `recent_intents` (the last 5 distinct validated public `intent` strings from committed,
 non-refused actor tool calls in removed turns, excluding `player_finish`, clipped to 160
-characters with the most recent occurrence at the tail)
-and distinct `source_ids` in their original order across the removed turns, with
+characters with the most recent occurrence at the tail),
+distinct `source_ids` in their original order across the removed turns (with
 contiguous same-prefix numeric runs losslessly compacted as `start..end` and a
-shared prefix factored into `source_id_prefix` when all entries share one stem.
+shared prefix factored into `source_id_prefix` when all entries share one stem),
+optional `changes_since` (bounded substantive delta since the previous cut boundary `vB`,
+omitted when empty), and optional `agenda` (committed `player_agenda` working threads
+after cut-boundary tombstone eviction, omitted when empty).
 The marker directs the player to `player_source` for those frames. Both
-messages stay fixed until the next cut. Knowledge notices at or after the cut
-boundary stay with the surviving turns; `tail-notice` messages before the cut boundary
+messages stay fixed until the next cut. Earlier mid-segment knowledge update notices
+before the cut boundary are dropped when represented by the replacement briefing or
+`changes_since`, and any unrepresented notice survives at most one cut before being
+retired on the following cut; `tail-notice` messages before the cut boundary
 and all `context-capacity` notice lines and step tracking reset on a cut (while
 `host-timeout` and `spend-limit` step trackers and any such notices at or after the
 cut boundary stay intact), the token estimate disregards pre-cut provider usage, and

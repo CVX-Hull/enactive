@@ -7,10 +7,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { McpClient } from '@earendil-works/pi-mcp';
+import { emptyAgenda, applyAgendaTool } from '../agenda.mjs';
 import { runHost, validateConfiguration } from '../host.mjs';
 import { compactSourceIds, coverageEntry, cutBriefing, cutMarker, CUT_BRIEFING_ARTICLES, CUT_BRIEFING_CHARS,
   CUT_BRIEFING_FACTS, CUT_BRIEFING_SNIPPET_CHARS, validateKnowledge } from '../knowledge.mjs';
-import { contest, knowledge, listUpdate, recallReply } from './delivery-scenario.mjs';
+import { contest, knowledge, listUpdate } from './delivery-scenario.mjs';
 import { actorId, article, fact, model, png, position, realDelay, reply, route, sessionId, usageRecord } from './host-scenario.mjs';
 
 const tokenCut = {high_mark:20_000, low_mark:2_600, min_free:1};
@@ -26,8 +27,7 @@ test('the current route requires a closed context cut policy for the player mode
   const base = route();
   const validate = config => validateConfiguration(config, model.id, 'off');
   assert.equal(validate(base).context_cut, null);
-  assert.deepEqual(validate({...base, context_cut:tokenCut,
-    recall:{...base.recall, model:{...base.recall.model, contextWindow:4096}}}).context_cut, tokenCut);
+  assert.deepEqual(validate({...base, context_cut:tokenCut}).context_cut, tokenCut);
   const missing = {...base};
   delete missing.context_cut;
   assert.throws(() => validate(missing), /invalid-configuration/);
@@ -68,14 +68,12 @@ const messageText = message => typeof message.content === 'string' ? message.con
 const markerText = payload => payload.messages.map(messageText).find(text => text.startsWith('BEGIN CONTEXT CUT'));
 const cutEvents = events => events.filter(event => event.type === 'context-cut');
 
-async function play(t, playerFetch, {contextCut = imageCut, maxImages = 2, block = 1, onEvent} = {}) {
+async function play(t, playerFetch, {contextCut = imageCut, maxImages = 2, block = 1, onEvent, agenda, routeOverrides} = {}) {
   const dir = await mkdtemp(join(tmpdir(), 'player-context-cut-'));
   t.after(() => rm(dir, {recursive:true, force:true}));
   const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
   await mkdir(actor, {recursive:true});
-  const configuration = {...route(), context_cut:contextCut, max_context_images:maxImages, context_image_block:block};
-  configuration.recall.model.id = 'recall-fixture';
-  configuration.recall.every = 100;
+  const configuration = {...route(), context_cut:contextCut, max_context_images:maxImages, context_image_block:block, ...routeOverrides};
   const control = new PassThrough();
   const events = [], payloads = [];
   let operations = 0;
@@ -98,14 +96,13 @@ async function play(t, playerFetch, {contextCut = imageCut, maxImages = 2, block
     // Give the off-path reader a polling interval while the provider holds its response.
     await realDelay(1200);
   };
-  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
+  const result = await runHost({configuration, agenda, knowledge:knowledge('v1'), knowledgeUpdates:list,
     session:sessionId, actorId, pendingControlId:null, control, finishReserveUsd:'0',
     context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
     env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
       enabled:true, required:true, enabled_tools:['computer_observe'], startup_timeout_sec:2, tool_timeout_sec:2},
     fetch:async (_url, init) => {
       const payload = JSON.parse(init.body);
-      if (payload.model === 'recall-fixture') return recallReply(['article-a']);
       payloads.push(payload);
       return playerFetch(payloads.length, {dir, publish, appendCoverage});
     }, onEvent:event => { events.push(event); onEvent?.(event, control); }});
@@ -120,7 +117,7 @@ test('a high-mark cut delivers a bounded briefing, clears stale usage and warnin
     return observe(n, 1, [3, 4].includes(n) ? 97_000 : n === 5 ? 12_345 : 16);
   }, {contextCut:tokenCut, maxImages:12});
   const start = events.find(event => event.type === 'host-start');
-  assert.deepEqual([start.schema, start.telemetry_version, start.context_cut], ['player-host/12', 12, tokenCut]);
+  assert.deepEqual([start.schema, start.telemetry_version, start.context_cut], ['player-host/13', 13, tokenCut]);
   assert.ok(start.unsupported_features.includes('compaction'));
   const [held, cut] = cutEvents(events);
   assert.equal(cutEvents(events).length, 2);
@@ -142,20 +139,20 @@ test('a high-mark cut delivers a bounded briefing, clears stale usage and warnin
   const marker = markerText(after).split('\n');
   assert.deepEqual(marker, [
     'BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false',
-    JSON.stringify({grants_authority:false, removed_turns:3, covered_through_operation_id:operationId(3),
+    JSON.stringify({grants_authority:false, removed_turns:3, uncovered_turns:0, covered_through_operation_id:operationId(3),
       knowledge_version:'v1', source_id_prefix:`${sessionId}-`, source_ids:['1..3'], recent_intents:['State the fixture action']}),
     'END CONTEXT CUT',
     'To inspect any omitted frame again, read its source_id (combining any source_id_prefix and expanding any start..end range) with player_source.',
   ]);
   const briefings = events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'briefing');
-  assert.deepEqual(briefings.map(event => [event.receiving_player_request_id, event.recall_request_id, event.article_ids, event.index_ids]),
-    [['request-1', 'recall-1', ['article-a'], ['article-b', 'fact-alone']], ['request-5', null, ['article-a', 'article-b'], ['fact-alone']]]);
+  assert.deepEqual(briefings.map(event => [event.receiving_player_request_id, event.article_ids, event.index_ids]),
+    [['request-1', ['article-b', 'article-a'], ['fact-alone']], ['request-5', ['article-b', 'article-a'], ['fact-alone']]]);
   const briefing = briefings.at(-1);
   const data = JSON.parse(briefing.text.split('\n')[1]);
   assert.deepEqual([data.leads.map(lead => lead.id), data.index, data.unlisted_entries],
-    [['article-a', 'article-b'], [{id:'fact-alone', title:'Unfiled subject', index:'An unfiled claim'}], 0]);
+    [['article-b', 'article-a'], [{id:'fact-alone', title:'Unfiled subject', index:'An unfiled claim'}], 0]);
   assert.equal(messageText(after.messages[1]), 'Offline mission\n\n' + briefing.text);
-  assert.equal(events.filter(event => event.type === 'request-start' && event.request_role === 'recall').length, 1);
+  assert.ok(events.filter(event => event.type === 'request-start').every(event => event.request_role === 'player'));
 
   const estimates = events.filter(event => event.type === 'context-estimate');
   assert.equal(estimates.find(event => event.request_id === 'request-5').usage_tokens, 0);
@@ -237,13 +234,13 @@ test('a cut briefing is bounded: recent articles as leads and recent standalone 
     fact(`fact-${n}`, {subject:`Fact ${n}`, text:`Standalone claim ${n}. Detail.`, seen:position(n)}))]});
   const small = cutBriefing(store(CUT_BRIEFING_FACTS + 5));
   const data = JSON.parse(small.text.split('\n')[1]);
-  const kept = [0, 1, 2, ...Array.from({length:CUT_BRIEFING_ARTICLES - 3}, (_, n) => n + 6)].map(n => `article-${n}`);
-  assert.deepEqual([small.kind, small.recall_request_id, small.article_ids, data.leads.map(lead => lead.id)],
-    ['briefing', null, kept, kept]);
-  assert.deepEqual(data.leads[0], {id:'article-0', title:'Article 0', lead:'Lead 0. More detail.'});
-  const recent = Array.from({length:CUT_BRIEFING_FACTS}, (_, n) => `fact-${n + 5}`);
+  const kept = [2, 1, 0, ...Array.from({length:CUT_BRIEFING_ARTICLES - 3}, (_, n) => CUT_BRIEFING_ARTICLES + 2 - n)].map(n => `article-${n}`);
+  assert.deepEqual([small.kind, small.article_ids, data.leads.map(lead => lead.id)],
+    ['briefing', kept, kept]);
+  assert.deepEqual(data.leads[0], {id:'article-2', title:'Article 2', lead:'Lead 2. More detail.'});
+  const recent = Array.from({length:CUT_BRIEFING_FACTS}, (_, n) => `fact-${CUT_BRIEFING_FACTS + 4 - n}`);
   assert.deepEqual([small.index_ids, data.index[0], data.unlisted_entries],
-    [recent, {id:'fact-5', title:'Fact 5', index:'Standalone claim 5'}, 3 + 5]);
+    [recent, {id:'fact-28', title:'Fact 28', index:'Standalone claim 28'}, 3 + 5]);
   const large = cutBriefing(store(5_000));
   assert.equal(JSON.parse(large.text.split('\n')[1]).unlisted_entries, 3 + 5_000 - CUT_BRIEFING_FACTS);
   assert.ok(large.text.length < small.text.length * 1.1, 'the briefing does not grow with the store');
@@ -263,7 +260,7 @@ test('a cut briefing stays within its serialized size cap however long the entri
   assert.ok(JSON.stringify(store).length > 30 * huge, 'the store itself is megabytes');
   const bounded = cutBriefing(store), data = payload(bounded);
   assert.ok(size(bounded) <= CUT_BRIEFING_CHARS, `payload ${size(bounded)} chars`);
-  assert.deepEqual(data.leads.map(lead => lead.id), ['article-0', 'article-1', 'article-2', 'article-3']);
+  assert.deepEqual(data.leads.map(lead => lead.id), ['article-4', 'article-3', 'article-2', 'article-1', 'article-0']);
   for (const row of [...data.leads.map(lead => lead.lead), ...data.index.map(row => row.index)]) {
     assert.equal(row.length, CUT_BRIEFING_SNIPPET_CHARS);
     assert.ok(row.endsWith('…'));
@@ -271,16 +268,17 @@ test('a cut briefing stays within its serialized size cap however long the entri
   // The newest facts fill what is left; every article and fact not shown is counted.
   const listed = data.index.map(row => row.id);
   assert.ok(listed.length > 0 && listed.length < CUT_BRIEFING_FACTS, `${listed.length} index lines`);
-  assert.deepEqual(listed, Array.from({length:listed.length}, (_, n) => `fact-${30 - listed.length + n}`));
+  assert.deepEqual(listed, Array.from({length:listed.length}, (_, n) => `fact-${29 - n}`));
   assert.equal(data.unlisted_entries, 5 + 30 - data.leads.length - listed.length);
   assert.deepEqual([bounded.article_ids, bounded.index_ids], [data.leads.map(lead => lead.id), listed]);
 
-  // Edge cases: an empty store and a store whose only article cannot fit are bounded too.
+  // Edge cases: an empty store and a store whose only article needs clipping are bounded too.
   const empty = cutBriefing({...knowledge(), articles:[], facts:[]});
   assert.deepEqual([payload(empty).leads, payload(empty).index, payload(empty).unlisted_entries], [[], [], 0]);
   const lone = cutBriefing({...knowledge(), articles:[articles[4]], facts:[filed[4]]});
   assert.ok(size(lone) <= CUT_BRIEFING_CHARS);
-  assert.deepEqual([payload(lone).leads, payload(lone).unlisted_entries], [[], 1]);
+  assert.deepEqual([lone.article_ids, payload(lone).unlisted_entries], [['article-4'], 0]);
+  assert.ok(payload(lone).leads[0].title.endsWith('…'));
   const single = cutBriefing({...knowledge(), articles:[articles[0]], facts:[filed[0]]});
   assert.deepEqual([payload(single).leads.map(lead => lead.lead.length), payload(single).unlisted_entries],
     [[CUT_BRIEFING_SNIPPET_CHARS], 0]);
@@ -337,14 +335,14 @@ test('restore permanently disables additional cuts even if later coverage arrive
     if (n === 2) await publish(publication(1));
     if (n === 3) await publish(restoration, publication(2));
     if (n === 4) await publish(publication(3));
-    return n === 5 ? reply() : observe(n, 1, 1000);
+    return n === 5 ? reply() : observe(n, 1, 2500);
   }, {maxImages:1});
   assert.deepEqual(cutEvents(events).map(event => [event.request_id, event.outcome, event.reason, event.covered_through_operation_id]),
     [['request-3', 'cut', undefined, operationId(1)]]);
   assert.equal(markerText(payloads[4]), markerText(payloads[2]));
 });
 
-test('coverage from a newer version refused for capacity leaves the adopted coverage usable', async t => {
+test('a clipped update can join a cut and use the verified coverage for the adopted version', async t => {
   const {events, payloads} = await play(t, async (n, {dir, publish}) => {
     if (n === 3) {
       const huge = knowledge();
@@ -355,50 +353,87 @@ test('coverage from a newer version refused for capacity leaves the adopted cove
     }
     return n === 4 ? reply() : observe(n, 1, 9000);
   });
-  assert.ok(events.some(event => event.type === 'knowledge-delivery' && event.version === 'v2' && event.reason === 'context-capacity'));
   assert.ok(!events.some(event => event.type === 'knowledge-delivery' && event.reason === 'invalid-entry'));
   const [cut] = cutEvents(events);
   assert.deepEqual([cut.request_id, cut.outcome, cut.knowledge_version, cut.covered_through_operation_id, cut.removed_turns],
-    ['request-4', 'cut', 'v1', operationId(1), 1]);
-  assert.deepEqual(JSON.parse(markerText(payloads[3]).split('\n')[1]).source_ids, [sourceId(1)]);
+    ['request-4', 'cut', 'v2', operationId(2), 2]);
+  const marker = JSON.parse(markerText(payloads[3]).split('\n')[1]);
+  assert.equal(marker.changes_since.article_changes[0].id, 'article-a');
+  assert.ok(marker.changes_since.article_changes[0].lead.endsWith('…'));
+  assert.equal(marker.uncovered_turns, 0);
+  assert.equal(cut.uncovered_turns, 0);
 });
 
-test('a version too large for the uncut history is adopted when a cut at the same boundary makes room', async t => {
-  // R-REGRESSION (#946): adoption was decided against the history before that boundary's cut, so a version
-  // that fit the request actually sent was refused for capacity and never offered again.
-  const {events, payloads} = await play(t, async (n, {dir, publish}) => {
-    if (n === 3) {
-      await listUpdate(dir, knowledge('v2'));
-      await publish(publication(2, 'v2'));
-    }
-    if (n >= 4) return reply();
-    return observe(n, 1, n === 3 ? 97_000 : 16);
-  }, {contextCut:tokenCut, maxImages:12});
-  const [cut] = cutEvents(events);
-  assert.deepEqual([cut.request_id, cut.outcome, cut.knowledge_version], ['request-4', 'cut', 'v2']);
-  const updates = events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'update');
-  assert.deepEqual(updates.map(event => [event.outcome, event.version, event.receiving_player_request_id]),
-    [['delivered', 'v2', 'request-4']]);
-  assert.equal(JSON.parse(markerText(payloads[3]).split('\n')[1]).knowledge_version, 'v2');
-  // The update follows the cut marker in the request that carries it.
-  const sent = payloads[3].messages.map(messageText);
-  assert.ok(sent.indexOf(updates[0].text) > sent.findIndex(text => text.startsWith('BEGIN CONTEXT CUT')));
-});
-
-test('a version too large even after the cut is still refused for capacity', async t => {
-  const {events} = await play(t, async (n, {dir, publish}) => {
-    if (n === 3) {
-      const huge = knowledge('v2');
-      huge.articles[0].lead = 'x'.repeat(600_000);
-      await listUpdate(dir, huge);
-      await publish(publication(2));
-    }
-    if (n >= 4) return reply();
-    return observe(n, 1, n === 3 ? 97_000 : 16);
-  }, {contextCut:tokenCut, maxImages:12});
-  assert.equal(cutEvents(events)[0].outcome, 'cut');
+test('cut markers diff from the previous briefing even after mid-segment delivery, and carry committed agenda', async t => {
+  let agenda = applyAgendaTool(emptyAgenda(), {op:'upsert', id:'evidence', status:'active', title:'Carry evidence',
+    refs:['fact-alone']}, new Set(['fact-alone'])).agenda;
+  agenda = applyAgendaTool(agenda, {op:'upsert', id:'finished', status:'done', title:'Earlier work'}, new Set()).agenda;
+  const v2 = knowledge('v2'), v3 = knowledge('v3');
+  for (const value of [v2, v3]) {
+    value.facts.pop();
+    value.history.ended.push('fact-alone');
+  }
+  v3.articles[0].body[0].text = 'Changed claim under the same lead.';
+  const {result, events, payloads} = await play(t, async (n, {dir, publish}) => {
+    if (n === 1) { await listUpdate(dir, v2); await realDelay(1200); }
+    if (n === 2) await publish(publication(1, 'v2'));
+    if (n === 3) { await listUpdate(dir, v3); await publish(publication(2, 'v3')); }
+    return n === 4 ? reply() : observe(n, 1, 4000);
+  }, {agenda, maxImages:1});
   assert.deepEqual(events.filter(event => event.type === 'knowledge-delivery' && event.kind === 'update')
-    .map(event => [event.outcome, event.version, event.reason]), [['refused', 'v2', 'context-capacity']]);
+    .map(event => [event.outcome, event.previous_version, event.version]), [['delivered', 'v1', 'v2']]);
+  const first = JSON.parse(markerText(payloads[2]).split('\n')[1]);
+  const second = JSON.parse(markerText(payloads[3]).split('\n')[1]);
+  assert.deepEqual([first.changes_since.from_version, first.changes_since.to_version], ['v1', 'v2']);
+  assert.deepEqual(first.changes_since.corrections, [{old_id:'fact-alone', reason:'ended', by:[], affects_agenda:true}]);
+  assert.deepEqual([first.agenda.cut_count, first.agenda.threads.length], [1, 2]);
+  assert.deepEqual([second.changes_since.from_version, second.changes_since.to_version], ['v2', 'v3']);
+  assert.equal(second.changes_since.claim_updates[0].text, 'Changed claim under the same lead.');
+  assert.equal(second.changes_since.corrections, undefined);
+  assert.deepEqual([second.agenda.cut_count, second.agenda.threads.map(thread => thread.id)], [2, ['evidence']]);
+  assert.deepEqual(result.agenda.threads.map(thread => thread.id), ['evidence']);
+  assert.ok(!payloads[2].messages.some(message => messageText(message).startsWith('BEGIN FALLIBLE KNOWLEDGE UPDATE')));
+  assert.deepEqual(cutEvents(events).map(event => event.uncovered_turns), [0, 0]);
+});
+
+test('cut leaves an earlier agenda-related ending visible when the replacement omits it, then retires it on the next cut', async t => {
+  const agenda = applyAgendaTool(emptyAgenda(), {op:'upsert', id:'evidence', status:'active', title:'Carry evidence',
+    refs:['fact-alone']}, new Set(['fact-alone'])).agenda;
+  const v2 = knowledge('v2'), v3 = knowledge('v3'), v4 = knowledge('v4');
+  v2.facts.pop();
+  v2.history.ended = ['fact-alone'];
+  v4.articles[0].lead = 'Updated lead for cut two.';
+  const {payloads} = await play(t, async (n, {dir, publish}) => {
+    if (n === 1) { await listUpdate(dir, v2); await realDelay(1200); }
+    if (n === 2) { await listUpdate(dir, v3); await publish(publication(1, 'v3')); }
+    if (n === 3) { await listUpdate(dir, v4); await publish(publication(2, 'v4')); }
+    return n === 4 ? reply() : observe(n, 1, 4000);
+  }, {agenda, maxImages:1});
+  const marker1 = JSON.parse(markerText(payloads[2]).split('\n')[1]);
+  assert.equal(marker1.changes_since, undefined);
+  assert.ok(payloads[2].messages.some(message => messageText(message).startsWith('BEGIN FALLIBLE KNOWLEDGE UPDATE (v2)')));
+  assert.ok(!payloads[3].messages.some(message => messageText(message).startsWith('BEGIN FALLIBLE KNOWLEDGE UPDATE (v2)')));
+});
+
+test('strict-fit rescue still succeeds when a carried agenda is already at the exact 3072-byte ceiling', async t => {
+  const threads = Array.from({length:6}, (_, i) => ({
+    id:`t-${i}`, status:'active', title:'x'.repeat(120), notes:'y'.repeat(240), created_at_cut:0, updated_at_cut:0,
+  }));
+  const base = {schema:'player-agenda-continuation/1', cut_count:9, threads:[...threads, {
+    id:'pad', status:'active', title:'a', notes:'b', created_at_cut:0, updated_at_cut:0,
+  }]};
+  const extra = 3072 - Buffer.byteLength(JSON.stringify(base));
+  assert.ok(extra > 0 && extra < 240);
+  base.threads[6].notes = 'b' + 'z'.repeat(extra);
+  assert.equal(Buffer.byteLength(JSON.stringify(base)), 3072);
+  const {result, events, payloads} = await play(t, async (n, {publish}) => {
+    if (n === 2) await publish(publication(1));
+    return n === 3 ? reply() : observe(n, 1, n === 2 ? 98_000 : 16);
+  }, {agenda:base, maxImages:12, contextCut:{low_mark:95_000, high_mark:99_900, min_free:10}});
+  assert.equal(result.ok, true);
+  assert.deepEqual(cutEvents(events).map(event => [event.outcome, event.cut_result]), [['cut', 'rescue']]);
+  assert.equal(result.agenda.cut_count, 9);
+  assert.ok(markerText(payloads[2]));
 });
 
 test('an accepted orderly stop fences new cuts and remains visible after an earlier cut', async t => {
@@ -407,7 +442,7 @@ test('an accepted orderly stop fences new cuts and remains visible after an earl
     if (n === 2) await publish(publication(1));
     if (n === 3) await publish(publication(2));
     return n === 4 ? reply(null, [['player_finish', {disposition:'external_stop_complete', report:'Stopped',
-      source_ids:[], control_id:command.id}]]) : observe(n, 1, 1000);
+      source_ids:[], control_id:command.id}]]) : observe(n, 1, 2500);
   }, {maxImages:1, onEvent:(event, control) => {
     if (event.type === 'tool-result' && event.request_id === 'request-3') control.write(JSON.stringify(command) + '\n');
   }});
@@ -438,8 +473,6 @@ test('an unknown player-transport/2 operation in a batch prevents cutting that b
   const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
   await mkdir(actor, {recursive:true});
   const configuration = {...route(), context_cut:imageCut, max_context_images:2};
-  configuration.recall.model.id = 'recall-fixture';
-  configuration.recall.every = 100;
   let calls = 0;
   t.mock.method(McpClient.prototype, 'connect', async () => {});
   t.mock.method(McpClient.prototype, 'close', async () => {});
@@ -462,7 +495,6 @@ test('an unknown player-transport/2 operation in a batch prevents cutting that b
       enabled:true, required:true, enabled_tools:['computer_observe'], startup_timeout_sec:2, tool_timeout_sec:2},
     fetch:async (_url, init) => {
       const payload = JSON.parse(init.body);
-      if (payload.model === 'recall-fixture') return recallReply(['article-a']);
       payloads.push(payload);
       const n = payloads.length;
       if (n === 2) { await appendFile(list, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
@@ -493,8 +525,6 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
   const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
   await mkdir(actor, {recursive:true});
   const configuration = {...route(), context_cut:imageCut, max_context_images:1};
-  configuration.recall.model.id = 'recall-fixture';
-  configuration.recall.every = 100;
   let operations = 0;
   const handoffOp = operationId(99), contextId = 'd'.repeat(32), contextSha = 'e'.repeat(64);
   t.mock.method(McpClient.prototype, 'connect', async () => {});
@@ -525,10 +555,9 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
       enabled:true, required:true, enabled_tools:['computer_observe', 'player_handoff'], startup_timeout_sec:2, tool_timeout_sec:2},
     fetch:async (_url, init) => {
       const payload = JSON.parse(init.body);
-      if (payload.model === 'recall-fixture') return recallReply(['article-a']);
       reqs++;
       if (reqs === 2) { await appendFile(list, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
-      return reqs === 3 ? reply(null, [['player_handoff', {}]]) : observe(reqs, 1, 1000);
+      return reqs === 3 ? reply(null, [['player_handoff', {}]]) : observe(reqs, 1, 2500);
     }, onEvent:event => events.push(event)});
   assert.deepEqual([result.ok, result.reason], [true, 'handoff']);
   assert.deepEqual(cutEvents(events).map(c => [c.request_id, c.outcome]), [['request-3', 'cut']]);
@@ -540,8 +569,6 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
   const actor2 = join(dir2, 'actors', '001'), list2 = join(actor2, 'knowledge-updates.jsonl');
   await mkdir(actor2, {recursive:true});
   const config2 = {...route(), spend_limit_usd:'0.002', unpriced_request_usd:'0.001', context_cut:imageCut, max_context_images:1};
-  config2.recall.model.id = 'recall-fixture';
-  config2.recall.every = 100;
   operations = 0;
   const events2 = [];
   let reqs2 = 0;
@@ -552,10 +579,9 @@ test('handoff succeeds after a cut and cut briefing emits knowledge-undelivered 
       enabled:true, required:true, enabled_tools:['computer_observe'], startup_timeout_sec:2, tool_timeout_sec:2},
     fetch:async (_url, init) => {
       const payload = JSON.parse(init.body);
-      if (payload.model === 'recall-fixture') return recallReply(['article-a']);
       reqs2++;
       if (reqs2 === 2) { await appendFile(list2, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
-      return reply(null, [['computer_observe', {}]], {...usage(1000), cost:reqs2 === 2 ? 0.002 : 0.0005});
+      return reply(null, [['computer_observe', {}]], {...usage(2500), cost:reqs2 === 2 ? 0.002 : 0.0005});
     }, onEvent:event => events2.push(event)});
   assert.deepEqual([res2.ok, res2.reason], [false, 'spend-limit']);
   assert.ok(events2.some(e => e.type === 'context-cut' && e.outcome === 'cut' && e.request_id === 'request-3'));

@@ -615,8 +615,13 @@ def build_items(run: Path, annotators: Sequence[str], matches: Path) -> dict:
 
 # --- the facts to judge -------------------------------------------------------------------------------------------------
 
-DELIVERY_MANIFESTS = (MANIFEST_SCHEMA, 'campaign-run/10', 'campaign-run/7')
-DELIVERY_VERSIONS = f'{MANIFEST_SCHEMA} or indexed historical /10 or /7'
+ARCHIVED_DELIVERY_SCHEMAS = {
+    'campaign-run/13': 'delivered-knowledge/3',
+    'campaign-run/10': 'delivered-knowledge/1',
+    'campaign-run/7': 'delivered-knowledge/1',
+}
+DELIVERY_MANIFESTS = (MANIFEST_SCHEMA, *ARCHIVED_DELIVERY_SCHEMAS)
+DELIVERY_VERSIONS = f'{MANIFEST_SCHEMA} or indexed historical /13, /10 or /7'
 
 
 def build_facts(run: Path, runs: Sequence[Path]) -> dict:
@@ -628,10 +633,12 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
     admissions, recall_events = {}, []
     for directory in runs:
         manifest = read_manifest(directory)
-        if manifest['schema'] not in DELIVERY_MANIFESTS:
+        schema = manifest['schema']
+        knowledge_schema = SCHEMA if schema == MANIFEST_SCHEMA else ARCHIVED_DELIVERY_SCHEMAS.get(schema)
+        if knowledge_schema is None:
             raise MeasureError(f'{directory}: delivery requires {DELIVERY_VERSIONS}')
-        current = manifest['schema'] == MANIFEST_SCHEMA
-        if current and manifest.get('live_knowledge_updates') is True:
+        scoped = schema in (MANIFEST_SCHEMA, 'campaign-run/13')
+        if scoped and manifest.get('live_knowledge_updates') is True:
             # The judged facts are the frozen file's; a version adopted during play delivers facts outside it.
             raise MeasureError(f'{directory}: the facts to judge are those of the frozen delivered file; '
                                'a run with live_knowledge_updates delivers versions outside it')
@@ -644,10 +651,10 @@ def build_facts(run: Path, runs: Sequence[Path]) -> dict:
         full, drawn = read_json(directory/'private/knowledge-full.json'), read_json(directory/'private/units.json')
         delivered = read_json(directory/'delivered-knowledge.json')
         # A sealed historical package keeps the knowledge version it was frozen with (closed archive read).
-        if full.get('schema') != (SCHEMA if current else 'delivered-knowledge/1') or delivered.get('schema') != full['schema'] \
+        if full.get('schema') != knowledge_schema or delivered.get('schema') != knowledge_schema \
                 or drawn.get('schema') not in ('knowledge-units/1', 'knowledge-units/2') or drawn['version'] != full['version']:
             raise MeasureError(f'{directory}: unsupported frozen knowledge')
-        if current and not selection_matches(full.get('selection'), manifest):
+        if scoped and not selection_matches(full.get('selection'), manifest):
             raise MeasureError(f'{directory}: private knowledge selection differs from the package world, lineage, context or delivered SHA-256')
         expected = units(full)
         if ([{k:v for k,v in u.items() if k not in (('withheld', 'placebo') if drawn['schema'] == 'knowledge-units/2' else ('withheld',))} for u in drawn['units']] != expected['units']

@@ -33,11 +33,13 @@ model fallback and no fallback outside its declared endpoints; the
 
 The player journal (`harness/player/journal.py`) retains public calls,
 fallible hints and referenced source images. It is not a player-authored knowledge
-store. The curator writes knowledge through its gate; the player receives a frozen
-briefing, reminders and read tools. A hint can inform later curation but cannot
-publish a fact or grant input authority. Source references show availability, not
-attention. [Player ports](../contracts/player-ports.md#player-knowledge-and-executable-proposals)
-owns the exact journal, hint and handoff contracts.
+store. The curator writes knowledge through its gate; the player receives deterministic
+briefings, substantive post-cut and mid-segment deltas, on-demand read/query tools,
+same-lineage ancestor frame reads (`player-source-read/2`) and a host-local working-state
+agenda (`player_agenda`, never projected into curator memory). A hint can inform later
+curation but cannot publish a fact or grant input authority. Source references show
+availability, not attention. [Player ports](../contracts/player-ports.md#player-knowledge-and-executable-proposals)
+owns the exact journal, hint, source-read and handoff contracts.
 
 The [player ports contract](../contracts/player-ports.md#player-journal)
 governs reopening the journal across native sessions. Capacity or source
@@ -48,14 +50,15 @@ not a knowledge graph, and does not renew authority.
 
 Journal and application tests cover the supported formats and composition. They do
 not establish learning benefit. Sealed historical evidence retains its original scope.
-The application serves knowledge reads from the delivered export. The host selects
-briefings and reminders from that same version under the [delivery contract](../contracts/player-host.md#delivered-knowledge-and-recall).
+The application serves knowledge reads from the delivered export. The host builds
+deterministic briefings and substantive deltas from that same version under the
+[delivery contract](../contracts/player-host.md#delivered-knowledge-and-player-working-state-agenda).
 When the package sets live knowledge updates, the driver has the application serve a
-newer version during play, and the host states the difference to the running actor
-in one update message ([a newer version during play](../contracts/player-host.md#a-newer-version-during-play)).
+newer version during play, and the host delivers non-empty substantive deltas to the
+running actor while suppressing empty updates ([a newer version during play](../contracts/player-host.md#a-newer-version-during-play)).
 Each knowledge read names the version it answers from.
-The [player guide](../player-guide.md#delivered-knowledge) describes how to check
-fallible leads and reminders against the current view. The
+The [player guide](../player-guide.md#delivered-knowledge-and-working-state) describes how to check
+fallible leads and deltas against the current view. The
 [curator repository](curator.md#facts-articles-and-grooming) stays outside the player
 runtime. After play, the evaluator reads [delivery evidence](../contracts/measurement-tools.md#adjudication-and-the-standing-use-measures).
 

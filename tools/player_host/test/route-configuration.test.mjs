@@ -55,12 +55,10 @@ function failoverRoute() {
     cost:{...maxCost}, compat:{...configuration.model.compat, openRouterRouting:{
       only:tags, order:[...tags], allow_fallbacks:false, require_parameters:true}}};
   configuration.endpoint_costs = structuredClone(endpointCosts);
-  configuration.recall.model = structuredClone(configuration.model);
-  configuration.recall.endpoint_costs = structuredClone(endpointCosts);
   return configuration;
 }
 
-test('two distinct endpoints require matching order and closed per-endpoint max rates for both roles', () => {
+test('two distinct endpoints require matching order and closed per-endpoint max rates for the player', () => {
   const validate = configuration => validateConfiguration(configuration, model.id, 'off');
   assert.doesNotThrow(() => validate(failoverRoute()));
   for (const change of [
@@ -88,32 +86,25 @@ test('two distinct endpoints require matching order and closed per-endpoint max 
     settings => { settings.model.cost.output += 0.1; },
   ];
   for (const change of invalidRates) {
-    for (const role of ['player', 'recall']) {
-      const configuration = failoverRoute();
-      change(role === 'recall' ? configuration.recall : configuration);
-      assert.throws(() => validate(configuration), /invalid-configuration/, role);
-    }
+    const configuration = failoverRoute();
+    change(configuration);
+    assert.throws(() => validate(configuration), /invalid-configuration/);
   }
 });
 
-test('direct and single-endpoint routes require null endpoint costs for each role', () => {
+test('direct and single-endpoint routes require null endpoint costs for the player', () => {
   const direct = route();
   const single = failoverRoute();
-  for (const settings of [single, single.recall]) {
-    settings.model.compat.openRouterRouting.only = ['baseten'];
-    settings.model.compat.openRouterRouting.order = ['baseten'];
-    settings.endpoint_costs = null;
-  }
+  single.model.compat.openRouterRouting.only = ['baseten'];
+  single.model.compat.openRouterRouting.order = ['baseten'];
+  single.endpoint_costs = null;
   for (const configuration of [direct, single]) {
     assert.doesNotThrow(() => validateConfiguration(configuration, model.id, 'off'));
-    for (const role of ['player', 'recall']) {
-      for (const value of [undefined, {}, endpointCosts]) {
-        const invalid = structuredClone(configuration);
-        const settings = role === 'recall' ? invalid.recall : invalid;
-        if (value === undefined) delete settings.endpoint_costs;
-        else settings.endpoint_costs = value;
-        assert.throws(() => validateConfiguration(invalid, model.id, 'off'), /invalid-configuration/);
-      }
+    for (const value of [undefined, {}, endpointCosts]) {
+      const invalid = structuredClone(configuration);
+      if (value === undefined) delete invalid.endpoint_costs;
+      else invalid.endpoint_costs = value;
+      assert.throws(() => validateConfiguration(invalid, model.id, 'off'), /invalid-configuration/);
     }
   }
 });
@@ -139,7 +130,6 @@ test('OpenRouter uses maintained routing and reasoning serializers with explicit
   configuration.model={...configuration.model,provider:'openrouter',baseUrl:'https://openrouter.ai/api/v1',reasoning:true,
     thinkingLevelMap:{medium:'medium'},compat:{...configuration.model.compat,supportsReasoningEffort:true,
       thinkingFormat:'openrouter',openRouterRouting:{only:['fireworks/us'],order:['fireworks/us'],allow_fallbacks:false,require_parameters:true}}};
-  configuration.recall.model=structuredClone(configuration.model);
   assert.doesNotThrow(()=>validateConfiguration(configuration,model.id,'medium'));
   for (const baseUrl of ['http://openrouter.ai/api/v1','https://other.invalid/api/v1','https://openrouter.ai/v1']) {
     assert.throws(()=>validateConfiguration({...configuration,model:{...configuration.model,baseUrl}},model.id,'medium'));
@@ -189,5 +179,11 @@ test('frozen serving tier uses the SDK payload hook and reports only observed st
     assert.deepEqual(tiers.map(e=>[e.request_id,e.applied_service_tier]),['priority','default'].includes(echo)?[['request-1',echo]]:[]);
     assert.equal(actual.payloads.length,2,'plain text needs a separate direct finish call');
     assert.ok(!JSON.stringify(actual.events).includes('fixture-key private tier'));
+  }
+});
+
+test('only player-host/13 is accepted and recall is outside its closed route', () => {
+  for (const change of [{schema:'player-host/12'}, {recall:null}, {recall:{}}]) {
+    assert.throws(() => validateConfiguration({...route(), ...change}, model.id, 'off'), /invalid-configuration/);
   }
 });

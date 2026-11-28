@@ -10,7 +10,7 @@ One [campaign custodian](../../tools/campaign_run.py) owns fresh mechanical targ
 store/server lifetime and final cleanup. The [driver](../../tools/campaign_player.py)
 owns the frozen [player host](../contracts/player-host.md)/MCP groups and at most one
 successor. The [package validator](../../tools/campaign_package.py) is authoritative
-for the closed `campaign-run/13` admission. Admission is that package check alone: it reads
+for the closed `campaign-run/14` admission. Admission is that package check alone: it reads
 no game phase or identity, and no semantic mission service exists.
 
 A run is launched through [the maintained supervisor](campaign-supervision.md),
@@ -21,11 +21,13 @@ and original package allowances remain here. Its receipt does not accept gamepla
 ## Frozen data
 
 Select one fresh canonical project-local directory under `.runtime/computer-sessions/`.
-Its manifest binds the exact clean source commit and SHA256 of six required inputs
-(`route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json` and
-`delivered-knowledge.json`). The five inputs other than `delivered-knowledge.json`
-are each at most 1 MiB. Create the knowledge file in the
-[export step](#freeze-delivered-knowledge), including for empty knowledge.
+Its manifest binds the exact clean source commit and SHA256 of eight required inputs
+(`route.json`, `mcp-template.json`, `context.txt`, `prompt.txt`, `target.json`,
+`delivered-knowledge.json`, `source-index.json` and `agenda.json`). The seven inputs
+other than `delivered-knowledge.json` are each at most 1 MiB. Create the knowledge file in the
+[export step](#freeze-delivered-knowledge), including for empty knowledge, alongside the
+frozen same-lineage `player-source-index/1` (`source-index.json`) and starting
+`player-agenda-continuation/1` (`agenda.json`, empty when starting fresh).
 It also freezes native executable/adapter bytes, bounded initial target files,
 shared-lock path, explicit `player-journal/1` store (`player_store`), player host argv, effort,
 loopback port, original wall/host/aggregate-host seconds, one/two-host limit,
@@ -42,10 +44,10 @@ and normal input configuration. The target receives only the permitted environme
 and inherited mechanical descriptors, not provider credentials.
 The custodian creates `.runtime/logs/` before launch for the prepared wrapper's log.
 
-`route.json` uses current `player-host/12` with text/image input and explicit
+`route.json` uses current `player-host/13` with text/image input and explicit
 provider/effort/price metadata and image peak and block, chosen against the
-provider's image limit. Set `endpoint_costs` for the player and recall as specified
-by the [route envelope](../contracts/player-host.md#route-envelope). Set
+provider's image limit (background LLM recall is retired). Set `endpoint_costs` for
+the player as specified by the [route envelope](../contracts/player-host.md#route-envelope). Set
 `context_cut` to `null` or the closed object with
 `high_mark`, `low_mark` and `min_free` described in the [host procedure](player-host.md).
 The route repeats the package's `spend_limit_usd` and carries
@@ -108,7 +110,7 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
 
 ```json
 {
-  "schema": "campaign-run/13",
+  "schema": "campaign-run/14",
   "session": "NEW_32_LOWERCASE_HEX_ID",
   "source_commit": "EXACT_40_HEX_CLEAN_HEAD",
   "labels": {"arm": "ARM", "start": "S1", "scenario": "SCENARIO", "lineage": null, "admission": null, "world": null},
@@ -116,7 +118,8 @@ the actual bytes, for example `shasum -a 256 SELECTED_FILE`; preserve those byte
   "files": {
     "route.json": "SHA256", "mcp-template.json": "SHA256",
     "context.txt": "SHA256", "prompt.txt": "SHA256", "target.json": "SHA256",
-    "delivered-knowledge.json": "SHA256"
+    "delivered-knowledge.json": "SHA256", "source-index.json": "SHA256",
+    "agenda.json": "SHA256"
   },
   "private_files": {"knowledge-full.json": "SHA256", "units.json": "SHA256"},
   "initial_files": {"ABSOLUTE_PREPARED_WRAPPER": "SHA256", "ABSOLUTE_OPTIONS_FILE": "SHA256"},
@@ -168,10 +171,14 @@ with `labels.lineage` when set, and `--context KEY=VALUE` for each declared run-
 `context`. The exporter selects every current record whose scope is satisfied by that target
 and blinds all raw world and lineage labels before drawing units. Omit `--world` to select
 unbound records alone. `--empty --package DIR` creates the required files with no units or
-coverage and takes the same selection options. Freeze the returned hashes in `files` and
+coverage and takes the same selection options. Then run
+`python -m tools.source_index --package DIR [--world WORLD --lineage LINEAGE --before-admission N] [--extra-run PRIOR_RUN ...] [--prior-agenda PRIOR_RUN/agenda-final.json]`
+to freeze `source-index.json` (`player-source-index/1`, empty when unbound/non-lineage) and
+`agenda.json` (`player-agenda-continuation/1`, empty when starting fresh or validated from a
+prior admission's `agenda-final.json`). Freeze all returned hashes in `files` and
 `private_files`. Preflight verifies the private selection against `labels.world`,
 `labels.lineage`, `context` and the delivered file's SHA-256. The
-[host contract](../contracts/player-host.md#delivered-knowledge-and-recall) specifies
+[host contract](../contracts/player-host.md#delivered-knowledge-and-player-working-state-agenda) specifies
 which files reach the player.
 
 With `--withhold-seed S`, each unit is withheld independently with probability one
@@ -183,17 +190,15 @@ defines the blocked assignment. The sealed pilot's starts each took their own se
 defines that measure. See the [unit rule](../contracts/measurement-tools.md#the-facts-to-judge-judged-facts1)
 for shared facts and article units.
 
-The closed `recall` object pins the model on the player's provider and key, `every` completed inputs per reminder, `endpoint_costs` and `unpriced_request_usd` computed from the recall model's rates. Player and recall share the run's dollar budget. Use forecast attempt counts to size the work and ending, and retain observed starts to assess the run.
-
 ### Live knowledge updates
 
 `live_knowledge_updates` is required and is `true` or `false`. With `false`, every
 actor plays the frozen version for the whole admission. With `true`, on each poll the
 driver adopts the highest newer version the
 [curator runner](../components/curator.md#delivery-to-a-running-actor) has confirmed and
-that verifies and publishes; the running host delivers the newest verified update that
-fits within context capacity (refusing an oversized one for context capacity), and any
-successor starts from the driver's latest adopted version. The
+that verifies and publishes; the running host delivers non-empty substantive deltas that
+fit within context capacity (suppressing empty updates and refusing oversized ones for
+context capacity), and any successor starts from the driver's latest adopted version. The
 [host contract](../contracts/player-host.md#a-newer-version-during-play) specifies
 adoption, verification and the message the player receives.
 Live delivery also sends the runner's verified coverage to the actor. A route
@@ -207,8 +212,6 @@ runner no newer version arrives and play keeps the frozen version. Preflight ref
 version is exported whole and would deliver what the draw withheld. The judged-facts
 builder refuses such a run for the same reason
 ([facts to judge](../contracts/measurement-tools.md#the-facts-to-judge-judged-facts1)).
-With `true`, the recall bound counts toward the [ending reserve](#spend-limit) even
-when the frozen file is empty, because a recall can follow a version adopted during play.
 
 ### Spend limit
 
@@ -220,14 +223,11 @@ The validator recomputes `unpriced_request_usd` as
 `(contextWindow × max(input, cacheRead, cacheWrite) + maxTokens × output) / 1e6`
 from the frozen rates and refuses a mismatch or zero. For two-endpoint routing
 the frozen model rates are the per-category maxima across the two endpoints.
-Set `ending_reserve.usd` at
-or above the player bound plus the recall bound (with zero recall contribution for
-empty knowledge in a package without [live knowledge updates](#live-knowledge-updates)),
-and ensure `ending_reserve.usd` plus that reserve bound stays strictly below
+Set `ending_reserve.usd` at or above the player bound,
+and ensure `ending_reserve.usd` plus that player bound stays strictly below
 `spend_limit_usd` so ordinary work can start before the ending reserve is reached.
 
-The host contract defines [spend accounting and stops](../contracts/player-host.md#spend)
-and [recall accounting](../contracts/player-host.md#delivered-knowledge-and-recall).
+The host contract defines [spend accounting and stops](../contracts/player-host.md#spend).
 The provider may bill attempts with unknown charges. Preserve unpriced counts and
 use the frozen time and mechanical ceilings. Read the counted figures from the
 receipt.
@@ -240,15 +240,14 @@ assign provider billing to the owner. Before paid play, the lead verifies the
 approved envelope against the frozen package. Preserve provider credit refusals
 as run evidence with the attempt's returned cost or explicit unknown.
 
-Limits: five input files each ≤1 MiB; 1–16 initial files; host argv of 1–8 entries,
+Limits: seven input files other than `delivered-knowledge.json` each ≤1 MiB; 1–16 initial files; host argv of 1–8 entries,
 the first an absolute regular file and the rest canonical project-local files tracked
 by the clean source commit (ignored `.runtime`, `.worktrees` or dependency files refuse), with
 the frozen adapter's `validate` mode accepting the route and MCP template; port 1024–65535;
 wall 60–86400 s, host/aggregate-host 30–86400 s, one or two hosts.
 Host seconds ≤ aggregate-host seconds < wall seconds minus 30 s cleanup. Each positive
 computer capacity is ≤2^40. `spend_limit_usd` is above zero. `ending_reserve.usd`
-covers the player's pending-request bound and, with delivered knowledge or live
-knowledge updates, the recall bound, and `ending_reserve.usd` plus that combined bound
+covers the player's pending-request bound, and `ending_reserve.usd` plus that bound
 stays strictly below the declared limit. The selected directory must have no prior started marker,
 session DB, native-process receipt, actors or contexts. An existing selected player
 store must be current; it never restores computer custody. The maintained
@@ -272,8 +271,7 @@ spectator use these values to describe the admission.
 Strings are printable ASCII only (space through `~`), with no control or non-ASCII
 characters. Preflight checks the start code against the current ledger schema
 before dispatch. A missing field, extra field or out-of-bound value refuses the
-package before effects, like the rest of the manifest. Preflight accepts only
-`campaign-run/13`.
+package before effects, like the rest of the manifest. Preflight accepts only `campaign-run/14`.
 
 The required top-level `context` object (`{}` by default) declares 0 to 8 **run-wide
 invariant** axes (`[a-z][a-z0-9_]{0,31}`, never `game`, `world` or `lineage`; printable
@@ -340,9 +338,12 @@ The custodian takes shared exclusion and writes `started.json` before native/DB
 creation. Native inherits the exact shared-lock descriptor/socket, retaining
 exclusion for its own lifetime. The custodian writes `ready.json` after starting
 its service. The driver creates exclusive per-actor inputs/host traces and
-operator-only resource notes. `frozen.json` is `player-host-inputs/4`.
+operator-only resource notes. `frozen.json` is `player-host-inputs/5`.
 With [live knowledge updates](#live-knowledge-updates) each actor directory also
 holds `knowledge-updates.jsonl` and the adopted versions under `knowledge/`.
+Each actor receives its starting `agenda.json` (`player-agenda-continuation/1`) and
+writes its final committed `agenda-final.json`, which carries across handoffs and is
+persisted to the run directory's `agenda-final.json` for resumed admissions.
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 
@@ -376,11 +377,11 @@ block is closed:
 | `reported_usd` | The sum of the cost the provider reported, over the responses that reported one |
 | `unpriced_requests` | Observed player attempts without a usable provider charge |
 | `unpriced_request_usd` | Player in-flight and ending planning bound from the route |
-| `unpriced_recall_requests` | Observed recall attempts without a usable provider charge |
-| `unpriced_recall_request_usd` | Recall in-flight and ending planning bound from the route |
+| `unpriced_recall_requests` | Constant `0` on `player-host/13` (retained for `campaign-receipt/7` / `player-driver/7` compatibility) |
+| `unpriced_recall_request_usd` | Constant `"0"` on `player-host/13` (retained for `campaign-receipt/7` / `player-driver/7` compatibility) |
 | `spent_usd` | Provider subtotal counted toward the dollar limit, equal to `reported_usd` |
-| `observed_attempts` | Player and recall HTTP starts read from the traces |
-| `observed_recall_attempts` | The recall subset |
+| `observed_attempts` | Player HTTP starts read from the traces |
+| `observed_recall_attempts` | Constant `0` on `player-host/13` (retained for `campaign-receipt/7` / `player-driver/7` compatibility) |
 | `spend_complete` | Whether [trace reconciliation](../contracts/player-host.md#spend) is complete. When false, the spend is unknown. |
 
 The dollar amounts are decimal text. The invoice is separate from the reported cost.

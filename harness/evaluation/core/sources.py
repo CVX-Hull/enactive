@@ -24,13 +24,13 @@ SESSION_SCHEMA = 'computer-session/1'
 OPERATION_SCHEMA = 'computer-operation/1'
 #: The current versions. Any other version of these records is an error naming the file and version, except where
 #: the closed archive index below lists that exact version for that session.
-HOST_SCHEMA = 'player-host/12'
-HOST_TELEMETRY = 12
+HOST_SCHEMA = 'player-host/13'
+HOST_TELEMETRY = 13
 #: Admitted historical telemetry versions where `briefing` and `reminder` `knowledge-delivery` events predated `outcome`.
 HISTORICAL_DELIVERY_TELEMETRY = frozenset((5, 8, 9, 11))
-MANIFEST_SCHEMA = 'campaign-run/13'
+MANIFEST_SCHEMA = 'campaign-run/14'
 #: These package versions use player-journal/1 and player-handoff-context/2.
-JOURNAL_MANIFEST_SCHEMAS = (MANIFEST_SCHEMA, 'campaign-run/12', 'campaign-run/10')
+JOURNAL_MANIFEST_SCHEMAS = (MANIFEST_SCHEMA, 'campaign-run/13', 'campaign-run/12', 'campaign-run/10')
 RECEIPT_SCHEMA = 'campaign-receipt/7'
 DRIVER_SCHEMA = 'player-driver/7'
 WATCH_TERMINAL_SCHEMA = 'campaign-watch-terminal/4'
@@ -138,6 +138,11 @@ ARCHIVE_COMBINATIONS = (
         dict(manifest='campaign-run/12', receipt='campaign-receipt/7', driver='player-driver/7', host='player-host/11',
              host_telemetry=11, run_ending='campaign-watch-terminal/4'),
         dict(manifest=_MANIFEST_12, host=_HOST_3)),
+    # Owner-approved sealed #963 validation and #998 multi-day admissions.
+    ArchiveCombination(
+        dict(manifest='campaign-run/13', receipt='campaign-receipt/7', driver='player-driver/7', host='player-host/12',
+             host_telemetry=12, run_ending='campaign-watch-terminal/4'),
+        dict(manifest=(*_MANIFEST_12, 'context'), host=_HOST_3)),
 )
 #: The manifest versions `read_manifest` names when it refuses one: the archived ones, then the current one.
 MANIFEST_SCHEMAS = tuple(dict.fromkeys([*(c.versions['manifest'] for c in ARCHIVE_COMBINATIONS), MANIFEST_SCHEMA]))
@@ -248,7 +253,7 @@ def read_manifest(run_dir: Path) -> dict:
     if value['schema'] != MANIFEST_SCHEMA and archive_entry(value) is None:
         raise EvaluationError(f'{path}: {value["schema"]} is read only for the sealed sessions that '
             f'{ARCHIVE_INDEX.name} lists with that version; session {value.get("session")!r} is not listed')
-    if value['schema'] == MANIFEST_SCHEMA and not valid_context(value.get('context')):
+    if value['schema'] in (MANIFEST_SCHEMA, 'campaign-run/13') and not valid_context(value.get('context')):
         raise EvaluationError(f'{path}: missing or invalid context axes')
     return value
 
@@ -410,9 +415,9 @@ class HostTraceUnsupported(EvaluationError):
 def is_delivered_exposure(fields: dict, host_telemetry: int | None) -> bool:
     """Whether a `knowledge-delivery` event records a placement the player actually received.
 
-    Current (`player-host/12`) deliveries always carry an explicit `outcome` (`delivered`, `undelivered`, or
-    `refused`); admitted historical traces (`telemetry_version` in `HISTORICAL_DELIVERY_TELEMETRY`) emitted
-    `briefing` and `reminder` rows without `outcome`.
+    Current deliveries always carry an explicit `outcome`, including `empty-suppressed` for an update without
+    substantive changes. Some admitted historical traces emitted `briefing` and `reminder` rows without
+    `outcome`.
     """
     kind = fields.get('kind')
     if kind not in ('briefing', 'reminder', 'update'):
@@ -426,7 +431,7 @@ def is_delivered_exposure(fields: dict, host_telemetry: int | None) -> bool:
 
 def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
               entry: ArchiveSession | None = None) -> Iterator[HostEvent]:
-    """Stream one current player-host/12 trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
+    """Stream one current or indexed host trace: the one offline parser of `host.jsonl` (the evaluator, the viewer and
     host-summary). The supervisor's live incremental reader in tools/campaign_player.py stays separate because
     evaluation never gates the control path (ADR008).
 
@@ -480,7 +485,7 @@ def iter_host(path: Path, actor_hint: str, *, partial_tail: bool = False,
 
 
 def read_host(path: Path, actor_hint: str, entry: ArchiveSession | None = None) -> tuple[str, tuple[HostEvent, ...]]:
-    """One whole current player-host/12 trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
+    """One whole host trace and its actor (the `host-start`'s `actor_id`, else `actor_hint`). A trace may
     still be appending, so an unterminated final line that does not parse is ignored on every pass, live or final.
     `entry` is its session's archive index entry, as in `iter_host`."""
     events = tuple(iter_host(path, actor_hint, partial_tail=True, entry=entry))

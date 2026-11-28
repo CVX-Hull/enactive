@@ -28,7 +28,7 @@ from typing import Any
 from harness.evaluation.core.host import HostFacts, ToolCall, host_facts
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError
-from harness.evaluation.core.sources import HostEvent, is_delivered_exposure, read_host, run_archive_entry
+from harness.evaluation.core.sources import HOST_TELEMETRY, HostEvent, is_delivered_exposure, read_host, run_archive_entry
 
 from .catalog import ID_LIMIT, RunInfo
 from .curator import read_file, read_rooted, rooted_entries, rooted_status
@@ -48,7 +48,7 @@ UNKNOWN_ENDPOINT = 'unknown'
 #: `context-cut` outcomes as the host writes them, and as the view names them.
 CUT_OUTCOMES = {'cut': 'applied', 'held-back': 'held_back'}
 CUT_RESULTS = ('target', 'best_effort', 'rescue')
-CUT_DETAIL_FIELDS = ('cut_result', 'cumulative_removed_turns', 'briefing_tokens', 'source_ids_count')
+CUT_DETAIL_FIELDS = ('cut_result', 'cumulative_removed_turns', 'briefing_tokens', 'source_ids_count', 'uncovered_turns')
 RESERVE_AMOUNTS = ('spent_usd', 'spend_limit_usd', 'finish_reserve_usd', 'unpriced_bound_usd')
 TAIL_NOTICE_KINDS = ('context-capacity', 'host-timeout', 'spend-limit')
 
@@ -172,7 +172,8 @@ def cut_fields(f: dict) -> dict:
         reason=identifier(f.get('reason')), knowledge_version=identifier(f.get('knowledge_version')),
         triggers=[t for t in (identifier(v, LABEL_LIMIT) for v in triggers[:TRIGGER_LIMIT]) if t is not None],
         cut_result=result if result in CUT_RESULTS else None,
-        **{key: count(f.get(key)) for key in ('tokens_before', 'tokens_after', 'images_before', 'images_after', 'removed_turns')},
+        **{key: count(f.get(key)) for key in ('tokens_before', 'tokens_after', 'images_before', 'images_after',
+                                            'removed_turns', 'uncovered_turns')},
         **{key: count(f.get(key)) if applied else None for key in ('cumulative_removed_turns', 'briefing_tokens', 'source_ids_count')})
 
 
@@ -277,6 +278,9 @@ def project(actors: list[tuple[str, str, tuple[HostEvent, ...]]], untraced: tupl
             elif event.type == 'settled':
                 out.settled[actor] = {key: f.get(key) for key in
                     ('player_requests', 'recall_requests', 'spent_usd', 'unpriced_requests', 'unpriced_recall_requests')}
+                if host_telemetry == HOST_TELEMETRY:
+                    for key in ('recall_requests', 'unpriced_recall_requests'):
+                        out.settled[actor][key] = f.get(key, 0)
         out.starts[actor], out.unpriced[actor] = Counter(), Counter()
         for request_id, number in started.items():
             out.starts[actor][role(request_id)] += number

@@ -7,7 +7,7 @@ test('completed handoff fences later batch inputs and ends even after an earlier
   const {result,payloads,calls,events}=await scenario(t,[reply('not a final gameplay report',[
     ['mutate',{mode:'ok',index:1}],['player_handoff',handoffArgs],['mutate',{mode:'ok',index:2}]
   ])],{enabledTools:handoffTools});
-  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:'',control_id:null});
+  assert.deepEqual(result,{ok:true,reason:'handoff',requests:1,finalText:'',control_id:null,agenda:{schema:'player-agenda-continuation/1',cut_count:0,threads:[]}});
   assert.equal(payloads.length,1);
   assert.deepEqual(calls.filter(c=>c.tool==='mutate').map(c=>[c.phase,c.index]),[['start',1],['end',1]]);
   assert.equal(events.filter(e=>e.type==='handoff').length,1);

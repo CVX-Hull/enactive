@@ -8,10 +8,13 @@ from __future__ import annotations
 
 from contextlib import closing
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import threading
 import time
 
@@ -21,9 +24,37 @@ from harness.trace import snapshot
 from harness.trace.projection import project
 from harness.trace.snapshot import TRANSACTION_BOUND_SECONDS, BoundExceeded, ReadRefused, SnapshotError, stage
 from harness.trace.stores import CURATOR_READ_LOCK, READ_HOLD_BOUND_SECONDS, sealed
-from tests.curator_trace import SESSION_ID, LiveWriter, png, record_package
+from tests import curator_trace
+from tests.curator_trace import SESSION_ID, png
+from tests.test_trace_projection import record_package
 
 ENDLESS = 'WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c) SELECT x FROM c'
+
+
+class LiveWriter(curator_trace.LiveWriter):
+    """Run the shared writer with the current frozen inputs."""
+
+    def __init__(self, run: Path, *, read_lock: bool = True):
+        run.mkdir()
+        if read_lock:
+            (run/CURATOR_READ_LOCK).touch()
+        record_package(run, labels=dict(world=None, lineage=None, admission=None))
+        self.run = run
+        self.process = subprocess.Popen([sys.executable, '-m', 'tests.test_trace_snapshot', str(run)],
+                                        cwd=curator_trace.ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        assert self.answer() == dict(ready=True, busy=0)
+
+
+class SnapshotWriter(curator_trace._Writer):
+    def freeze(self) -> dict:
+        directory = self.actor['directory']
+        self.write(directory/'agenda.json', dict(schema='player-agenda-continuation/1', cut_count=0, threads=[]))
+        names = ('actor.json', 'route.json', 'mcp.json', 'context.txt', 'prompt.txt', 'agenda.json')
+        self.write(directory/'frozen.json', dict(schema='player-host-inputs/5', actor_id=self.actor['id'],
+            session=self.session, knowledge_updates=None,
+            files={n: hashlib.sha256((directory/n).read_bytes()).hexdigest() for n in names}))
+        self.log(dict(type='host-start', schema='player-host/13', telemetry_version=13, actor_id=self.actor['id']))
+        return {}
 
 
 def _open_store_files(run: Path) -> int:
@@ -93,6 +124,45 @@ def test_at_the_writers_start_a_snapshot_holds_only_actors_with_frozen_inputs(tm
         assert {p.name for p in (frozen.directory/'actors'/'001').iterdir()} == {
             'frozen.json', 'prompt.txt', 'context.txt', 'actor.json', 'route.json', 'mcp.json', 'host.jsonl'}
         assert writer(op='close')['busy'] == 0
+
+
+@pytest.mark.parametrize('ended', [False, True])
+def test_snapshot_omits_agenda_files_calls_and_telemetry(tmp_path, ended):
+    with LiveWriter(tmp_path/'run') as writer:
+        writer(op='new_actor')
+        actor = writer.run/'actors'/'001'
+        secret = 'private-agenda-thread'
+        (actor/'agenda-final.json').write_text(json.dumps({'threads': [secret]}))
+        (writer.run/'source-index.json').write_text(json.dumps({'private': secret}))
+        with (actor/'host.jsonl').open('a') as stream:
+            events = [
+                dict(type='tool-start', tool='player_agenda', tool_call_id='agenda-edit', arguments={'text': secret}),
+                dict(type='tool-result', tool_call_id='agenda-edit', result={'structuredContent': {'id': secret}}),
+                dict(type='player-agenda', threads=[secret]),
+                dict(type='knowledge-delivery', kind='briefing', version='v1',
+                     text='BEGIN FALLIBLE KNOWLEDGE\n' + json.dumps({'leads': [], 'agenda': {'threads': [secret]}}) + '\nEND FALLIBLE KNOWLEDGE'),
+                dict(type='knowledge-undelivered', kind='update', version='v2',
+                     delta={'corrections': [{'old_id': 'fact-1', 'affects_agenda': True}]},
+                     text='BEGIN FALLIBLE KNOWLEDGE UPDATE (v2)\n'
+                          + json.dumps({'corrections': [{'old_id': 'fact-1', 'affects_agenda': True}]})
+                          + '\nEND FALLIBLE KNOWLEDGE UPDATE'),
+            ]
+            stream.writelines(json.dumps(event) + '\n' for event in events)
+        operation = writer(op='step')['operation_id']
+        if ended:
+            writer(op='handoff')
+        frozen = Stager(tmp_path/'snapshots')(writer.run)
+        actor = frozen.directory/'actors'/'001'
+        assert not (actor/'agenda.json').exists() and not (actor/'agenda-final.json').exists()
+        assert not (frozen.directory/'source-index.json').exists()
+        log = (actor/'host.jsonl').read_text()
+        assert operation in log
+        assert all(value not in log for value in (secret, 'agenda-edit', 'player_agenda', 'player-agenda', 'affects_agenda'))
+        parsed = [json.loads(line) for line in log.splitlines() if line.strip()]
+        assert {event['type'] for event in parsed} >= {'knowledge-delivery', 'knowledge-undelivered'}
+        _, _, tools = _project(frozen.directory, tmp_path/'trace')
+        assert all(tool['tool'] != 'player_agenda' for tool in tools['001'])
+        writer(op='close')
 
 
 def test_under_sustained_writes_every_snapshot_is_a_prefix_numbered_as_the_sealed_trace(tmp_path):
@@ -412,3 +482,8 @@ def test_an_actor_whose_guard_input_is_not_yet_whole_is_left_out_until_it_is(tmp
         process.write_text(json.dumps(dict(pid=1, pgid=1, argv=['player'])) + '\n')
         assert take(writer.run).actors[0].steps == 1
         assert writer(op='close')['errors'] == {}
+
+
+if __name__ == '__main__':
+    curator_trace._Writer = SnapshotWriter
+    curator_trace._serve(Path(sys.argv[1]), SESSION_ID)

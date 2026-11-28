@@ -24,7 +24,7 @@ def test_delivered_reminder_is_a_notice_for_prompt_composition_pairs(tmp_path):
                   usage=dict(input=10,output=1,cacheRead=0,cacheWrite=0)),
             event('tool-start',at+2,request_id=key,tool_call_id='call',tool='x',arguments={}),
             event('tool-result',at+3,request_id=key,tool_call_id='call',result={'content':[{'type':'text','text':'x'}]})]
-    events=[event('host-start',0,schema='player-host/12',telemetry_version=12),*request('request-1',1),
+    events=[event('host-start',0,schema='player-host/13',telemetry_version=13),*request('request-1',1),
         event('knowledge-delivery',5,kind='reminder',outcome='delivered',receiving_player_request_id='request-2'),
         *request('request-2',6),
         # A delivered knowledge update is a message the host added too; a refused one added nothing.
@@ -34,6 +34,8 @@ def test_delivered_reminder_is_a_notice_for_prompt_composition_pairs(tmp_path):
         event('knowledge-delivery',13,kind='reminder',outcome='undelivered',receiving_player_request_id='request-4'),
         *request('request-4',14),
         event('knowledge-delivery',15,kind='update',outcome='refused',reason='sha256-mismatch'),
+        event('knowledge-delivery',15,kind='update',outcome='empty-suppressed',version='v2'),
+        event('player-agenda',15,request_id='request-4',tool_call_id='agenda',op='read'),
         *request('request-5',16),event('settled',20)]
     path=tmp_path/'host.jsonl';path.write_text(''.join(json.dumps(e)+'\n' for e in events))
     value=analyze_trace(path)['prompt_composition']
@@ -53,7 +55,7 @@ class HostAnalysisTests(unittest.TestCase):
 
     def event(self, kind, at, **fields):
         if kind == "host-start":
-            fields = {"schema": "player-host/12", "telemetry_version": 12, **fields}
+            fields = {"schema": "player-host/13", "telemetry_version": 13, **fields}
         return dict(type=kind, monotonic_ms=at, **fields)
 
     def test_cut_results_and_reserve_events_roll_up_from_traces_to_runs_and_selection(self):
@@ -352,9 +354,9 @@ class HostAnalysisTests(unittest.TestCase):
                        {"schema": "player-host/9", "telemetry_version": 9},
                        {"schema": "player-host/10", "telemetry_version": 10},
                        {"schema": "player-host/11", "telemetry_version": 11},
-                       {"schema": "player-host/12", "telemetry_version": 11},
-                       {"schema": "player-host/12", "telemetry_version": 1},
-                       {"schema": "player-host/12", "telemetry_version": True}):
+                       {"schema": "player-host/13", "telemetry_version": 11},
+                       {"schema": "player-host/13", "telemetry_version": 1},
+                       {"schema": "player-host/13", "telemetry_version": True}):
             row = analyze_trace(self.trace([dict(type="host-start", monotonic_ms=0, **fields)]))
             self.assertEqual(row["coverage"], "unsupported_version")
             self.assertNotIn("requests", row)
@@ -406,7 +408,7 @@ class HostAnalysisTests(unittest.TestCase):
         actor.mkdir(parents=True)
         path = actor / "host.jsonl"
         path.write_text(json.dumps(self.event("host-start", 0)) + "\n")
-        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/13", context={}, source_commit="abc")))
+        (self.root / "manifest.json").write_text(json.dumps(dict(schema="campaign-run/14", context={}, source_commit="abc")))
         receipt = dict(schema="campaign-receipt/7", outcome="player_task_complete_unassessed",
             normal_save_claimed_by_harness=False, driver=dict(schema="player-driver/7", observed_attempts=1,
                 reported_usd="0.004", unpriced_requests=0, unpriced_request_usd="0.25", spent_usd="0.004", spend_complete=True))

@@ -164,25 +164,24 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
 
     assert rehearsal['actor1'] == dict(ok=True, reason='external_stop_complete'), rehearsal['actor1']
     assert rehearsal['actor2'] == dict(ok=False, reason='provider-error'), rehearsal['actor2']
-    assert rehearsal['host1']['schema'] == 'player-host/12' and rehearsal['host1']['telemetry_version'] == 12
+    assert rehearsal['host1']['schema'] == 'player-host/13' and rehearsal['host1']['telemetry_version'] == 13
     assert rehearsal['host1']['actor_id'] == ACTOR_ID
-    assert rehearsal['host2']['schema'] == 'player-host/12' and rehearsal['host2']['telemetry_version'] == 12
+    assert rehearsal['host2']['schema'] == 'player-host/13' and rehearsal['host2']['telemetry_version'] == 13
     assert rehearsal['host2']['actor_id'] == '4' * 32
-    assert rehearsal['recall_count'] >= 2
-    assert any('water-purification' in items for items in rehearsal['reminder_already_in_context']), rehearsal['reminder_already_in_context']
-    assert all(not (set(r.get('article_ids') or ()) & {'water-purification'}) for r in rehearsal['reminder_recalls'])
     assert rehearsal['cut_prompt_has_recent_intents'] is True
+    assert rehearsal['cut_prompt_has_agenda'] is True
+    assert len(rehearsal['agenda_events']) == 1 and rehearsal['agenda_events'][0]['op'] == 'upsert'
     applied_cuts = [c for c in rehearsal['cuts'] if c.get('outcome') == 'cut']
-    assert any(c.get('cut_result') == 'best_effort' for c in applied_cuts), rehearsal['cuts']
+    assert any(c.get('cut_result') == 'best_effort' and c.get('uncovered_turns') == 0 for c in applied_cuts), rehearsal['cuts']
     assert len(rehearsal['tail_notices']) >= 1
     assert len(rehearsal['spend_reserves']) >= 1
     assert [u.get('outcome') for u in rehearsal['actor1_updates']] == ['delivered'], rehearsal['actor1_updates']
     assert [u.get('outcome') for u in rehearsal['actor2_updates']] == ['undelivered'], rehearsal['actor2_updates']
 
-    # 4. Complete `campaign-run/13` run directory with real `player-host-inputs/4` frozen manifests
+    # 4. Complete `campaign-run/14` run directory with real `player-host-inputs/5` frozen manifests
     #    so evaluator, `spectator-view/3`, and `host_analysis` verify snapshots and inspect both actors.
     manifest = dict(
-        schema='campaign-run/13', session=SESSION_ID, source_commit='c' * 40,
+        schema='campaign-run/14', session=SESSION_ID, source_commit='c' * 40,
         labels=dict(arm='rehearsal', start='S1', scenario='Wilderness / Campground / Survivor',
                     world='rehearsal-world', lineage=None, admission=None),
         context=dict(ruleset='standard'), live_knowledge_updates=True,
@@ -194,7 +193,7 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
         (actor_dir / 'actor.json').write_text(json.dumps(dict(actor_id=actor_hex)))
         actual_sha = hashlib.sha256((actor_dir / 'delivered-knowledge.json').read_bytes()).hexdigest()
         (actor_dir / 'frozen.json').write_text(json.dumps(dict(
-            schema='player-host-inputs/4', session=SESSION_ID, actor_id=actor_hex,
+            schema='player-host-inputs/5', session=SESSION_ID, actor_id=actor_hex,
             finish_reserve_usd='0.50', knowledge_updates='knowledge-updates.jsonl',
             files={'delivered-knowledge.json': actual_sha},
         )))
@@ -298,7 +297,8 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     r405 = client.post('/api/view/runs')
     assert r405.status_code == 405 and r405.json()['schema'] == 'spectator-view/3' and r405.json()['error'] == 'method_not_allowed'
 
-    # `#957` `tools.host_analysis` roll-up on the real `player-host/12` trace.
+    # `#957` `tools.host_analysis` roll-up on the real `player-host/13` trace, plus `#1026` zero curator leakage.
+    from harness.trace import projection
     trace_path = run_dir / 'actors' / '001' / 'host.jsonl'
     analyzed = host_analysis.analyze_trace(trace_path)
     assert analyzed['context_cuts']['by_result']['best_effort'] >= 1
@@ -306,6 +306,18 @@ def test_combined_wave3_wave4_player_host_and_spectator_rehearsal(tmp_path):
     rolled = host_analysis.host_summary([trace_path])
     assert rolled['selection']['context_cuts']['by_result']['best_effort'] >= 1
     assert rolled['selection']['spend_reserve_reached']['count'] >= 1
+    (run_dir / 'agenda.json').write_text(json.dumps(dict(schema='player-agenda-continuation/1', cut_count=0, threads=[])))
+    (run_dir / 'actors' / '001' / 'agenda.json').write_text(json.dumps(dict(
+        schema='player-agenda-continuation/1', cut_count=1,
+        threads=[dict(id='boil-water', title='Boil river water in shelter stove', status='active', created_at_cut=0, updated_at_cut=1)],
+    )))
+    proj_dir = tmp_path / 'projected-trace'
+    projection.project([run_dir], proj_dir)
+    assert not any(p.name in ('agenda.json', 'agenda-final.json', 'source-index.json') for p in proj_dir.rglob('*'))
+    for p in proj_dir.rglob('*'):
+        if p.is_file() and p.suffix in ('.json', '.jsonl', '.txt'):
+            raw = p.read_text(encoding='utf-8', errors='ignore')
+            assert 'player-agenda' not in raw and 'player_agenda' not in raw and 'boil-water' not in raw, p
 
 
 @pytest.mark.skipif(not CURATOR_HOST_READY, reason='requires macOS Seatbelt and tools/curator_host/node_modules')

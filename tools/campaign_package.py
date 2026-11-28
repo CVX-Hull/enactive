@@ -18,7 +18,7 @@ from harness.trace.projection import valid_context
 from tools.configure_player_tools import ROOT,configuration
 from tools.run_ledger import validator as ledger_validator
 
-FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json','delivered-knowledge.json'}
+FILES={'route.json','mcp-template.json','context.txt','prompt.txt','target.json','delivered-knowledge.json','source-index.json','agenda.json'}
 FIELDS={'schema','session','source_commit','files','initial_files','native','library','shared_lock','player_store',
         'host','effort','port','wall_seconds','host_seconds','total_host_seconds','max_hosts','limits','ending_reserve',
         'spend_limit_usd','labels','context','private_files','live_knowledge_updates'}
@@ -114,7 +114,7 @@ def local_file(value: str) -> Path:
 
 
 def host_argv(host) -> list[str]:
-    """Validate the closed `player-host/12` adapter selection and return its argv."""
+    """Validate the closed `player-host/13` adapter selection and return its argv."""
     closed(host,{'argv'})
     argv=host['argv']
     if (type(argv) is not list or not 1<=len(argv)<=8
@@ -165,8 +165,20 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
         path=local_file(str(directory/name))
         if (name!='delivered-knowledge.json' and path.stat().st_size>1048576) or file_sha256(path)!=sha:raise ControlError('Frozen driver input differs')
     from harness.player.knowledge import Knowledge, SCHEMA
+    from harness.player.source_index import SourceIndex, SourceIndexError, validate_agenda
     from tools.knowledge_export import selection_matches
     knowledge=Knowledge(directory/'delivered-knowledge.json')
+    try:
+        SourceIndex.from_file(
+            directory/'source-index.json',
+            root_dir=ROOT,
+            expected_world=profile['labels']['world'],
+            expected_lineage=profile['labels']['lineage'],
+            check_labels=True,
+        )
+        validate_agenda(strict_loads((directory/'agenda.json').read_bytes(), ControlError))
+    except (OSError, ValueError, RecursionError, SourceIndexError) as exc:
+        raise ControlError(f'Invalid frozen source index or agenda continuation: {exc}') from exc
     closed(profile['private_files'],{'knowledge-full.json','units.json'})
     full_bytes = local_file(str(directory/'private/knowledge-full.json')).read_bytes()
     units_path = local_file(str(directory/'private/units.json'))
@@ -217,6 +229,8 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
     route=read_json(directory/'route.json',1048576)
     if type(route) is not dict or route.get('schema')!=HOST_SCHEMA:
         raise ControlError('Unsupported player host route; old routes are inert history')
+    if 'recall' in route:
+        raise ControlError('Unsupported player host route: recall is retired')
     if route.get('service_tier')!='default':raise ControlError('This campaign allocation supports only the selected default serving tier')
     # The dollar limit: the most this run may count as spent. The route repeats it, and the driver
     # narrows it to what remains for each actor.
@@ -252,22 +266,16 @@ def _preflight(directory: Path) -> tuple[dict, dict, dict, str]:
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10,
         env=dict(PATH=os.environ.get('PATH','/usr/bin:/bin'),LANG='en_US.UTF-8'))
     bound=unpriced_request_usd(route)
-    recall_bound=unpriced_request_usd(route['recall'])
-    if recall_bound<=0 or usd(route['recall']['unpriced_request_usd'],'recall.unpriced_request_usd')!=recall_bound:
-        raise ControlError('Recall unpriced_request_usd differs from its model rates')
-    # With live updates a recall can follow a version adopted during play, even from an empty frozen file.
-    recalls=bool(knowledge.records) or profile['live_knowledge_updates']
-    reserve_bound=usd_sum([bound,recall_bound if recalls else Decimal(0)])
     # A rate-derived bound must reserve resources for a pending request.
     if bound<=0:raise ControlError("The route's configured rates give no in-flight request bound")
     if usd(route['unpriced_request_usd'],'route.json unpriced_request_usd')!=bound:
         raise ControlError(f"route.json unpriced_request_usd must be {usd_text(bound)} for this route's rates")
-    # Allow for in-flight player and recall requests before an orderly finish, and leave room to start ordinary work.
-    if Decimal(reserve['usd'])<reserve_bound:
-        raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(reserve_bound)}, "
+    # Allow for an in-flight player request before an orderly finish, and leave room to start ordinary work.
+    if Decimal(reserve['usd'])<bound:
+        raise ControlError(f"ending_reserve.usd {reserve['usd']} must be at least unpriced_request_usd {usd_text(bound)}, "
             'so an in-flight attempt still leaves an orderly finish')
-    if usd_sum([Decimal(reserve['usd']),reserve_bound])>=limit:
-        raise ControlError(f"ending_reserve.usd {reserve['usd']} plus unpriced_request_usd {usd_text(reserve_bound)} "
+    if usd_sum([Decimal(reserve['usd']),bound])>=limit:
+        raise ControlError(f"ending_reserve.usd {reserve['usd']} plus unpriced_request_usd {usd_text(bound)} "
             f"must be below spend_limit_usd {profile['spend_limit_usd']}, "
             'so ordinary work can start before the ending reserve is reached')
     return profile, route, target, sha256(manifest_bytes).hexdigest()

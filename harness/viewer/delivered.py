@@ -22,8 +22,8 @@ import threading
 from .catalog import ID_LIMIT, Catalog, RunInfo, ViewError
 from .curator import read_rooted, rooted_entries, rooted_status
 from .knowledge import (
-    ARCHIVED_DELIVERED_V3, ARCHIVED_DELIVERED_V3_SESSIONS, CURRENT_SNAPSHOT, SOURCE, add_fact_fields, add_ids, citations,
-    delivered_shape, fields, frame_clocks, history, marker, record, scope_class,
+    CURRENT_SNAPSHOT, SOURCE, add_fact_fields, add_ids, citations, delivered_shape, fields, frame_clocks, history,
+    manifest_schema_for, marker, record, scope_class, snapshot_schemas,
 )
 from .telemetry import HostProjection, Steps, identifier, read
 from . import views
@@ -52,13 +52,15 @@ CACHED_FILES = 128
 Parts = tuple[str, ...]
 
 
-def load(run_dir: Path, parts: Parts, session_id: str) -> tuple[str, dict | None]:
+def load(run_dir: Path, parts: Parts, knowledge_schema: str | None) -> tuple[str, dict | None]:
     """(`available`, the document) or (why not, None), once per state of the file."""
     status = rooted_status(run_dir, *parts)
     if status is None:
         return 'missing', None
+    if knowledge_schema is None:
+        return 'unsupported', None
     stamp = (status.st_mode, status.st_ino, status.st_mtime_ns, status.st_size)
-    key = (run_dir, parts, session_id)
+    key = (run_dir, parts, knowledge_schema)
     with _lock:
         cached = _cache.get(key)
         if cached is not None and cached[0] == stamp:
@@ -71,8 +73,7 @@ def load(run_dir: Path, parts: Parts, session_id: str) -> tuple[str, dict | None
         except (ValueError, UnicodeError, RecursionError):
             state = 'malformed'
         else:
-            if not (delivered_shape(document, SCHEMA) or
-                    (session_id in ARCHIVED_DELIVERED_V3_SESSIONS and delivered_shape(document, ARCHIVED_DELIVERED_V3))):
+            if not delivered_shape(document, knowledge_schema):
                 state, document = 'unsupported', None
     with _lock:
         _cache.pop(key, None)
@@ -97,8 +98,8 @@ def version_files(run_dir: Path) -> list[tuple[str, Parts]]:
     return ([(INITIAL, STARTING)] if rooted_status(run_dir, *STARTING) is not None else []) + rows
 
 
-def version_row(name: str, run_dir: Path, parts: Parts, session_id: str) -> dict:
-    state, document = load(run_dir, parts, session_id)
+def version_row(name: str, run_dir: Path, parts: Parts, knowledge_schema: str | None) -> dict:
+    state, document = load(run_dir, parts, knowledge_schema)
     if document is None:
         return dict(version=name, status=state, recorded_version=None, articles_count=None, facts_count=None, coverage=None)
     return dict(version=name, status=state, recorded_version=identifier(document.get('version')),
@@ -268,9 +269,10 @@ def browse(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, vers
         facts=dict(items=[], total=0, next=None, limit=limit))
     if info.run_dir is None or not files:
         return empty
-    rows = [version_row(name, info.run_dir, parts, info.session) for name, parts in files]
+    _, knowledge_schema = snapshot_schemas(manifest_schema_for(info.run_dir, info.session))
+    rows = [version_row(name, info.run_dir, parts, knowledge_schema) for name, parts in files]
     selected = version or next((r['version'] for r in reversed(rows) if r['status'] == 'available'), rows[-1]['version'])
-    state, document = load(info.run_dir, dict(files)[selected], info.session)
+    state, document = load(info.run_dir, dict(files)[selected], knowledge_schema)
     if document is None:
         if version is not None:
             raise ViewError(409, 'unsupported_knowledge', f'{selected}: {state}')

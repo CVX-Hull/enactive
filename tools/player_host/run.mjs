@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { lstat, open, readFile, writeFile } from 'node:fs/promises';
+import { lstat, mkdtemp, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { emptyAgenda, validateAgenda } from './agenda.mjs';
 import { INPUT_LIMIT_BYTES, HostError, runHost, validateConfiguration, validateMcpConfiguration } from './host.mjs';
 
-// player-host/12 modes: `run` hosts one actor, `validate` checks route and MCP
+// player-host/13 modes: `run` hosts one actor, `validate` checks route and MCP
 // table offline. Each required flag occurs exactly once and each optional flag at
 // most once; values are non-empty. The flag set is closed.
 function parseFlags(argv, required, optional = new Set()) {
@@ -31,6 +33,14 @@ async function readBounded(path, signal) {
     if (offset > INPUT_LIMIT_BYTES) throw new HostError('input-too-large');
     return data.subarray(0, offset).toString('utf8');
   } finally { await file.close(); }
+}
+async function writeAgenda(path, agenda) {
+  const tmp = await mkdtemp(join(dirname(path), '.player-agenda-'));
+  try {
+    const file = join(tmp, 'agenda.json');
+    await writeFile(file, JSON.stringify(agenda), {mode:0o600});
+    await rename(file, path);
+  } finally { await rm(tmp, {recursive:true, force:true}); }
 }
 async function validateMode(argv) {
   try {
@@ -66,19 +76,35 @@ let timer;
 try {
   if (mode !== 'run') throw new HostError('invalid-arguments');
   const args = parseFlags(process.argv.slice(3), new Set(['--config', '--mcp-config', '--context', '--prompt', '--session', '--actor-id', '--pending-control-id', '--delivered-knowledge', '--finish-reserve-usd', '--model', '--effort', '--timeout-seconds', '-o']),
-    // Present only when the run delivers newer knowledge versions to a running actor: the driver's append-only list.
-    new Set(['--knowledge-updates']));
+    new Set(['--knowledge-updates', '--agenda', '--agenda-out']));
   const seconds = Number(args['--timeout-seconds']);
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds * 1000 > 2_147_483_647) throw new HostError('invalid-host-timeout');
   timer = setTimeout(cancel, seconds * 1000);
-  const [route, mcp, context, prompt, knowledge] = await Promise.all([readBounded(args['--config'], controller.signal), readBounded(args['--mcp-config'], controller.signal), readBounded(args['--context'], controller.signal), readBounded(args['--prompt'], controller.signal), readFile(args['--delivered-knowledge'], {encoding:'utf8', signal:controller.signal})]);
+  const [route, mcp, context, prompt, knowledge, agendaText] = await Promise.all([readBounded(args['--config'], controller.signal), readBounded(args['--mcp-config'], controller.signal), readBounded(args['--context'], controller.signal), readBounded(args['--prompt'], controller.signal), readFile(args['--delivered-knowledge'], {encoding:'utf8', signal:controller.signal}), args['--agenda'] ? readBounded(args['--agenda'], controller.signal) : null]);
+  let agenda;
+  try { agenda = agendaText === null ? emptyAgenda() : validateAgenda(JSON.parse(agendaText)); }
+  catch { throw new HostError('invalid-agenda'); }
   const remaining = seconds - (performance.now() - started) / 1000;
   if (remaining <= 0) throw new HostError('host-timeout');
-  const result = await runHost({configuration:JSON.parse(route), mcpConfig:JSON.parse(mcp), context, prompt, knowledge:JSON.parse(knowledge), knowledgeUpdates:args['--knowledge-updates'] ?? null, finishReserveUsd:args['--finish-reserve-usd'], session:args['--session'], actorId:args['--actor-id'], pendingControlId:args['--pending-control-id'] === 'none' ? null : args['--pending-control-id'], control:process.stdin, model:args['--model'], effort:args['--effort'], timeoutSeconds:remaining, signal:controller.signal, onEvent:output});
+  let settlement;
+  const result = await runHost({configuration:JSON.parse(route), mcpConfig:JSON.parse(mcp), context, prompt, agenda, knowledge:JSON.parse(knowledge), knowledgeUpdates:args['--knowledge-updates'] ?? null, finishReserveUsd:args['--finish-reserve-usd'], session:args['--session'], actorId:args['--actor-id'], pendingControlId:args['--pending-control-id'] === 'none' ? null : args['--pending-control-id'], control:process.stdin, model:args['--model'], effort:args['--effort'], timeoutSeconds:remaining, signal:controller.signal, onEvent:event => {
+    if (event.type === 'settled') settlement = event;
+    else return output(event);
+  }});
+  let writeFailed = false;
+  if (args['--agenda-out']) {
+    try { await writeAgenda(args['--agenda-out'], result.agenda); }
+    catch (error) {
+      writeFailed = true;
+      process.stderr.write(`player_host: failed to write agenda output: ${error?.message ?? error}\n`);
+    }
+  }
   // campaign_player owns exclusive reservation of this exact final path; the
   // contract writes only the report from a direct accepted finish invocation.
-  if (result.ok && ['task_complete', 'cannot_continue', 'external_stop_complete'].includes(result.reason)) await writeFile(args['-o'], result.finalText + '\n', {encoding:'utf8', signal:controller.signal});
-  process.exitCode = result.ok ? 0 : 1;
+  if (result.ok && !writeFailed && ['task_complete', 'cannot_continue', 'external_stop_complete'].includes(result.reason)) await writeFile(args['-o'], result.finalText + '\n', {encoding:'utf8', signal:controller.signal});
+  // Always emit the real settlement with intact spend/request counts before setting non-zero exit on agenda-out I/O failure.
+  output(settlement);
+  process.exitCode = result.ok && !writeFailed ? 0 : 1;
 } catch (error) {
   output({type:'settled', wall_time:new Date().toISOString(), monotonic_ms:performance.now() - started, ok:false, reason:error instanceof HostError ? error.reason : 'invalid-input-or-output', native_cleanup_claimed:false});
   process.exitCode=1;

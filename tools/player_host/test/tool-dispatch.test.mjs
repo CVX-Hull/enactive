@@ -8,7 +8,7 @@ for (const fail of [false,true]) test(`actual provider payload preserves full te
   const {result,payloads,events,calls} = await scenario(t,[reply(null,[['observe',{fail}]]),reply()]);
   assert.equal(result.ok,true);
   assert.equal(calls.length,1);
-  assert.deepEqual(payloads[0].tools.map(t=>t.function.name), ['observe','mutate','integer','player_finish']);
+  assert.deepEqual(payloads[0].tools.map(t=>t.function.name), ['observe','mutate','integer','player_agenda','player_finish']);
   assert.equal(payloads[0].tools[2].function.parameters.properties.value.type,'integer');
   assert.equal(payloads[0].max_completion_tokens,model.maxTokens);
   const serialized = JSON.stringify(payloads[1]);
@@ -44,7 +44,7 @@ test('request metadata hashes exact serialized bodies without retaining forwarde
   const trace=events.filter(e=>e.type==='request-start');
   assert.equal(payloads[1].messages.find(m=>m.role==='assistant').reasoning_content,reasoning);
   assert.ok(JSON.stringify(payloads[1]).includes(png));
-  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,12);
+  assert.equal(events.find(e=>e.type==='host-start').telemetry_version,13);
   assert.deepEqual(events.filter(e=>e.type==='assistant-text').map(e=>[e.text,e.omitted_bytes]),[['Visible plan',0],['finished',0]]);
   for(const secret of [reasoning,png,'fixture-key','UNRELATED_HOST_SECRET','Frozen player guide','Offline mission']) {
     assert.ok(!JSON.stringify(events).includes(secret));
@@ -126,12 +126,12 @@ test('fixture union schema refusal keeps the SDK feedback stable, explicit corre
   assert.match(actualMcpError,/MCP isError: true/);assert.match(actualMcpError,/fixture MCP refusal/);
   assert.deepEqual(payloads[0].tools,payloads[4].tools,'the actual full schema remains stable');
 });
-test('a partial input ends the rest of its turn except collection, and is not a completed input',async t=>{
-  // R-REGRESSION (#946): calls queued after a partial delivery still dispatched, and the partial counted toward
-  // the reminder cadence, which counts completed inputs only.
-  const configuration=route();configuration.recall.every=1;
+test('a partial input allows collection and agenda maintenance while further mutations wait',async t=>{
+  // R-REGRESSION (#946): calls queued after a partial delivery still dispatched.
+  const configuration=route();
   const {result,calls,events}=await scenario(t,[
     reply(null,[['computer_input',{}],['mutate',{mode:'ok',index:1}],['computer_result',{operation_id:'1'.repeat(32)}],
+      ['player_agenda',{op:'upsert', id:'task', title:'Check the partial result', status:'active'}],
       ['mutate',{mode:'ok',index:2}]]),
     reply(null,[['mutate',{mode:'ok',index:3}]]),reply()
   ],{configuration,enabledTools:['computer_input','mutate','computer_result']});
@@ -140,5 +140,6 @@ test('a partial input ends the rest of its turn except collection, and is not a 
     ['computer_input','computer_result','mutate-3'],'collection follows the partial input; the next turn decides again');
   assert.deepEqual(events.filter(e=>e.type==='tool-refused').map(e=>[e.tool,e.reason,e.dispatched]),
     [['mutate','uncertain-input',false],['mutate','uncertain-input',false]]);
-  assert.equal(events.filter(e=>e.type==='knowledge-recall'&&e.kind==='reminder').length,0,'a partial input offers no reminder');
+  assert.deepEqual(events.filter(e=>e.type==='player-agenda').map(e=>[e.request_id, e.op, e.active_count]),
+    [['request-1', 'upsert', 1]]);
 });

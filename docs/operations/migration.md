@@ -16,20 +16,21 @@ Before changing a deployment:
 
 1. Close writers and verify exact owned native/host/MCP cleanup. Never migrate under a live actor/game.
 2. Preserve original saves, SQLite/JSON/PNG, configuration, source checkpoint and binary bytes as inert evidence. Keep failed/abandoned chains intact.
-3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/13` package under `.runtime/computer-sessions/`.
+3. Select current coherent source, current adapter/native bytes and normal project-local input settings. Freeze a fresh explicit `campaign-run/14` package under `.runtime/computer-sessions/`.
 4. Use a fresh `computer-session/1` store and launch marker. A selected partial directory refuses even with no DB; do not delete markers to rearm it.
 5. Select a `player-journal/1` store (`user_version=1`); a supported journal can span fresh native-child sessions. Unsupported or unrecognized nonempty stores are refused before native launch without conversion.
 6. Requalify the affected native/gameplay boundary. Earlier test/demo results remain bound to their source and cannot qualify the replacement.
 
 Current actor consumers use `player-computer-result/2`, `player-computer-operation/1`, `player-error/2` and
 `player-transport/2`. Host/control/telemetry and all finite-package
-callers move together with `player-host/12`, telemetry 12, `campaign-run/13`,
-`player-host-inputs/4`, `delivered-knowledge/4`, `player-knowledge/4`, `knowledge-update-entry/1`, `coverage-update-entry/1`,
+callers move together with `player-host/13`, telemetry 13, `campaign-run/14`,
+`player-host-inputs/5`, `player-source-index/1`, `player-source-read/2`, `player-agenda-continuation/1`,
+`delivered-knowledge/4`, `player-knowledge/4`, `knowledge-update-entry/1`, `coverage-update-entry/1`,
 `player-driver/7`, `campaign-receipt/7` and `spectator-view/3`. The live spectator requires
 `computer-status/2`; its host block carries observed attempts. The evaluator
 reads older versions only for sealed sessions individually pinned to those
 versions in its [closed archive index](../standards/migration.md) (including `#889`'s
-and `#896`'s sealed `campaign-run/12` manifests, journals and handoffs). Use the original
+and `#896`'s sealed `campaign-run/12` runs and `#963`/`#998`'s sealed `campaign-run/13` runs). Use the original
 source commit and readers for preserved evidence outside that index. Native wire,
 canonical `computer-operation/1`, `computer-source/1` and computer-session storage
 are separate versions; the actor projection does not migrate the canonical database.

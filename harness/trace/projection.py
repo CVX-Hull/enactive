@@ -49,6 +49,7 @@ from .stores import SealedStoreError, sealed
 
 # Label fields supplied by each supported sealed run package version.
 PACKAGE_LABELS = {
+    'campaign-run/14': ('world', 'lineage', 'admission'),
     'campaign-run/13': ('world', 'lineage', 'admission'),
     'campaign-run/12': ('world', 'lineage', 'admission'),
     'campaign-run/10': ('lineage', 'admission'),
@@ -76,6 +77,7 @@ TOOL_ARGUMENTS = {
 }
 RESULT_FIELDS = ('schema', 'operation_id', 'kind', 'status', 'reason', 'id', 'error', 'submission')
 NEVER = ('actor.json', 'route.json', 'mcp.json', 'mcp-template.json', 'host-process.json', 'frozen.json',
+         'agenda.json', 'agenda-final.json', 'source-index.json',
          'driver-receipt.json', 'host-stderr.log', 'host.jsonl (raw)', 'custodian-*', 'native-*', 'viewer-*',
          'watch-*', 'receipt.json', 'started.json', 'ready.json', 'target.json', 'orderly-stop.json',
          'session.sqlite3 (raw)', 'manifest.json (raw run package)')
@@ -195,7 +197,7 @@ def _verified_labels(session: Path, session_id: str) -> dict:
         raise _LabelEvidenceError('manifest-schema', 'unsupported run package manifest schema')
     if package.get('session') != session_id:
         raise _LabelEvidenceError('manifest-session', 'manifest session differs from sealed session')
-    if schema == 'campaign-run/12' and _archived_manifests().get(session_id) != schema:
+    if schema in ('campaign-run/13', 'campaign-run/12') and _archived_manifests().get(session_id) != schema:
         raise _LabelEvidenceError('manifest-schema', 'unsupported run package manifest schema')
 
     _, opening = _label_evidence(session/'watch-start.json', 65536, 'supervisor-digest')
@@ -223,7 +225,7 @@ def _verified_labels(session: Path, session_id: str) -> dict:
     # Sealed /10 sessions retain their verified lineage with no world.
     if 'world' in fields and selected['lineage'] is not None and selected['world'] is None:
         raise _LabelEvidenceError('manifest-schema', 'run package manifest must label the world of a lineage')
-    context = package.get('context') if schema == 'campaign-run/13' else {}
+    context = package.get('context') if schema in ('campaign-run/14', 'campaign-run/13') else {}
     if not valid_context(context):
         raise _LabelEvidenceError('manifest-schema', 'run package manifest has invalid context axes')
     return dict(selected, context=context)
@@ -326,12 +328,27 @@ def _steps(session: Path, session_id: str) -> tuple[dict[str, list[dict]], dict[
     return per_actor, sources
 
 
+def _agenda_event(event: dict, agenda_calls: set[tuple[object, object]]) -> bool:
+    """Recognize private agenda telemetry and tool traffic, including replies that omit the tool name."""
+    kind = event.get('type')
+    if kind == 'player-agenda':
+        return True
+    if kind in ('tool-start', 'tool-result', 'tool-refused'):
+        call = (event.get('request_id'), event.get('tool_call_id'))
+        if event.get('tool') == 'player_agenda':
+            if kind == 'tool-start':
+                agenda_calls.add(call)
+            return True
+        return call in agenda_calls
+    return False
+
+
 def _tools(host: Path) -> list[dict]:
     if not host.is_file():
         return []
     if host.is_symlink():
         raise ProjectionError(f'{host}: symbolic link in sealed evidence')
-    starts, calls = {}, []
+    starts, calls, agenda_calls = {}, [], set()
     for number, line in enumerate(host.read_text().splitlines(), 1):
         if not line.strip():
             continue
@@ -339,6 +356,8 @@ def _tools(host: Path) -> list[dict]:
             event = json.loads(line)
         except ValueError as exc:
             raise ProjectionError(f'{host}:{number}: unreadable event') from exc
+        if _agenda_event(event, agenda_calls):
+            continue
         kind = event.get('type')
         if kind == 'tool-start':
             starts[event.get('tool_call_id')] = event

@@ -44,11 +44,11 @@ def test_judged_facts_builder_resolves_shared_facts_from_the_recorded_citing_art
     )
     seed=next(s for s in range(100) if len(draw(full,s)[0]['articles'])==articles_delivered)
     package=tmp_path/'package';hashes=export(package,full,seed)
-    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', context={},session='a'*32, labels=dict(world=None, lineage=None),
+    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/14', context={},session='a'*32, labels=dict(world=None, lineage=None),
         live_knowledge_updates=False,files={'delivered-knowledge.json':hashes['delivered-knowledge.json']},
         private_files={n:hashes['private/'+n] for n in ('knowledge-full.json','units.json')})))
     actor=package/'actors/001';actor.mkdir(parents=True)
-    (actor/'host.jsonl').write_text(json.dumps(dict(type='host-start',schema='player-host/12',telemetry_version=12,actor_id='actor'))+'\n')
+    (actor/'host.jsonl').write_text(json.dumps(dict(type='host-start',schema='player-host/13',telemetry_version=13,actor_id='actor'))+'\n')
     value=build_facts(tmp_path/'memory-measure/result',[package])['admissions']['package']['001']
     route='index' if articles_delivered else 'withheld'
     assert any(f['id']=='fact-3' for f in value[route])
@@ -64,7 +64,7 @@ ARCHIVED_EMPTY = dict(schema='delivered-knowledge/1', version=None, coverage=Non
 
 
 def frozen_package(tmp_path, schema, knowledge, *, selection=True, **manifest):
-    """A package with its frozen knowledge and no actor: `campaign-run/13`, or a sealed `/10` one of the archive."""
+    """A package with its frozen knowledge and no actor: `campaign-run/14`, or a sealed `/10` one of the archive."""
     package = tmp_path/'package'
     from harness.player.knowledge import empty
     hashes = export(package, empty())
@@ -74,7 +74,7 @@ def frozen_package(tmp_path, schema, knowledge, *, selection=True, **manifest):
         delivered.write_text(json.dumps(knowledge))
     private = json.loads(full.read_text())
     full.write_text(json.dumps(dict(knowledge, selection=private['selection']) if selection else knowledge))
-    current = schema == 'campaign-run/13'
+    current = schema == 'campaign-run/14'
     (package/'manifest.json').write_text(json.dumps(dict(dict(schema=schema, session='a' * 32 if current else ARCHIVED_SESSION,
         labels=dict(world=None, lineage=None), files={'delivered-knowledge.json': file_sha256(delivered)},
         private_files={'knowledge-full.json': file_sha256(full), 'units.json': hashes['private/units.json']},
@@ -83,10 +83,10 @@ def frozen_package(tmp_path, schema, knowledge, *, selection=True, **manifest):
     return package
 
 
-@pytest.mark.parametrize('schema', ['campaign-run/13', 'campaign-run/10'])
+@pytest.mark.parametrize('schema', ['campaign-run/14', 'campaign-run/10'])
 def test_facts_builder_requires_private_selection_only_on_current_packages(tmp_path, schema):
     from harness.player.knowledge import empty
-    current = schema == 'campaign-run/13'
+    current = schema == 'campaign-run/14'
     package = frozen_package(tmp_path, schema, empty() if current else ARCHIVED_EMPTY, selection=False)
     run = tmp_path/'memory-measure/result'
     if current:
@@ -96,11 +96,11 @@ def test_facts_builder_requires_private_selection_only_on_current_packages(tmp_p
         assert build_facts(run, [package])['admissions'] == {'package': {}}
 
 
-@pytest.mark.parametrize('schema', ['campaign-run/13', 'campaign-run/10'])
+@pytest.mark.parametrize('schema', ['campaign-run/14', 'campaign-run/10'])
 def test_facts_builder_reads_each_package_version_with_the_knowledge_version_it_was_frozen_with(tmp_path, schema):
     """Sealed campaign-run/10 packages keep delivered-knowledge/1. Current packages hold delivered-knowledge/4."""
     from harness.player.knowledge import empty
-    current = schema == 'campaign-run/13'
+    current = schema == 'campaign-run/14'
     other = frozen_package(tmp_path/'other', schema, ARCHIVED_EMPTY if current else empty())
     with pytest.raises(MeasureError, match='unsupported frozen knowledge'):
         build_facts(tmp_path/'memory-measure/other', [other])
@@ -110,7 +110,7 @@ def test_facts_builder_reads_each_package_version_with_the_knowledge_version_it_
 
 def test_facts_builder_refuses_a_run_that_delivered_versions_outside_its_frozen_file(tmp_path):
     from harness.player.knowledge import empty
-    package = frozen_package(tmp_path, 'campaign-run/13', empty(), live_knowledge_updates=True)
+    package = frozen_package(tmp_path, 'campaign-run/14', empty(), live_knowledge_updates=True)
     with pytest.raises(MeasureError, match='live_knowledge_updates delivers versions outside it'):
         build_facts(tmp_path/'memory-measure/result', [package])
 
@@ -135,10 +135,10 @@ def test_builder_uses_first_text_exposure_and_last_completed_player_decision(tmp
                              {'article-' + x: [x] for x in ('brief', 'read-first', 'lead-first', 'withheld')})
     seed=next(n for n in range(1000) if {f['id'] for f in draw(full,n)[0]['facts']}=={'brief','read-first','lead-first','index'})
     hashes=export(package,full,seed)
-    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', context={},session='a'*32, labels=dict(world=None, lineage=None),
+    (package/'manifest.json').write_text(json.dumps(dict(schema='campaign-run/14', context={},session='a'*32, labels=dict(world=None, lineage=None),
         live_knowledge_updates=False,files={'delivered-knowledge.json':hashes['delivered-knowledge.json']},
         private_files={name:hashes['private/'+name] for name in ('knowledge-full.json','units.json')})))
-    events=[dict(type='host-start',schema='player-host/12',telemetry_version=12,session='a'*32,actor_id='b'*32),
+    events=[dict(type='host-start',schema='player-host/13',telemetry_version=13,session='a'*32,actor_id='b'*32),
             dict(type='request-start',request_id='recall-1',request_role='recall'),
             dict(type='response-complete',request_id='recall-1',stop_reason='stop'),
             dict(type='knowledge-delivery',kind='briefing',outcome='delivered',text='briefing',fact_ids=['brief'],receiving_player_request_id='request-1')]
@@ -177,7 +177,7 @@ def test_builder_uses_first_text_exposure_and_last_completed_player_decision(tmp
 
 
 def test_player_host_12_undelivered_exposures_compact_query_hits_and_filtered_recall_precision(tmp_path):
-    """Under player-host/12 and player-knowledge/4:
+    """Under player-host/13 and player-knowledge/4:
     - `outcome='undelivered'` and missing `outcome` never count as delivered exposure, while archived `/11`
       briefings/reminders without `outcome` still do.
     - Compact `player-knowledge/4` query `hits` are projected by `record_ids` but ignored by `memory_measure`
@@ -202,12 +202,12 @@ def test_player_host_12_undelivered_exposures_compact_query_hits_and_filtered_re
                              {'article-kept': ['kept'], 'article-stripped': ['stripped']})
     hashes = export(package, full)
     read = Knowledge.from_dict(full).read('hit-then-read')
-    (package / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/13', context={}, session='a' * 32,
+    (package / 'manifest.json').write_text(json.dumps(dict(schema='campaign-run/14', context={}, session='a' * 32,
         labels=dict(world=None, lineage=None), live_knowledge_updates=False,
         files={'delivered-knowledge.json': hashes['delivered-knowledge.json']},
         private_files={name: hashes['private/' + name] for name in ('knowledge-full.json', 'units.json')})))
     events = [
-        dict(type='host-start', schema='player-host/12', telemetry_version=12, session='a' * 32, actor_id='b' * 32),
+        dict(type='host-start', schema='player-host/13', telemetry_version=13, session='a' * 32, actor_id='b' * 32),
         # Undelivered briefing must not credit 'undelivered'.
         dict(type='knowledge-delivery', kind='briefing', outcome='undelivered', text='failed',
              fact_ids=['undelivered'], receiving_player_request_id='request-1'),

@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Batch 2 player-host/13 and five-session archive cutover PR lands
-status: active
+status: historical
+date: '2026-11-27'
+scope: 'Frozen Batch 1 store-migration contract (#1046) and two-step five-session #963/#998 archive cutover plan, now implemented across Batch 1 and Batch 2'
+replacement: docs/contracts/curator.md
 ---
 
 # Frozen Batch 1 store-migration contract (`#1046`)

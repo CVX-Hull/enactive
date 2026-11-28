@@ -17,7 +17,7 @@ from tools.campaign_player import COVERED_PREFIX_FILE,UPDATES_FILE,HostEvents,Li
 from tools.configure_player_tools import configuration
 
 
-START=dict(type='host-start',telemetry_version=12,schema='player-host/12')
+START=dict(type='host-start',telemetry_version=13,schema='player-host/13')
 
 
 def cost(request,amount,how='provider-reported',kind='response-complete'):
@@ -40,7 +40,7 @@ def test_observed_attempts_and_partial_trace(tmp_path):
           dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
           dict(type='request-start',request_id='request-2'),cost('request-2',None,'unpriced'),
           dict(type='request-start',request_id='request-3'),cost('request-3','0.7'),
-          dict(type='settled',unpriced_recall_requests=0,requests=3,player_requests=3,recall_requests=0,ok=False,spent_usd='0.8',unpriced_requests=1)]
+          dict(type='settled',requests=3,player_requests=3,ok=False,spent_usd='0.8',unpriced_requests=1)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
     events=HostEvents(path)
     try:
@@ -56,24 +56,28 @@ def test_observed_attempts_and_partial_trace(tmp_path):
     finally:events.close()
 
 
-def test_recall_attempts_are_observed_and_keep_unknown_cost_separate(tmp_path):
+def test_recall_request_ids_and_settled_recall_fields_are_refused(tmp_path):
     path=tmp_path/'host.jsonl'
-    rows=[START,dict(type='request-start',request_id='recall-1',request_role='recall'),
-          cost('recall-1',None,'unpriced'),dict(type='request-start',request_id='request-1'),
-          cost('request-1','0.1'),dict(type='settled',requests=2,player_requests=1,recall_requests=1,unpriced_requests=0,unpriced_recall_requests=1,spent_usd='0.1')]
+    rows=[START,dict(type='request-start',request_id='recall-1',request_role='recall')]
     path.write_text(''.join(json.dumps(r)+'\n' for r in rows))
     events=HostEvents(path)
     try:
-        value=events.finish()
-        assert events.counted_usd()==Decimal('0.1')
-        assert value['accounting_complete'] and value['observed_attempts']==2
-        assert value['unpriced_requests']==0 and value['unpriced_recall_requests']==1 and value['spent_usd']=='0.1'
+        with pytest.raises(ControlError,match='lacks current origin'):events.finish()
     finally:events.close()
-    with path.open('a') as stream:stream.write(json.dumps(dict(type='request-start',request_id='recall-2'))+'\n')
+    # Retired recall fields in settled also fail host agreement.
+    bad_settled=[START,dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
+                 dict(type='settled',requests=1,player_requests=1,recall_requests=0,unpriced_requests=0,unpriced_recall_requests=0,spent_usd='0.1')]
+    res=finished(tmp_path,bad_settled)
+    assert not res['accounting_complete'] and not res['spend_complete']
+    # Event after settlement still raises.
+    good=[START,dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
+          dict(type='settled',requests=1,player_requests=1,unpriced_requests=0,spent_usd='0.1')]
+    path.write_text(''.join(json.dumps(r)+'\n' for r in good))
+    with path.open('a') as stream:stream.write(json.dumps(dict(type='request-start',request_id='request-2'))+'\n')
     events=HostEvents(path)
     try:
         with pytest.raises(ControlError,match='event follows settlement'):events.finish()
-        assert events.observations()['observed_attempts']==2
+        assert events.observations()['observed_attempts']==1
     finally:events.close()
 
 
@@ -91,10 +95,10 @@ def test_a_started_request_without_a_cost_record_keeps_the_subtotal_and_flags_in
 def test_host_totals_that_differ_from_the_drivers_own_sums_leave_the_spend_incomplete(tmp_path,totals):
     rows=[START,dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
           dict(type='request-start',request_id='request-2'),cost('request-2',None,'unpriced')]
-    agreed=finished(tmp_path,[*rows,dict(type='settled',unpriced_recall_requests=0,requests=2,player_requests=2,recall_requests=0,ok=True,spent_usd='0.1',unpriced_requests=1)])
+    agreed=finished(tmp_path,[*rows,dict(type='settled',requests=2,player_requests=2,ok=True,spent_usd='0.1',unpriced_requests=1)])
     assert agreed['accounting_complete'] and agreed['spend_complete'] and agreed['observed_attempts']==2
     (tmp_path/'host.jsonl').unlink()
-    result=finished(tmp_path,[*rows,dict(type='settled',unpriced_recall_requests=0,requests=2,player_requests=2,recall_requests=0,ok=True,**totals)])
+    result=finished(tmp_path,[*rows,dict(type='settled',requests=2,player_requests=2,ok=True,**totals)])
     assert not result['accounting_complete'] and not result['spend_complete'] and result['observed_attempts']==2
     assert result['spent_usd']=='0.1'
 
@@ -106,7 +110,7 @@ def test_a_reported_cost_longer_than_a_declared_amount_may_be_is_counted_exactly
     rows=[START,dict(type='request-start',request_id='request-1'),cost('request-1',long19),
           dict(type='request-start',request_id='request-2'),cost('request-2',long23),
           dict(type='request-start',request_id='request-3'),cost('request-3','123456789012.5'),
-          dict(type='settled',unpriced_recall_requests=0,requests=3,player_requests=3,recall_requests=0,ok=True,spent_usd='123456789012.50345012345678901274567',unpriced_requests=0)]
+          dict(type='settled',requests=3,player_requests=3,ok=True,spent_usd='123456789012.50345012345678901274567',unpriced_requests=0)]
     result=finished(tmp_path,rows)
     assert result['accounting_complete'] and result['spend_complete']
     assert result['reported_usd']==result['spent_usd']=='123456789012.50345012345678901274567'
@@ -116,7 +120,7 @@ def test_a_reported_cost_longer_than_a_declared_amount_may_be_is_counted_exactly
     cost('request-1','1e-1'),cost('request-1','0.2','unpriced-bound'),dict(type='response-complete',request_id='request-1')])
 def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_path,record):
     path=tmp_path/'host.jsonl'
-    rows=[START,dict(type='request-start',request_id='request-1'),record,dict(type='settled',unpriced_recall_requests=0,requests=1,ok=True)]
+    rows=[START,dict(type='request-start',request_id='request-1'),record,dict(type='settled',requests=1,ok=True)]
     path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
     events=HostEvents(path)
     try:
@@ -126,8 +130,8 @@ def test_a_cost_record_the_driver_cannot_count_makes_the_trace_unreadable(tmp_pa
 
 
 @pytest.mark.parametrize('schema,telemetry',
-    [('pi-player-host/6',4), ('player-host/3',4), ('player-host/12',11), ('player-host/11',12), (None,4)]
-    + [(f'player-host/{version}',version) for version in (3, 6, 7, 8, 9, 10, 11)])
+    [('pi-player-host/6',4), ('player-host/3',4), ('player-host/13',12), ('player-host/12',13), (None,4)]
+    + [(f'player-host/{version}',version) for version in (3, 6, 7, 8, 9, 10, 11, 12)])
 def test_trace_from_another_host_contract_is_refused(tmp_path,schema,telemetry):
     path=tmp_path/'host.jsonl'
     path.write_text(json.dumps(dict(type='host-start',telemetry_version=telemetry,schema=schema))+'\n')
@@ -141,7 +145,7 @@ def test_known_prelaunch_failure_has_zero_attempts_and_no_successor(tmp_path):
     application=SimpleNamespace(runtime=SimpleNamespace(add_actor=Mock(side_effect=OSError('fixture store refusal')),stop=Mock()))
     profile=dict(max_hosts=2,host_seconds=100,total_host_seconds=200,spend_limit_usd='1')
     with patch('tools.campaign_player.subprocess.Popen') as launch:
-        result=run_hosts(tmp_path,profile,dict(unpriced_request_usd='0.25',recall=dict(unpriced_request_usd='0.2')),application,'fixture-secret',
+        result=run_hosts(tmp_path,profile,dict(unpriced_request_usd='0.25'),application,'fixture-secret',
             threading.Event(),time.monotonic()+300)
     assert result['outcome']=='incomplete' and result['observed_attempts']==0
     assert (result['spent_usd'],result['spend_complete'])==('0',True)
@@ -170,10 +174,17 @@ from datetime import datetime, timezone
 mode, *rest = sys.argv[1:]
 flags = dict(zip(rest[::2], rest[1::2]))
 updates = flags.pop('--knowledge-updates', None)
-assert mode == 'run' and sorted(flags) == ['--actor-id', '--config', '--context', '--delivered-knowledge', '--effort', '--finish-reserve-usd', '--mcp-config', '--model', '--pending-control-id', '--prompt', '--session', '--timeout-seconds', '-o'], sys.argv
+assert mode == 'run' and sorted(flags) == ['--actor-id', '--agenda', '--agenda-out', '--config', '--context', '--delivered-knowledge', '--effort', '--finish-reserve-usd', '--mcp-config', '--model', '--pending-control-id', '--prompt', '--session', '--timeout-seconds', '-o'], sys.argv
 assert sorted(os.environ) >= ['FIXTURE_KEY', 'LANG', 'PATH'] and os.environ['FIXTURE_KEY'] == 'fixture-secret'
 prompt = open(flags['--prompt']).read()
 assert (updates is not None) == ('LIVE_UPDATES' in prompt), sys.argv
+agenda = json.load(open(flags['--agenda']))
+assert agenda['schema'] == 'player-agenda-continuation/1', agenda
+if 'WRITE_AGENDA' in prompt and flags['--actor-id'] == 'a'*32:
+    agenda = dict(schema='player-agenda-continuation/1', cut_count=1, threads=[
+        dict(id='carried-thread', title='Carry across handoff', status='active', created_at_cut=0, updated_at_cut=1)
+    ])
+open(flags['--agenda-out'], 'w').write(json.dumps(agenda) + '\\n')
 import time
 if updates is not None and flags['--actor-id'] == 'a'*32 and 'STALLED' not in prompt:
     # The first actor's host stands in for the curator runner: it leaves a version whole in the run's
@@ -198,16 +209,10 @@ assert prompt.startswith('Frozen mission') and 'Software actor/resource note' no
 assert 'HTTP attempts' not in prompt and 'final actor' not in prompt
 def emit(**value): print(json.dumps(dict(wall_time=datetime.now(timezone.utc).isoformat(),**value)), flush=True)
 route = json.load(open(flags['--config']))
-emit(type='host-start', telemetry_version=12, schema='player-host/12', spend_limit_usd=route['spend_limit_usd'])
+emit(type='host-start', telemetry_version=13, schema='player-host/13', spend_limit_usd=route['spend_limit_usd'])
 if 'HANG' in prompt: time.sleep(120)  # a host still playing when the driver must stop it
-recall_made = int('WITH_RECALL' in prompt and flags['--pending-control-id']=='none')
-if recall_made:
-    emit(type='request-start',request_id='recall-1',request_role='recall')
-    emit(type='response-complete',request_id='recall-1',reported_cost_usd='0',counted_cost_usd='0',cost_counted_as='provider-reported')
 unpriced = int('WITH_UNPRICED' in prompt)
 if unpriced:
-    emit(type='request-start',request_id='recall-1',request_role='recall')
-    emit(type='response-complete',request_id='recall-1',reported_cost_usd=None,counted_cost_usd=None,cost_counted_as='unpriced')
     emit(type='request-start',request_id='request-1')
     emit(type='response-complete',request_id='request-1',reported_cost_usd=None,counted_cost_usd=None,cost_counted_as='unpriced')
 request_id = f'request-{1+unpriced}'
@@ -226,7 +231,7 @@ if control:
     assert control['actor_id'] == flags['--actor-id'] and control['session'] == flags['--session']
 if handoff:
     emit(type='handoff',actor_id=flags['--actor-id'],session=flags['--session'],handoff_id='d'*32,context_id='e'*32,context_sha256='f'*64,grants_authority=False)
-    emit(type='settled',unpriced_recall_requests=0,ok=True,reason='handoff',requests=1+recall_made,player_requests=1,recall_requests=recall_made,spent_usd=spent,unpriced_requests=0)
+    emit(type='settled',ok=True,reason='handoff',requests=1+unpriced,player_requests=1+unpriced,spent_usd=spent,unpriced_requests=unpriced)
 else:
     reason = 'external_stop_complete' if ending else 'task_complete'
     control_id = control['id'] if control else None
@@ -234,15 +239,17 @@ else:
     failed = 'HOST_FAILURE' in prompt
     if 'NO_FINISH' not in prompt and not failed:
         emit(type='player-finish',disposition=reason,control_id=control_id,report='report',source_ids=[])
-    emit(type='settled',unpriced_recall_requests=unpriced,ok=not failed,reason='provider-error' if failed else reason,control_id=control_id,requests=1+recall_made+2*unpriced,player_requests=1+unpriced,recall_requests=recall_made+unpriced,spent_usd=spent,unpriced_requests=unpriced)
+    emit(type='settled',ok=not failed,reason='provider-error' if failed else reason,control_id=control_id,requests=1+unpriced,player_requests=1+unpriced,spent_usd=spent,unpriced_requests=unpriced)
 open(flags['-o'], 'w').write('report\\n')
 """
 
 
 def driver_case(tmp_path,prompt='Frozen mission',*,two_actors=False,low_frames=False):
+    from harness.player.source_index import empty_agenda
     adapter=tmp_path/'adapter.py';adapter.write_text(FAKE_HOST)
     (tmp_path/'context.txt').write_text('Frozen context');(tmp_path/'prompt.txt').write_text(prompt)
     (tmp_path/'delivered-knowledge.json').write_text(json.dumps(empty()))
+    (tmp_path/'agenda.json').write_text(json.dumps(empty_agenda()))
     actors=[dict(actor_id=c*32,token='t') for c in ('a','c')]
     application=SimpleNamespace(set_knowledge=Mock(),
         runtime=SimpleNamespace(add_actor=Mock(side_effect=actors),stop=Mock(),confirm_quiescent=Mock(),
@@ -254,7 +261,7 @@ def driver_case(tmp_path,prompt='Frozen mission',*,two_actors=False,low_frames=F
     profile=dict(max_hosts=2 if two_actors else 1,host_seconds=100,total_host_seconds=200,effort='off',port=8766,
                  ending_reserve=reserve,session='b'*32,host=dict(argv=[sys.executable,str(adapter)]),spend_limit_usd='1')
     # Each fake host makes one request that reports $0.004.
-    route=dict(recall=dict(model=dict(id='fixture'),every=5,unpriced_request_usd='0.2'),spend_limit_usd='1',unpriced_request_usd='0.25',api_key_env='FIXTURE_KEY',model=dict(id='fixture',name='fixture'))
+    route=dict(spend_limit_usd='1',unpriced_request_usd='0.25',api_key_env='FIXTURE_KEY',model=dict(id='fixture',name='fixture'))
     return profile,route,application
 
 
@@ -322,10 +329,10 @@ def test_overflowing_configured_estimate_leaves_actual_spend_intact(tmp_path):
 def test_driver_total_keeps_unknown_attempts_separate_from_spend(tmp_path):
     profile,route,application=driver_case(tmp_path,'Frozen mission WITH_UNPRICED')
     result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
-    assert result['observed_attempts']==3 and result['observed_recall_attempts']==1
+    assert result['observed_attempts']==2 and result['observed_recall_attempts']==0
     for receipt in (result,result['actors'][0]):
         assert receipt['spend_complete']
-        assert receipt['unpriced_requests']==receipt['unpriced_recall_requests']==1
+        assert receipt['unpriced_requests']==1 and receipt['unpriced_recall_requests']==0
         assert receipt['spent_usd']==receipt['reported_usd']=='0.004'
 
 
@@ -377,22 +384,26 @@ def test_no_successor_is_started_when_no_dollars_remain(tmp_path):
     assert (result['spent_usd'],result['spend_complete'])==('0.004',True)
 
 
-def test_recall_can_continue_with_remaining_budget_after_verified_handoff(tmp_path):
-    profile,route,application=driver_case(tmp_path,'Frozen mission HANDOFF_RACE WITH_RECALL',two_actors=True)
+def test_agenda_and_budget_continue_after_verified_handoff(tmp_path):
+    profile,route,application=driver_case(tmp_path,'Frozen mission HANDOFF_RACE WRITE_AGENDA',two_actors=True)
     with patch('tools.campaign_player._handoff_context',return_value='{}'):
         result=run_hosts(tmp_path,profile,route,application,'fixture-secret',threading.Event(),time.monotonic()+300)
     assert result['outcome']=='player_task_complete_unassessed',result
-    assert [a['observed_recall_attempts'] for a in result['actors']]==[1,1]
-    assert result['observed_attempts']==4 and result['observed_recall_attempts']==2
+    assert [a['observed_recall_attempts'] for a in result['actors']]==[0,0]
+    assert result['observed_attempts']==2 and result['observed_recall_attempts']==0
     assert application.runtime.confirm_quiescent.call_count==1
     for name,spend_limit in (('001','1'),('002','0.996')):
         actor=tmp_path/'actors'/name
         assert json.loads((actor/'route.json').read_text()) == dict(route,spend_limit_usd=spend_limit)
         frozen=json.loads((actor/'frozen.json').read_text())
-        assert frozen['schema']=='player-host-inputs/4' and frozen['knowledge_updates'] is None
-        assert 'delivered-knowledge.json' in frozen['files']
+        assert frozen['schema']=='player-host-inputs/5' and frozen['knowledge_updates'] is None
+        assert 'delivered-knowledge.json' in frozen['files'] and 'agenda.json' in frozen['files']
         assert not any('private' in key for key in frozen['files'])
         assert not (actor/'knowledge-updates.jsonl').exists() and '--knowledge-updates' not in json.loads((actor/'host-process.json').read_text())['argv']
+    assert json.loads((tmp_path/'actors/001/agenda.json').read_text())['threads']==[]
+    carried=json.loads((tmp_path/'actors/002/agenda.json').read_text())
+    assert carried['cut_count']==1 and carried['threads'][0]['id']=='carried-thread'
+    assert json.loads((tmp_path/'agenda-final.json').read_text())==carried
     assert not application.set_knowledge.called
 
 
@@ -433,7 +444,7 @@ def test_a_version_left_during_play_is_listed_for_the_running_actor_and_seeds_it
     assert second.joinpath('knowledge-updates.jsonl').read_text()=='' and not second.joinpath('knowledge').exists()
     for actor in (first,second):
         frozen=json.loads((actor/'frozen.json').read_text())
-        assert (frozen['schema'],frozen['knowledge_updates'])==('player-host-inputs/4','knowledge-updates.jsonl')
+        assert (frozen['schema'],frozen['knowledge_updates'])==('player-host-inputs/5','knowledge-updates.jsonl')
         assert frozen['files']['delivered-knowledge.json']==hashlib.sha256((actor/'delivered-knowledge.json').read_bytes()).hexdigest()
         assert 'knowledge-updates.jsonl' not in frozen['files']
         argv=json.loads((actor/'host-process.json').read_text())['argv']
@@ -749,7 +760,7 @@ def test_driver_copies_delivered_knowledge_as_exact_bytes(tmp_path):
 
 def test_missing_response_record_cannot_pass_as_an_unpriced_settlement(tmp_path):
     rows=[START,dict(type='request-start',request_id='request-1'),
-          dict(type='settled',requests=1,player_requests=1,recall_requests=0,spent_usd='0',unpriced_requests=1,unpriced_recall_requests=0)]
+          dict(type='settled',requests=1,player_requests=1,spent_usd='0',unpriced_requests=1)]
     result=finished(tmp_path,rows)
     assert result['spent_usd']=='0' and result['unpriced_requests']==1
     assert not result['accounting_complete'] and result['observed_attempts']==1
@@ -933,7 +944,7 @@ def test_a_trace_line_within_the_bound_is_read_wherever_read_boundaries_fall(tmp
     # The long line starts three quarters into the first read and ends inside a later, full read.
     rows=[START,padding(786432),padding(31*1048576+524288),padding(1048576),
           dict(type='request-start',request_id='request-1'),cost('request-1','0.1'),
-          dict(type='settled',unpriced_recall_requests=0,requests=1,player_requests=1,recall_requests=0,ok=True,spent_usd='0.1',unpriced_requests=0)]
+          dict(type='settled',requests=1,player_requests=1,ok=True,spent_usd='0.1',unpriced_requests=0)]
     result=finished(tmp_path,rows)
     assert result['accounting_complete'] and result['spent_usd']=='0.1',result
     path=tmp_path/'host.jsonl'
@@ -973,7 +984,7 @@ def test_a_driver_stop_stays_the_reason_even_when_the_stopped_host_settles_clean
     the latched driver stop reason must survive instead of being overwritten by generic host failure."""
     profile,route,application=driver_case(tmp_path,'Frozen mission HANG')
     stopped=threading.Event();threading.Timer(0.3,stopped.set).start()
-    clean_events={'accounting_complete':True,'settled':{'ok':False,'reason':'cancelled','requests':0,'player_requests':0,'recall_requests':0,'spent_usd':'0','unpriced_requests':0,'unpriced_recall_requests':0},
+    clean_events={'accounting_complete':True,'settled':{'ok':False,'reason':'cancelled','requests':0,'player_requests':0,'spent_usd':'0','unpriced_requests':0},
         'handoff':None,'player_finish':None,'observed_attempts':0,'observed_recall_attempts':0,'requests':[],'spent_usd':'0','unpriced_requests':0,'unpriced_recall_requests':0,'spend_complete':True,'reported_usd':'0'}
     with patch.object(HostEvents,'finish',return_value=clean_events):
         result=run_hosts(tmp_path,profile,route,application,'fixture-secret',stopped,time.monotonic()+300)

@@ -7,7 +7,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
-import { emptyKnowledge } from './host-scenario.mjs';
+import { emptyAgenda } from '../agenda.mjs';
+import { emptyKnowledge, reply } from './host-scenario.mjs';
 
 const python=process.env.ENACTIVE_TEST_PYTHON;
 const runner=fileURLToPath(new URL('../run.mjs',import.meta.url));
@@ -18,11 +19,11 @@ async function cli(t, handle, extraEnv = {}, enabledTools = ['observe'], extraAr
   const server=createServer(handle); server.listen(0,'127.0.0.1'); await once(server,'listening');
   t.after(()=>{server.closeAllConnections();server.close();});
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:`http://127.0.0.1:${server.address().port}/v1`,input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'player-host/12',endpoint_costs:null,context_cut:null,context_reserve_tokens:512,service_tier:'default',model,recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
+  const route={schema:'player-host/13',endpoint_costs:null,context_cut:null,context_reserve_tokens:512,service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture,join(dir,'log'),join(dir,'pid')],cwd:dir,enabled:true,required:true,enabled_tools:enabledTools,startup_timeout_sec:3,tool_timeout_sec:1};
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json'),context:join(dir,'context.txt'),knowledge:join(dir,'delivered-knowledge.json'),prompt:join(dir,'prompt.txt'),final:join(dir,'final.txt')};
   await Promise.all([writeFile(paths.route,JSON.stringify(route)),writeFile(paths.mcp,JSON.stringify(mcp)),writeFile(paths.context,'Frozen player guide'),writeFile(paths.prompt,'Offline mission'),writeFile(paths.final,'reserved'),writeFile(paths.knowledge,JSON.stringify(emptyKnowledge()))]);
-  const child=spawn(process.execPath,[runner,'run','--config',paths.route,'--mcp-config',paths.mcp,'--context',paths.context,'--prompt',paths.prompt,'--session','2'.repeat(32),'--actor-id','3'.repeat(32),'--pending-control-id','none','--delivered-knowledge',paths.knowledge,'--finish-reserve-usd','0','--model','fixture','--effort','off','--timeout-seconds','10','-o',paths.final,...extraArgs(dir)],{env:{PATH:process.env.PATH,CLI_FIXTURE_KEY:'sentinel-private-key',...extraEnv},stdio:['pipe','pipe','pipe']});
+  const child=spawn(process.execPath,[runner,'run','--config',paths.route,'--mcp-config',paths.mcp,'--context',paths.context,'--prompt',paths.prompt,'--session','2'.repeat(32),'--actor-id','3'.repeat(32),'--pending-control-id','none','--delivered-knowledge',paths.knowledge,'--finish-reserve-usd','0','--model','fixture','--effort','off','--timeout-seconds','10','-o',paths.final,...await extraArgs(dir)],{env:{PATH:process.env.PATH,CLI_FIXTURE_KEY:'sentinel-private-key',...extraEnv},stdio:['pipe','pipe','pipe']});
   t.after(()=>{if(child.exitCode===null) child.kill('SIGKILL');});
   let stdout='',stderr='';child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk);
   child.stdin.on('error',()=>{});
@@ -109,7 +110,7 @@ async function validateFiles(t, mutate = ()=>{}) {
   const dir=await mkdtemp(join(tmpdir(),'pi-host-validate-'));
   t.after(()=>rm(dir,{recursive:true,force:true}));
   const model={id:'fixture',name:'fixture',api:'openai-completions',provider:'fixture',baseUrl:'http://127.0.0.1:1/v1',input:['text','image'],reasoning:false,cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:10000,maxTokens:100};
-  const route={schema:'player-host/12',endpoint_costs:null,context_cut:null,context_reserve_tokens:512,service_tier:'default',model,recall:{model:structuredClone(model),every:5,unpriced_request_usd:'0.25',endpoint_costs:null},api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
+  const route={schema:'player-host/13',endpoint_costs:null,context_cut:null,context_reserve_tokens:512,service_tier:'default',model,api_key_env:'CLI_FIXTURE_KEY',spend_limit_usd:'1',unpriced_request_usd:'0.25',max_context_images:4,context_image_block:1,request_timeout_seconds:5};
   const mcp={command:resolve(python),args:[fixture],cwd:dir,enabled:true,required:true,enabled_tools:['observe'],startup_timeout_sec:3,tool_timeout_sec:1};
   mutate(route,mcp);
   const paths={route:join(dir,'route.json'),mcp:join(dir,'mcp.json')};
@@ -121,7 +122,7 @@ test('CLI validate accepts the route and MCP table silently without a credential
   assert.equal(result.code,0);assert.equal(result.stdout,'');
 });
 test('CLI validate refuses an old route schema, a disabled MCP table and repeated or missing flags',async t=>{
-  for (const mutate of [route=>{route.schema='pi-player-host/7';},route=>{route.schema='player-host/8';},(_route,mcp)=>{mcp.enabled=false;}]) {
+  for (const mutate of [route=>{route.schema='pi-player-host/7';},route=>{route.schema='player-host/12';},route=>{route.recall=null;},(_route,mcp)=>{mcp.enabled=false;}]) {
     const result=await modeRun(t,await validateFiles(t,mutate));
     assert.equal(result.code,1);assert.equal(result.stdout,'');
   }
@@ -138,4 +139,62 @@ test('CLI requires a leading mode word and settles unsuccessfully without one',a
     const last=result.stdout.trim().split('\n').filter(Boolean).map(JSON.parse).at(-1);
     assert.equal(last.type,'settled');assert.equal(last.ok,false);assert.equal(last.reason,'invalid-arguments');
   }
+});
+
+test('CLI loads the frozen agenda and atomically replaces the output with committed state', async t => {
+  const carried = {...emptyAgenda(), cut_count:4, threads:[{id:'keep', title:'Retained task', status:'paused',
+    refs:['prior-1'], created_at_cut:1, updated_at_cut:3}]};
+  let requests = 0;
+  const run = await cli(t, async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks));
+    assert.ok(JSON.stringify(body.messages[1]).includes('Retained task'));
+    const response = ++requests === 1
+      ? reply(null, [['player_agenda',{op:'set_status', id:'keep', status:'active', notes:'Continue the task'}]])
+      : reply();
+    res.writeHead(200, {'content-type':'text/event-stream'});
+    res.end(await response.text());
+  }, {}, ['observe'], async dir => {
+    const input = join(dir, 'agenda.json'), output = join(dir, 'agenda-out.json');
+    await writeFile(input, JSON.stringify(carried));
+    await writeFile(output, 'reserved');
+    return ['--agenda', input, '--agenda-out', output];
+  });
+  assert.equal((await run.finished)[0], 0);
+  assert.deepEqual(JSON.parse(await readFile(join(run.dir, 'agenda.json'), 'utf8')), carried);
+  const saved = JSON.parse(await readFile(join(run.dir, 'agenda-out.json'), 'utf8'));
+  assert.deepEqual(saved, {...carried, threads:[{...carried.threads[0], status:'active',
+    notes:'Continue the task', updated_at_cut:4}]});
+  assert.deepEqual(run.read().events.find(event => event.type === 'player-agenda').agenda, saved);
+  assert.equal(run.read().events.at(-1).type, 'settled');
+});
+
+test('CLI rejects a malformed agenda before opening the provider route', async t => {
+  const run = await cli(t, () => assert.fail('no inference for an invalid agenda'), {}, ['observe'], async dir => {
+    const input = join(dir, 'agenda.json');
+    await writeFile(input, JSON.stringify({...emptyAgenda(), unexpected:true}));
+    return ['--agenda', input];
+  });
+  assert.equal((await run.finished)[0], 1);
+  assert.equal(run.read().events.at(-1).reason, 'invalid-agenda');
+});
+
+test('CLI preserves real settled spend telemetry when --agenda-out cannot be written', async t => {
+  const finish = (_req, res) => {
+    res.writeHead(200, {'content-type':'text/event-stream'});
+    res.end('data: ' + JSON.stringify({id:'fixture', model:'fixture-backend',
+      choices:[{index:0, delta:{role:'assistant', tool_calls:[{index:0, id:'finish', type:'function',
+        function:{name:'player_finish', arguments:JSON.stringify({intent:'Report the fixture result',
+          disposition:'task_complete', report:'final answer', source_ids:[], control_id:null})}}]}, finish_reason:'tool_calls'}],
+      usage:{prompt_tokens:11, completion_tokens:5, total_tokens:16, cost:0.000038}}) + '\n\ndata: [DONE]\n\n');
+  };
+  const run = await cli(t, finish, {}, ['observe'], async dir => ['--agenda-out', dir]);
+  assert.equal((await run.finished)[0], 1);
+  const {events, stderr} = run.read();
+  assert.ok(stderr.length > 0);
+  const settled = events.at(-1);
+  assert.deepEqual([settled.type, settled.ok, settled.reason, settled.requests, settled.spent_usd],
+    ['settled', true, 'task_complete', 1, '0.000038']);
+  assert.equal(await readFile(run.paths.final, 'utf8'), 'reserved');
 });

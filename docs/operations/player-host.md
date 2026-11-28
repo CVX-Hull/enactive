@@ -25,8 +25,8 @@ The current campaign accepts the explicit default
 service tier. Configuration metadata/prices are not invoice, quality or latency
 attestation. New live calls remain bounded by the package's dollar limit and operational capacities.
 
-The package freezes `route.json` (`player-host/12`), `delivered-knowledge.json`, `mcp-template.json`,
-`context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
+The package freezes `route.json` (`player-host/13`), `delivered-knowledge.json`, `source-index.json`,
+`agenda.json`, `mcp-template.json`, `context.txt`, `prompt.txt` and `target.json`. The route declares explicit model
 text/image capabilities, context/output capacities, effort mapping, costs, request
 timeout, the dollar limit, the planning bound for an in-flight
 request, credential environment name, image peak, eviction block and
@@ -46,7 +46,7 @@ The [host reference](../../tools/player_host/README.md) owns exact closed fields
 Unsupported route and player-view configurations are rejected as executable inputs.
 
 The driver creates each actor's `player-adapter/2`, explicit MCP table, fixed
-context, ongoing-objective/knowledge prompt and `player-host-inputs/4` hashes.
+context, ongoing-objective/knowledge prompt, starting `agenda.json` and `player-host-inputs/5` hashes.
 With [live knowledge updates](campaign-run.md#live-knowledge-updates) it also passes
 `--knowledge-updates`, and a successor starts from the latest version adopted in the
 run ([host contract](../contracts/player-host.md#a-newer-version-during-play)).
@@ -56,7 +56,7 @@ list with the invalidation before the host starts.
 Experiment quotas, host counts and other final-actor policy remain outside player
 context, with one deliberate exception below. Pi loads no coding-agent
 shell/file tools, personal settings, resource discovery or resumed history.
-Both original and successor start fresh; at most two hosts fit `campaign-run/13`.
+Both original and successor start fresh; at most two hosts fit `campaign-run/14`.
 Each actor's route carries in `spend_limit_usd` the dollars the run has left, and no
 request count. The driver starts an actor only while dollars and more than 30 s of host time
 remain and nothing has stopped the run. The

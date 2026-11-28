@@ -81,7 +81,7 @@ a revision to a published version, readout, player input and visible effect.
 Keep missing links unknown.
 
 The [curator component](../components/curator.md) owns the published facts and
-articles. The [host contract](../contracts/player-host.md#delivered-knowledge-and-recall)
+articles. The [host contract](../contracts/player-host.md#delivered-knowledge-and-player-working-state-agenda)
 owns delivery from the frozen export. The comparison needs a supported
 experimental readout for arbitrary schema data. A revised type or relation is
 useful only when the frozen reader and player can interpret its applicability

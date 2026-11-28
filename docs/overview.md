@@ -31,16 +31,13 @@ remains available when a hint fails and mechanical custody is healthy.
 A separate [curator](components/curator.md) is the sole writer of durable long-term
 memory: it reads what happened, publishes cited facts and articles through a gate,
 and holds no custody. It works beside play without making the player wait, and
-between runs. Each fact (`curator-fact/5`) carries an open scope map and typed links,
-so world-bound and context-scoped knowledge is delivered only to matching runs. The
-current schema still accepts `strategy` claims; the approved writing policy narrows
-curated memory to Kinds 1–5 only with no recommendations or plans
-([decision](decisions/owner-decisions.md#curator-records-statement-kinds-one-to-five);
-[#1024](https://github.com/CVX-Hull/enactive/issues/1024),
-[#1022](https://github.com/CVX-Hull/enactive/issues/1022)), and keeps player-owned
-ephemeral working state and self-directed goals separate from curated memory
-([decision](decisions/owner-decisions.md#player-working-state-agenda-1026);
-[#1026](https://github.com/CVX-Hull/enactive/issues/1026)).
+between runs. Each fact (`curator-fact/6`) carries an open scope map, a closed five-value
+`statement_kind` (Kinds 1–5 only, with no recommendations or plans), optional `state_key`,
+kinematic `anchor`, grounded `when`, `depiction_source_id` and typed links, so world-bound
+and context-scoped knowledge is delivered only to matching runs. Player-owned ephemeral
+working state and self-directed goals stay separate from curated memory in the host-local
+`player_agenda` tool (`player-agenda-continuation/1`), which carries across cuts, handoffs
+and resumed admissions and never enters curator snapshots or traces.
 
 ## How it works
 
@@ -80,15 +77,14 @@ Knowledge moves beside play in four steps, each optional for a run:
    (refusing an oversized one for context capacity), while a successor starts from the
    driver's latest adopted version. Otherwise every actor keeps the package's frozen
    version.
-3. **Cut.** The `player-host/12` route can enable `context_cut`. The host then replaces
-   older turns with a fresh briefing, and only turns that the curator's confirmed,
-   [unbroken coverage](contracts/player-host.md#coverage-gated-context-cut) has reached.
-   Without that coverage, play continues with image eviction and handoff, or stops at
-   `context-capacity` when no eligible covered cut can fit the next request; the
-   current host can also wait on opening recall or in-flight recall spend settlement
-   ([non-blocking latency principle](decisions/owner-decisions.md#non-blocking-latency-contract-and-split-1026);
-   [#1036](https://github.com/CVX-Hull/enactive/issues/1036),
-   [#1037](https://github.com/CVX-Hull/enactive/issues/1037)).
+3. **Cut.** The `player-host/13` route can enable `context_cut`. The host then replaces
+   older turns with a fresh deterministic briefing (zero background LLM recall) and a cut
+   marker carrying `recent_intents`, removed `source_ids`, a bounded substantive
+   `changes_since` delta and committed `player_agenda` threads, removing only turns that
+   the curator's confirmed [unbroken coverage](contracts/player-host.md#coverage-gated-context-cut)
+   has reached. Without that coverage, play continues with image eviction and handoff, or
+   stops at `context-capacity` when no eligible covered cut can fit the next request
+   ([#1037](https://github.com/CVX-Hull/enactive/issues/1037)).
 4. **Groom.** After a run is sealed, the operator can run
    [boundary grooming](operations/curator-hosts.md#post-admission-boundary-grooming) to
    merge, retire and reorganize the whole store for a later package.
@@ -134,6 +130,7 @@ question is parked.
 | Player runtime, recall dedup, hysteresis cuts & compact queries (`player-host/12`, `player-knowledge/3`): [Porter2 and replay gates (#949)](acceptance/2026-11-25-player-host-12-porter2-and-replay-gates-949.md), [#950](https://github.com/CVX-Hull/enactive/issues/950) and [bounded live validation (#963)](acceptance/2026-11-25-wave3-wave4-live-validation-963.md) | Live-verified, one actor, bounded | `#949` replay and `#950` tests verify the design offline. In `#963`, `797` player and `60` recall requests ran at `94.04%` cache read share, `4%` large rewrites and `$0.0051` per decision, with `26` context cuts and `0` hard capacity stops, `69` reminder checks with `0` `already_in_context` overlap, and `16` compact `player-knowledge/3` queries; play ended on an orderly `host_seconds` stop with `normal_native_exit_zero: true`. | A live `spend-reserve-reached` handshake (`0` events), a multi-actor handoff, multi-day play, or a causal benefit of cuts or recall. |
 | Multi-day standard-build campaign (`campaign-run/13`, `curator-knowledge/4`, `delivered-knowledge/3`, `player-host/12`): [three-day campaign (#998)](acceptance/2026-11-26-multi-day-standard-build-campaign-998.md) | Live-verified, single lineage | The [owner](decisions/owner-decisions-archive.md#multi-day-campaign-accepted-reserve-stop-waived-998) accepted it for the player-owned campaign outcome with the reserve-stop item waived. One unmodified `8/8/8/8` survivor reached a saved clock 72 h 2 min 48 s past the start in four admissions for `$35.45`, each ending with a save, a separate quit and a zero native exit. The knowledge chain is unbroken from v0 to v101, and in later admissions the player read and acted on records from earlier ones. All 2,201 game inputs match a hosted actor's tool call. | A stop on the dollar reserve (the advisory spend notice ended three admissions first), an actor handoff, a sustainable food supply, a second lineage, or a causal benefit of memory. |
 | Keyed fluents, anchors, clocks, Kinds 1–5 & hygiene (`curator-knowledge/5`, `curator-fact/6`, `curator-submission/3`, `delivered-knowledge/4`, `player-knowledge/4`): [store-migration contract](design/store-migration-contract.md) and [freeze/baselines (#1046)](acceptance/2026-11-27-store-migration-freeze-and-998-baselines-1046.md) | Offline or stand-in | Gate invariants, exporter, reader, deterministic hygiene worklist, spectator projections, and paired retrieval replay against sealed `#896-b`, `#889`, and `#998` corpora pass offline with zero compatibility shims. | Fresh-world live validation on `curator-knowledge/5`, a multi-actor live handoff, or a causal benefit in play. |
+| Player working-state agenda, substantive deltas, retired recall & same-lineage ancestor source index (`campaign-run/14`, `player-host/13`, `player-host-inputs/5`, `player-source-index/1`, `player-source-read/2`, `player-agenda-continuation/1`): [Batch 2 checks (#1025, #1026)](acceptance/2026-11-27-batch2-player-continuity-checks.md) | Offline or stand-in | Host-local `player_agenda` carryover across cuts/handoffs/resumes with zero curator leakage, bounded claim-level substantive deltas (`0` empty updates on `#998` replay), deterministic `bm25_1hop` overflow briefing, zero LLM recall, same-lineage ancestor `player_source` reads (`785/785` `#998 v94` frames), 5-session `#963`+`#998` archive cutover, and pre-merge `C-MODEL-CHECK` pass offline. | Fresh-world live validation on `campaign-run/14` / `player-host/13`, multi-actor live handoff, or causal benefit in play. |
 
 Delivered means SDL events were handed over. It does not mean the application
 consumed them, saved a character or achieved an objective. Exact receipts,

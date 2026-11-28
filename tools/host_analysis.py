@@ -476,8 +476,9 @@ def analyze_trace(path: Path, tokenizers=None) -> dict:
                 context.append({key: event.get(key) for key in ("projection_ms", "input_images", "omitted_images", "retained_images")})
                 if isinstance(event.get("request_id"), str):
                     omitted[event["request_id"]] = event.get("omitted_images") if number(event.get("omitted_images")) else None
-            elif kind == 'knowledge-delivery' and event.get('kind') in ('reminder', 'update') and event.get('outcome') != 'refused':
-                # A reminder or a delivered knowledge update is a message the host added to the receiving request.
+            elif (kind == 'knowledge-delivery' and event.get('kind') in ('reminder', 'update')
+                    and event.get('outcome') not in ('refused', 'empty-suppressed')):
+                # Even an undelivered row may have added text to the receiving request before it failed.
                 notices.add(event.get('receiving_player_request_id'))
             elif kind == "tail-notice":
                 identity, kinds = event.get("request_id"), event.get("kinds")
