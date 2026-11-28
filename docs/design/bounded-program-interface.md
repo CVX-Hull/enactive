@@ -19,8 +19,8 @@ review_trigger: "The owner decides whether to take up the programs line, a progr
 Terms follow the [glossary](../glossary.md). This brief refines the interface handoff named in [ADR 009](../decisions/009-curated-player.md#interface-milestones-and-acceptance-ownership) and [programs and monitor](programs-and-monitor.md) against the active contracts:
 
 - [Computer-control contract](../contracts/computer-control.md) (`computer-request/3`, `computer-receipt/2`, one input sender, permanent Pause, and permanent input stop on partial or unknown delivery).
-- [Player ports contract](../contracts/player-ports.md) (`player-journal/1`, `player-computer-result/2`, `player-knowledge/4`, required `intent`, optional `cites`, no hidden countdown exposure).
-- [Player host contract](../contracts/player-host.md) (`player-host/12`, `delivered-knowledge/4`, pinned immutable run packages).
+- [Player ports contract](../contracts/player-ports.md) (`player-journal/1`, `player-computer-result/2`, `player-knowledge/4`, `player-source-read/2`, required `intent`, optional `cites`, no hidden countdown exposure).
+- [Player host contract](../contracts/player-host.md) (`player-host/13`, `delivered-knowledge/4`, `player-source-index/1`, pinned immutable run packages).
 - [Curator contract](../contracts/curator.md) (`curator-knowledge/5`, `curator-fact/6`, `curator-submission/3`, `curator-gate/2`, `curator-coverage/2`).
 
 Nothing in `curator-knowledge/5` accepts program or test files today: `harness/curator/gate.py` enforces that `programs/.keep` and `tests/.keep` are empty and refuses any other entry under `programs/` or `tests/`. Adopting this interface requires a coordinated `S-MIGRATION` across the closed formats that change together—the repository (`curator-knowledge/6`), submissions (`curator-submission/4`), delivered exports (`delivered-knowledge/5`), and the successor `campaign-run/*` package contract—migrating every producer, gate check, exporter, admission preflight, spectator reader, and rejection test together.

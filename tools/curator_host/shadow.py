@@ -95,12 +95,13 @@ class ShadowError(ValueError):
 class Arm:
     model: str
     name: str
-    provider: str  # the one OpenRouter provider the route is pinned to
+    provider: str
     effort: str
+    flex_provider: str | None = None
 
 
 # The arms are tracked configuration beside the frozen prices: each arm's OpenRouter model, display
-# name, the one provider its route is pinned to, and its effort.
+# name, provider pins, and effort.
 ARMS_SCHEMA = 'curator-shadow-arms/1'
 ARMS_FILE = ROOT/'data'/'curator'/'shadow-arms.json'
 
@@ -237,7 +238,8 @@ def host_configuration(arm: Arm, prices: dict[str, Price], *, effort: str, max_r
                        provider: str | None = None) -> dict:
     if service_tier not in SERVICE_TIERS:
         raise ShadowError(f'service_tier must be one of {", ".join(SERVICE_TIERS)}')
-    route_provider = provider or arm.provider
+    tier_provider = arm.flex_provider if service_tier == 'flex' else None
+    route_provider = provider or tier_provider or arm.provider
     price = prices[arm.model]
     per = lambda value: float(value)  # noqa: E731 - the host's cost entries are informational numbers
     return dict(

@@ -1130,7 +1130,7 @@ def runner_config(tmp_path: Path, **values) -> Path:
     (dict(knowledge_root='data/knowledge'), 'knowledge_root must be inside'),
     (dict(arm='nobody'), 'unknown arm'), (dict(cap_usd=1), 'decimal string'), (dict(cap_usd='0'), 'positive'),
     (dict(service_tier='batch'), 'service_tier must be one of'),
-    (dict(upstream='http://example.com'), 'may only be OpenRouter'), (dict(trigger_steps=50), 'must not exceed'),
+    (dict(upstream='http://example.com'), 'may only be OpenRouter'), (dict(trigger_steps=61), 'must not exceed'),
     (dict(host=dict(gpu=1)), 'host may have'),
     (dict(host=dict(context_image_block=8)), 'host may have'),
     (dict(hygiene=dict(extra=1)), 'hygiene may have'),
@@ -1140,13 +1140,33 @@ def test_the_runner_configuration_is_refused_before_anything_runs(tmp_path, chan
         live_runner.read_config(runner_config(tmp_path, **change), tmp_path/'runtime')
 
 
+def test_runner_settings_defaults():
+    assert Settings().trigger_steps == 40
+    assert Settings().ceiling_steps == 60
+
+
 def test_the_runner_configuration_takes_the_designs_defaults(tmp_path):
     config = live_runner.read_config(runner_config(tmp_path), tmp_path/'runtime')
     assert config['settings'] == Settings() and config['upstream'] == shadow.OPENROUTER_ORIGIN
-    assert config['service_tier'] == 'default' and config['hygiene'] == live.HygieneSettings()
+    assert config['hygiene'] == live.HygieneSettings()
     assert config['host']['max_requests'] == 120 and config['host']['effort'] is None and config['session_cap'] is None
-    flex_cfg = live_runner.read_config(runner_config(tmp_path, service_tier='flex'), tmp_path/'runtime')
-    assert flex_cfg['service_tier'] == 'flex' and flex_cfg['host']['request_timeout_seconds'] == 960
+
+
+@pytest.mark.parametrize('overrides, tier, timeout, provider', [
+    ({}, 'flex', 960, 'openai/flex'),
+    (dict(service_tier='default'), 'default', 240, 'openai'),
+    (dict(arm='opus'), 'default', 240, 'anthropic'),
+])
+def test_live_runner_tier_and_provider(tmp_path, overrides, tier, timeout, provider):
+    config = live_runner.read_config(runner_config(tmp_path, **overrides), tmp_path/'runtime')
+    assert config['service_tier'] == tier
+    assert config['settings'].trigger_steps == 40
+    assert config['settings'].ceiling_steps == 60
+    assert config['host']['request_timeout_seconds'] == timeout
+    prices = shadow.load_prices(config['prices'])
+    host = live_runner.session_host_configuration(config, prices, config['cap'])
+    routing = host['model']['compat']['openRouterRouting']
+    assert routing['only'] == routing['order'] == [provider]
 
 
 def fake_sessions(tmp_path: Path, monkeypatch, behave) -> live_runner.Sessions:

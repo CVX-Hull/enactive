@@ -477,6 +477,13 @@ def test_both_arms_configure_a_host_the_proxy_allows():
         assert done.stdout.strip() == 'valid', done.stderr
 
 
+@pytest.mark.parametrize('override, provider', [({}, 'openai/flex'), (dict(provider='openai'), 'openai')])
+def test_terra_flex_provider_can_be_overridden(tmp_path, override, provider):
+    config, _, _ = host_config(tmp_path, service_tier='flex', **override)
+    routing = config['model']['compat']['openRouterRouting']
+    assert routing['only'] == routing['order'] == [provider]
+
+
 SUMMARY_FIELDS = {'window', 'coverage', 'schema', 'kind', 'arm', 'model', 'effort', 'lineage', 'trace_session', 'memory', 'cap_usd', 'started_wall',
                   'run_state', 'wall_seconds', 'cost_usd', 'proxy', 'stopped_by_cap', 'session_id', 'record', 'session_state',
                   'sandbox', 'errors', 'refused', 'submissions', 'accepted', 'rejected', 'unresolved', 'verdicts', 'drafts', 'published_after',

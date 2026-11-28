@@ -201,9 +201,15 @@ fit within context capacity (suppressing empty updates and refusing oversized on
 context capacity), and any successor starts from the driver's latest adopted version. The
 [host contract](../contracts/player-host.md#a-newer-version-during-play) specifies
 adoption, verification and the message the player receives.
-Live delivery also sends the runner's verified coverage to the actor. A route
-with context cuts enabled can cut only through eligible covered turns. Play
-continues through ordinary image eviction and handoff while coverage is unavailable.
+Live delivery also sends the runner's verified coverage to the actor. On `player-host/13`
+with context cuts enabled, the host prefers curator-covered turns at `high_mark` /
+`image_peak` and activates a bounded deterministic uncovered-cut fallback above the
+derived Tier-2 pressure ceiling or on strict hard-fit rescue without advancing
+`covered_through_operation_id` (preserving `player_agenda`, `recent_intents`, omitted
+`source_ids` and unchanged disk WAL ingestion;
+[host contract](../contracts/player-host.md#coverage-gated-context-cut)). Play
+continues through ordinary image eviction and handoff while coverage is unavailable or
+after a restore.
 
 Set it only for a run launched with `--curator-runner`
 ([supervision](campaign-supervision.md#freeze-launch-and-inspect)); without the
@@ -290,7 +296,7 @@ player-visible input is determining the
 Every value but `usd` is a positive integer strictly below its corresponding original
 host or mechanical limit. Use the [spend limit rules](#spend-limit) for the dollar
 reserve. Before admission the lead forecasts reserve adequacy for the largest
-already-admitted input burst, pending player and recall requests, control delivery,
+already-admitted input burst, pending player requests, control delivery,
 any permitted successor and the expected finish-up under the original limits.
 Set these values for the planned run in place of the example numbers.
 
