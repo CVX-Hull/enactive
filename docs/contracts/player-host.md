@@ -284,11 +284,16 @@ never drops active goals). The system prompt and tool table stay identical acros
 **Player working-state agenda (`player_agenda`).** The host registers the host-local tool
 `player_agenda` beside `player_finish` (rejecting any MCP tool named `player_agenda` or
 `player_finish`) and allows it after uncertain input alongside read-only tools. It maintains
-a bounded `player-agenda-continuation/1` JSON structure (at most 3,072 serialized UTF-8 bytes,
+a bounded `player-agenda-continuation/1` JSON structure (at most 3,072 serialized UTF-8 bytes
+hard ceiling; `player_agenda` tool writes reserve 16 bytes of cut-counter headroom — 3,056
+bytes — while permitting strictly shrinking writes on a carried agenda near the ceiling;
 at most 8 `active`+`paused` threads, at most 16 total threads, up to 6 single-level `sub_items`
 and up to 8 evidence-grounded `refs` per thread; `done`/`dropped` threads are evicted after
 2 context cuts). Every `ref` must already be earned by the current actor (present in carried
-agenda refs, delivered knowledge IDs/`state_key`s/citations, or observed `source_id`s). The
+agenda refs, delivered knowledge IDs/`state_key`s/citations, or observed `source_id`s). When
+non-empty at actor start, the host renders the carried agenda in a separate `BEGIN PLAYER AGENDA`
+block appended after `BEGIN FALLIBLE KNOWLEDGE` in the live opening prompt (never inside the
+knowledge briefing or `knowledge-delivery` telemetry). The
 player agenda is strictly host-local working state: it carries across context cuts, actor
 handoffs and resumed admissions (`--agenda` / `--agenda-out` and `agenda-final.json`), and is
 never copied or projected into curator snapshots or traces.
@@ -425,7 +430,8 @@ after cut-boundary tombstone eviction, omitted when empty).
 The marker directs the player to `player_source` for those frames. Both
 messages stay fixed until the next cut. Earlier mid-segment knowledge update notices
 before the cut boundary are dropped when represented by the replacement briefing or
-`changes_since`; `tail-notice` messages before the cut boundary
+`changes_since`, and any unrepresented notice survives at most one cut before being
+retired on the following cut; `tail-notice` messages before the cut boundary
 and all `context-capacity` notice lines and step tracking reset on a cut (while
 `host-timeout` and `spend-limit` step trackers and any such notices at or after the
 cut boundary stay intact), the token estimate disregards pre-cut provider usage, and

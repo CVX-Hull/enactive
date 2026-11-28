@@ -103,7 +103,9 @@ export function applyAgendaTool(agenda, args, earnedRefs) {
     else threads.push(thread);
   }
   const next = validateAgenda({...agenda, threads});
-  if (args.op !== 'read' && Buffer.byteLength(JSON.stringify(next)) > AGENDA_MAX_BYTES - AGENDA_CUT_HEADROOM) {
+  const nextBytes = Buffer.byteLength(JSON.stringify(next));
+  const prevBytes = Buffer.byteLength(JSON.stringify(agenda));
+  if (args.op !== 'read' && nextBytes > AGENDA_MAX_BYTES - AGENDA_CUT_HEADROOM && nextBytes >= prevBytes) {
     invalid(`exceeds ${AGENDA_MAX_BYTES - AGENDA_CUT_HEADROOM} UTF-8 bytes tool headroom (${AGENDA_MAX_BYTES} max)`);
   }
   if (args.op === 'upsert') {

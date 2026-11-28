@@ -101,7 +101,7 @@ try {
   }
   // campaign_player owns exclusive reservation of this exact final path; the
   // contract writes only the report from a direct accepted finish invocation.
-  if (result.ok && ['task_complete', 'cannot_continue', 'external_stop_complete'].includes(result.reason)) await writeFile(args['-o'], result.finalText + '\n', {encoding:'utf8', signal:controller.signal});
+  if (result.ok && !writeFailed && ['task_complete', 'cannot_continue', 'external_stop_complete'].includes(result.reason)) await writeFile(args['-o'], result.finalText + '\n', {encoding:'utf8', signal:controller.signal});
   // Always emit the real settlement with intact spend/request counts before setting non-zero exit on agenda-out I/O failure.
   output(settlement);
   process.exitCode = result.ok && !writeFailed ? 0 : 1;

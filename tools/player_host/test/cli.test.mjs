@@ -196,4 +196,5 @@ test('CLI preserves real settled spend telemetry when --agenda-out cannot be wri
   const settled = events.at(-1);
   assert.deepEqual([settled.type, settled.ok, settled.reason, settled.requests, settled.spent_usd],
     ['settled', true, 'task_complete', 1, '0.000038']);
+  assert.equal(await readFile(run.paths.final, 'utf8'), 'reserved');
 });
