@@ -137,6 +137,7 @@ class HostProjection:
     coverage_waits: list[dict] = field(default_factory=list)
     agenda_events: list[Mark] = field(default_factory=list)
     applied_tiers: dict[tuple[str, str], str] = field(default_factory=dict)
+    logical_requests: dict[tuple[str, str], str] = field(default_factory=dict)
     settled: dict[str, dict] = field(default_factory=dict)
     starts: dict[str, Counter] = field(default_factory=dict)   # actor ID -> request starts by role
     unpriced: dict[str, Counter] = field(default_factory=dict)  # actor ID -> starts without a priced response, by role
@@ -227,7 +228,7 @@ def _delivery_delta(f):
     return stated if isinstance(stated, dict) else {}
 
 
-def delivery_fields(f, *, applied_requests, delivered, undelivered):
+def delivery_fields(f, *, applied_requests, delivered, undelivered, logical_requests=None):
     delta = _delivery_delta(f)
     changes = delta.get('changes_since') if isinstance(delta.get('changes_since'), dict) else delta
     overflow = changes.get('overflow')
@@ -237,7 +238,9 @@ def delivery_fields(f, *, applied_requests, delivered, undelivered):
     parsed = modern or any(isinstance(changes.get(key), list) for key in buckets)
     delta_counts = {key: len(changes[key]) if isinstance(changes.get(key), list) else 0 for key in buckets} if parsed else None
     out = update_fields(f, delta) if f.get('kind') == 'update' else {}
-    request_id = identifier(f.get('receiving_player_request_id')) or identifier(f.get('request_id'))
+    receiving = identifier(f.get('receiving_player_request_id'))
+    request_id = receiving or identifier(f.get('request_id'))
+    logical_receiving = (logical_requests or {}).get(receiving, receiving) if receiving is not None else None
     outcome = identifier(f.get('outcome'), LABEL_LIMIT)
     if undelivered or outcome == 'undelivered':
         kind, outcome = 'undelivered', 'undelivered'
@@ -246,7 +249,7 @@ def delivery_fields(f, *, applied_requests, delivered, undelivered):
     elif outcome == 'refused':
         kind = 'refused'
     elif f.get('kind') == 'briefing':
-        post_cut = identifier(f.get('receiving_player_request_id')) in applied_requests or f.get('briefing_kind') == 'cut'
+        post_cut = logical_receiving in applied_requests or f.get('briefing_kind') == 'cut'
         kind = 'post_cut_briefing' if post_cut else 'opening_briefing'
     else:
         kind = 'update'
@@ -383,8 +386,8 @@ def agenda_summary(info, host):
                 events_count=len(events), reconstructed=bool(latest is not None and final is None))
 
 
-def coverage_waits(actor, index, events, responses):
-    """A held-back event starts a span. Ordinary requests extend it until the next cut."""
+def coverage_waits(actor, index, events, responses, *, is_last_actor: bool = True):
+    """A held-back event starts a span. Ordinary requests extend it until the next cut or actor settlement."""
     waits, opening, requests, peak = [], None, {}, None
     prompts = {r.line: r.prompt_tokens for r in responses if not r.is_recall}
     request_peaks: dict[str, int] = {}
@@ -410,6 +413,10 @@ def coverage_waits(actor, index, events, responses):
     for event in events:
         fields = event.fields
         request_id = identifier(fields.get('request_id'))
+        if event.type == 'settled' and opening is not None:
+            finish(event, 'settled')
+            opening = None
+            continue
         if event.type == 'context-cut':
             outcome = CUT_OUTCOMES.get(identifier(fields.get('outcome')))
             if outcome == 'held_back':
@@ -436,7 +443,7 @@ def coverage_waits(actor, index, events, responses):
                 if tokens is not None:
                     peak = max(tokens, peak or 0)
     if opening is not None:
-        finish(events[-1], 'trace_end')
+        finish(events[-1], 'trace_end' if is_last_actor else 'handoff')
     return waits
 
 
@@ -449,7 +456,10 @@ def project(actors: list[tuple[str, str, tuple[HostEvent, ...]]], untraced: tupl
     for index, (_, actor, events) in enumerate(actors):
         host_telemetry = (events[0].fields.get('telemetry_version')
             if events and events[0].type == 'host-start' and type(events[0].fields.get('telemetry_version')) is int else None)
-        applied = {request for e in events if e.type == 'context-cut' and e.fields.get('outcome') in ('cut', 'applied')
+        logical = {request: (identifier(e.fields.get('logical_request_id')) or request) for e in events
+                   if e.type == 'request-start' if (request := identifier(e.fields.get('request_id'))) is not None}
+        out.logical_requests.update({(actor, request): target for request, target in logical.items()})
+        applied = {logical.get(request, request) for e in events if e.type == 'context-cut' and e.fields.get('outcome') in ('cut', 'applied')
                    if (request := identifier(e.fields.get('request_id'))) is not None}
         tiers = {request: e.fields['applied_service_tier'] for e in events if e.type == 'response-service-tier'
                  and e.fields.get('applied_service_tier') in SERVICE_TIERS
@@ -489,7 +499,7 @@ def project(actors: list[tuple[str, str, tuple[HostEvent, ...]]], untraced: tupl
             elif event.type in ('knowledge-delivery', 'knowledge-undelivered') and f.get('kind') in ('update', 'briefing'):
                 delivered = event.type == 'knowledge-delivery' and is_delivered_exposure(f, host_telemetry)
                 delivery = delivery_fields(f, applied_requests=applied, delivered=delivered,
-                                           undelivered=event.type == 'knowledge-undelivered')
+                                           undelivered=event.type == 'knowledge-undelivered', logical_requests=logical)
                 mark = Mark(actor, index, event.line, event.wall, delivery)
                 out.deliveries.append(mark)
                 if f['kind'] == 'update' and event.type == 'knowledge-delivery':
@@ -515,7 +525,7 @@ def project(actors: list[tuple[str, str, tuple[HostEvent, ...]]], untraced: tupl
                 if host_telemetry == HOST_TELEMETRY:
                     for key in ('recall_requests', 'unpriced_recall_requests'):
                         out.settled[actor][key] = f.get(key, 0)
-        out.coverage_waits.extend(coverage_waits(actor, index, events, actor_responses))
+        out.coverage_waits.extend(coverage_waits(actor, index, events, actor_responses, is_last_actor=index == len(actors) - 1))
         out.starts[actor], out.unpriced[actor] = Counter(), Counter()
         for request_id, number in started.items():
             out.starts[actor][role(request_id)] += number

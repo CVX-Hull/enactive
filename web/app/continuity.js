@@ -23,7 +23,8 @@ export const deliveryWord = kind => (DELIVERY_KINDS[kind] || [label(kind || 'del
 export const deliveryTone = kind => (DELIVERY_KINDS[kind] || [null, 'quiet'])[1];
 /** A version's place in the chain, as the viewer states it from the files, the publications and the trace. */
 export const CHAIN_STATUS = {delivered: 'Delivered', empty_suppressed: 'Adopted (empty-suppressed)', refused: 'Refused',
-  exported_not_delivered: 'Exported (not delivered)', superseded: 'Superseded', published_only: 'Published only'};
+  undelivered: 'Undelivered', exported_not_delivered: 'Exported (not delivered)', superseded: 'Superseded',
+  published_only: 'Published only', trace_only: 'Recorded in trace only'};
 
 /** A cut that left turns no briefing covered (#1037), or a rescue cut, is a cut the curator did not keep up with. */
 export const uncoveredCut = e => (e.uncovered_turns || 0) > 0;

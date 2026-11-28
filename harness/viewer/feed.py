@@ -176,12 +176,18 @@ def from_host(host: HostProjection, steps: Steps, keys: dict[int, list[str]]) ->
         anchor = anchor_at(anchors, step.wall)
         attached[anchor] = attached.get(anchor, 0) + 1
         items.append(dict(id=entry_id(anchor, min(attached[anchor], FINDING_SUB - 1)), **recorded_step(step, keys)))
-    cuts = {(mark.actor, mark.fields['request_id']): mark for mark in host.cuts
-            if mark.fields['outcome'] == 'applied' and mark.fields['request_id'] is not None}
+    def logical_key(actor: str, request_id: str | None) -> tuple[str, str] | None:
+        if request_id is None:
+            return None
+        return actor, host.logical_requests.get((actor, request_id), request_id)
+
+    cuts = {key: mark for mark in host.cuts
+            if mark.fields['outcome'] == 'applied'
+            and (key := logical_key(mark.actor, mark.fields['request_id'])) is not None}
     briefings = {}
     for mark in host.deliveries:
-        key = mark.actor, mark.fields['receiving_player_request_id']
-        cut = cuts.get(key)
+        key = logical_key(mark.actor, mark.fields['receiving_player_request_id'])
+        cut = cuts.get(key) if key is not None else None
         joined = cut is not None and mark.fields['delivery_kind'] == 'post_cut_briefing' and mark.fields['outcome'] == 'delivered'
         delivery_id = entry_id(trace_anchor(mark.actor_index, mark.line))
         joined_cut_id = entry_id(trace_anchor(cut.actor_index, cut.line)) if joined else None

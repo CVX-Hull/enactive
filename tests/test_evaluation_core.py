@@ -775,8 +775,9 @@ def test_current_knowledge_and_context_metrics(tmp_path):
     actor = run.actor()
     request = run.request(actor)
     for kind, outcome in [('briefing', 'delivered'), ('update', 'delivered'), ('update', 'empty-suppressed'),
-                          ('update', 'refused'), ('briefing', 'undelivered')]:
+                          ('update', 'refused')]:
         run.host[actor].append(run.event(actor, 'knowledge-delivery', kind=kind, outcome=outcome, version='v1'))
+    run.host[actor].append(run.event(actor, 'knowledge-undelivered', kind='update', version='v2', reason='actor-ended'))
     for outcome, uncovered in [('cut', 0), ('cut', 2), ('held-back', 8)]:
         run.host[actor].append(run.event(actor, 'context-cut', outcome=outcome, uncovered_turns=uncovered))
     for tool in ('player_knowledge_read', 'player_knowledge_query', 'player_memory_read'):
@@ -784,9 +785,14 @@ def test_current_knowledge_and_context_metrics(tmp_path):
     run.call(actor, 'player_knowledge_read', {}, {}, error=True)
     run.call(actor, 'player_agenda', {}, {})
     run.call(actor, 'player_agenda', {}, {}, error=True)
-    for schema, clickable in [('player-source-read/2', False), ('player-source-read/2', True),
-                              ('player-source-read/1', False), ('player-source-read/2', 0)]:
-        run.call(actor, 'player_source', {}, dict(schema=schema, clickable=clickable))
+    for schema, clickable, origin in [
+        ('player-source-read/2', False, dict(admission='s01', actor='001', step=1)),
+        ('player-source-read/2', False, dict(admission='current', actor='001', step=None)),
+        ('player-source-read/2', True, dict(admission='current', actor='001', step=1)),
+        ('player-source-read/1', False, dict(admission='s01')),
+        ('player-source-read/2', False, None),
+    ]:
+        run.call(actor, 'player_source', {}, dict(schema=schema, clickable=clickable, origin=origin))
     for tool in ('player_agenda', 'player_source'):
         run.host[actor].append(run.event(actor, 'tool-refused', tool=tool, request_id=request, tool_call_id=tool))
     path = evaluate(run.finish(), FakeBinding(), tmp_path / 'evals')
@@ -800,7 +806,7 @@ def test_current_knowledge_and_context_metrics(tmp_path):
         ('knowledge.deliveries', 'undelivered'): (1, 1, 5),
         'context.uncovered_cuts': (1, 1, 2),
         'agenda.calls': (2, 2, None),
-        'source.ancestor_reads': (1, 1, 5),
+        'source.ancestor_reads': (1, 1, 6),
     }
     for name, values in expected.items():
         row = metrics[name]
@@ -808,6 +814,29 @@ def test_current_knowledge_and_context_metrics(tmp_path):
     assert all(not row.name.startswith(('memory.', 'programs.')) for row in metrics.values())
     assert [event['payload']['tool'] for event in events_of(path, 'memory_read')] == [
         'player_knowledge_read', 'player_knowledge_query', 'player_memory_read']
+
+
+def test_uncovered_cuts_distinguishes_missing_field_and_opening_knowledge_refuses_symlinks(tmp_path):
+    run = Run(tmp_path / 'run')
+    actor = run.actor()
+    run.request(actor)
+    run.host[actor].append(run.event(actor, 'context-cut', outcome='cut'))
+    directory = run.finish()
+    outside = tmp_path / 'outside.json'
+    outside.write_text(json.dumps(dict(schema='delivered-knowledge/4', version='v99')))
+    (directory / 'delivered-knowledge.json').symlink_to(outside)
+    path = evaluate(directory, FakeBinding(), tmp_path / 'evals')
+    metrics = metrics_of(path)
+    cut_row = metrics['context.uncovered_cuts']
+    assert (cut_row.value, cut_row.count, cut_row.denominator, cut_row.missing) == (None, 0, 0, 'unrecorded_uncovered_turns')
+    with open_readonly(path) as connection:
+        assert read_run_facts(connection)['opening_knowledge_version'] is None
+    # Malformed snapshot also leaves opening version unknown rather than aborting live evaluation.
+    (directory / 'delivered-knowledge.json').unlink()
+    (directory / 'delivered-knowledge.json').write_text('{broken')
+    live_path = evaluate(directory, FakeBinding(), tmp_path / 'live-evals', state='live')
+    with open_readonly(live_path) as connection:
+        assert read_run_facts(connection)['opening_knowledge_version'] is None
 
 
 def test_current_manifest_with_legacy_write_retains_legacy_metrics(tmp_path):

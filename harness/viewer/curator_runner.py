@@ -160,22 +160,24 @@ def projection(document: dict) -> dict:
     return out
 
 
-def status(path: Path | None, now: float, *, examined_ids: set[str] | None = None) -> dict:
+def status(path: Path | None, now: float, *, examined_ids: set[str] | None = None,
+           expected_sessions: set[str] | None = None) -> dict:
     """The payload of the configured status file. One in a run package's own place is read from that package's root."""
     if path is None:
         return dict(source_status='not_configured', snapshot=None, read_wall=now, status=None)
     if path.parts[-2:] == OWN:
-        return run_status(path.parent.parent, now, examined_ids=examined_ids)
-    return payload(*read_file(path), now, examined_ids=examined_ids)
+        return run_status(path.parent.parent, now, examined_ids=examined_ids, expected_sessions=expected_sessions)
+    return payload(*read_file(path), now, examined_ids=examined_ids, expected_sessions=expected_sessions)
 
 
-def run_status(run_dir: Path, now: float, *, examined_ids: set[str] | None = None) -> dict:
+def run_status(run_dir: Path, now: float, *, examined_ids: set[str] | None = None,
+               expected_sessions: set[str] | None = None) -> dict:
     """The payload of a run package's own status file."""
-    return payload(*read_rooted(run_dir, *OWN), now, examined_ids=examined_ids)
+    return payload(*read_rooted(run_dir, *OWN), now, examined_ids=examined_ids, expected_sessions=expected_sessions)
 
 
 def payload(state: str, snapshot: dict | None, data: bytes | None, now: float, *,
-            examined_ids: set[str] | None = None) -> dict:
+            examined_ids: set[str] | None = None, expected_sessions: set[str] | None = None) -> dict:
     """The route's payload: `source_status`, the bytes read (`snapshot`), when this read happened and the projection."""
     if state != 'available' or data is None:
         return dict(source_status=state, snapshot=snapshot, read_wall=now, status=None)
@@ -185,6 +187,8 @@ def payload(state: str, snapshot: dict | None, data: bytes | None, now: float, *
         return dict(source_status='malformed', snapshot=snapshot, read_wall=now, status=None)
     if not isinstance(document, dict) or document.get('schema') not in (SCHEMA, ARCHIVED_SCHEMA):
         return dict(source_status='unsupported', snapshot=snapshot, read_wall=now, status=None)
+    if expected_sessions is not None and document.get('session') not in expected_sessions:
+        return dict(source_status='other_run', snapshot=snapshot, read_wall=now, status=None)
     examined = document.get('examined')
     if examined_ids is not None and isinstance(examined, list):
         examined_ids.update(value for row in examined if isinstance(row, dict)

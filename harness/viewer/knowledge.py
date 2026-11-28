@@ -275,7 +275,9 @@ def source_read(call):
                call.arguments.get('alias'), *candidates)
     alias = next((s for s in aliases if isinstance(s, str) and ALIAS.fullmatch(s)), None)
     real = next((s for s in candidates if isinstance(s, str) and SOURCE.fullmatch(s)), None)
-    return dict(source_id=real, player_alias=alias, non_clickable=True,
+    clickable = value.get('clickable')
+    return dict(source_id=real, player_alias=alias,
+                non_clickable=not clickable if type(clickable) is bool else None,
                 origin='current' if admission == 'current' else 'ancestor' if admission == 'ancestor' or alias else None)
 
 

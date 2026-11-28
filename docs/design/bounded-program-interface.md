@@ -133,13 +133,12 @@ Under [S-MIGRATION](../standards/migration.md), every reader and writer accepts 
 
 ### Dormant legacy `player-memory/2` hooks in the current tree
 
-Three read-only evidence/viewer paths still carry the word `programs` solely to read closed-archive `player-memory/2` runs:
+Two read-only evidence paths still carry the word `programs` solely to read closed-archive `player-memory/2` runs (the viewer's `/api/view/run/<run>/programs` route was retired in `spectator-view/4`):
 
 | Location | Current role | Frozen boundary rule |
 | --- | --- | --- |
 | `harness/trace/memory_reader.py` | Read-only sealed-store reader for historical `player-memory/2` SQLite files (including their legacy `programs` table). | Sealed-evidence reader only; confers no authoring, storage, or execution capability. |
 | `harness/evaluation/core/sources.py:188` | `MemoryFacts.programs: dict[str, dict]` (`schema = 'player-memory/2'`) for closed-archive evaluation reads. | Never reused, overloaded, or extended to carry ADR 009 curator-submitted programs. |
-| `harness/viewer/views.py:416-441` and `/api/view/run/<run>/programs` (`harness/viewer/app.py:271`) | Projects legacy `player-memory/2` programs, `player_program_run` calls, and `program_save` events; returns `capability: "retired"` on current `player-journal/1` runs. | Must not be overloaded with ADR 009 program records. `#471` migrates program views cleanly under `S-MIGRATION` once real `#465`/`#467`/`#469` producers exist, showing missing data as absent or unknown. |
 
 ## Active fact-store dependencies and the asserter-field rule
 

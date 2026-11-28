@@ -1422,7 +1422,7 @@ def test_an_older_trace_states_no_price_or_endpoint_it_does_not_record(archive):
 def test_curator_spend_is_exact_and_complete_only_when_every_session_settled(mission):
     client, _, root, _ = mission
     get = lambda: client.get('/api/view/run/mission/summary').json()['curator_spend']
-    assert get() == dict(ingestion_usd=None, hygiene_usd=None, hygiene_share=None, ingestion_sessions=0, hygiene_sessions=0, applied_tiers={}, deferrals=0, sessions_total=3, sessions_settled=2, sessions_unsettled=1, spent_usd='1.6714952', unsettled_requests=0, spend_complete=False)
+    assert get() == dict(ingestion_usd=None, hygiene_usd=None, hygiene_share=None, ingestion_sessions=0, hygiene_sessions=0, hygiene_failed=0, applied_tiers={}, deferrals=None, deferrals_complete=False, sessions_total=3, sessions_settled=2, sessions_unsettled=1, spent_usd='1.6714952', unsettled_requests=0, spend_complete=False)
     session = root / 'sessions' / 'admission-a' / 'w3'
     with (session / 'proxy-ledger.jsonl').open('a') as stream:
         stream.write(json.dumps(dict(charged=None, usage_missing=True)) + '\n{"charged":"9')     # an unpriced row, and one being written
@@ -1432,9 +1432,9 @@ def test_curator_spend_is_exact_and_complete_only_when_every_session_settled(mis
         (session / 'proxy-close.json').write_text(json.dumps(damage))
         assert get()['sessions_settled'] == 2 and get()['spent_usd'] == '1.6714952', damage
     (session / 'proxy-close.json').write_text(json.dumps(dict(close, settled=False, unsettled_requests=2, spent_snapshot_usd='0.25')))
-    assert get() == dict(ingestion_usd=None, hygiene_usd=None, hygiene_share=None, ingestion_sessions=0, hygiene_sessions=0, applied_tiers={}, deferrals=0, sessions_total=3, sessions_settled=2, sessions_unsettled=1, spent_usd='1.87685395', unsettled_requests=2, spend_complete=False)
+    assert get() == dict(ingestion_usd=None, hygiene_usd=None, hygiene_share=None, ingestion_sessions=0, hygiene_sessions=0, hygiene_failed=0, applied_tiers={}, deferrals=None, deferrals_complete=False, sessions_total=3, sessions_settled=2, sessions_unsettled=1, spent_usd='1.87685395', unsettled_requests=2, spend_complete=False)
     (session / 'proxy-close.json').write_text(json.dumps(dict(close, spent_snapshot_usd='0E-7')))
-    assert get() == dict(ingestion_usd=None, hygiene_usd=None, hygiene_share=None, ingestion_sessions=0, hygiene_sessions=0, applied_tiers={}, deferrals=0, sessions_total=3, sessions_settled=3, sessions_unsettled=0, spent_usd='1.62685395', unsettled_requests=0, spend_complete=True)
+    assert get() == dict(ingestion_usd=None, hygiene_usd=None, hygiene_share=None, ingestion_sessions=0, hygiene_sessions=0, hygiene_failed=0, applied_tiers={}, deferrals=None, deferrals_complete=False, sessions_total=3, sessions_settled=3, sessions_unsettled=0, spent_usd='1.62685395', unsettled_requests=0, spend_complete=True)
 
 
 def test_curator_spend_is_unknown_and_never_zero_where_nothing_can_be_read(mission):
@@ -1450,7 +1450,7 @@ def test_curator_spend_is_unknown_and_never_zero_where_nothing_can_be_read(missi
     for name in ('w1', 'w2'):
         for path in (sessions / name).iterdir():
             path.unlink()
-    assert get() == dict(ingestion_usd=None, hygiene_usd=None, hygiene_share=None, ingestion_sessions=0, hygiene_sessions=0, applied_tiers={}, deferrals=0, sessions_total=3, sessions_settled=0, sessions_unsettled=3, spent_usd=None, unsettled_requests=0, spend_complete=False)
+    assert get() == dict(ingestion_usd=None, hygiene_usd=None, hygiene_share=None, ingestion_sessions=0, hygiene_sessions=0, hygiene_failed=0, applied_tiers={}, deferrals=None, deferrals_complete=False, sessions_total=3, sessions_settled=0, sessions_unsettled=3, spent_usd=None, unsettled_requests=0, spend_complete=False)
     spend = client.get('/api/view/run/mission/telemetry').json()['spend']
     assert spend['curator_spent_usd'] is None and spend['curator_spend_complete'] is False
     ledger.touch()                                           # an empty ledger is a measured zero
@@ -1770,7 +1770,8 @@ def test_current_cut_reserve_and_tail_notice_telemetry(tmp_path, monkeypatch):
     assert [row['outcome'] for row in feed] == ['applied', 'applied', 'applied']
     assert [tuple(row[field] for field in fields) for row in feed] == expected
     assert [row['outcome'] for row in series['cuts']] == ['applied', 'applied', 'applied', 'held_back']
-    assert series['coverage_waits'][0]['active'] is True
+    assert series['coverage_waits'][0]['active'] is False
+    assert series['coverage_waits'][0]['ended_by'] in ('settled', 'handoff')
     first = dict(actor=actor, actor_id=None, seq=1, wall=wall, spent_usd=None, spend_limit_usd=None,
         finish_reserve_usd=None, unpriced_bound_usd='0')
     latest_row = dict(latest, seq=1, wall=wall + 1)
@@ -2296,7 +2297,7 @@ def test_delivered_knowledge_confirms_opening_briefing_delivery_for_initial(miss
     trace.write_text('\n'.join([lines[0], undelivered, *lines[1:]]) + '\n')
     # A row tagged undelivered is evidence of a missed placement, not of exposure.
     row = client.get('/api/view/run/mission/delivered-knowledge?version=initial').json()['version_chain'][0]
-    assert row['delivery_status'] == 'exported_not_delivered' and row['deliveries'][0]['outcome'] == 'undelivered'
+    assert row['delivery_status'] == 'undelivered' and row['deliveries'][0]['outcome'] == 'undelivered'
     briefing = json.dumps(dict(type='knowledge-delivery', kind='briefing', outcome='delivered', version=initial_version,
         wall_time=iso(BASE + 0.5), monotonic_ms=5.0, receiving_player_request_id='request-1'))
     trace.write_text('\n'.join([lines[0], briefing, *lines[1:]]) + '\n')
@@ -2826,3 +2827,78 @@ def test_v4_run_curator_filters_lineage_and_withholds_unlisted_session_fields(mi
     assert empty['gate_verdicts']['total_lineage'] == empty['drafts']['total_lineage'] == 3
     relinked(first / 'proxy-ledger.jsonl', directory / 'outside-ledger')
     assert client.get(f'{url}/curator/session/w1').json()['ledger_total'] == 0
+
+
+def test_v4_primary_review_regressions_retry_join_settled_wait_and_foreign_status(tmp_path):
+    from harness.viewer import curator_ops, delivered as delivered_view, feed as story_view, knowledge as know_view, telemetry as tel_view
+    from harness.viewer.frame import FrameSources
+
+    # 1. Retry briefing joins applied cut via logical_request_id, and settled actor closes coverage wait.
+    run_dir = tmp_path / 'retry-run'
+    run = Run(run_dir, session='d' * 32)
+    a1 = run.actor()
+    run.step(a1, 'input', [key('j')], F('in_play', 3600, fill=1))
+    r4 = run.request(a1)
+    run.host[a1].append(run.event(a1, 'context-cut', outcome='held-back', reason='uncovered', request_id=r4, tokens_before=40000))
+    run.host[a1].append(run.event(a1, 'context-cut', outcome='cut', request_id=r4, cut_result='target',
+                                  tokens_before=41000, tokens_after=12000, removed_turns=4, uncovered_turns=0))
+    r5 = 'request-retry-5'
+    run.host[a1].append(run.event(a1, 'request-start', request_id=r5, logical_request_id=r4))
+    run.host[a1].append(run.event(a1, 'knowledge-delivery', kind='briefing', outcome='delivered', version='v2',
+                                  receiving_player_request_id=r5, article_ids=['a1'], index_ids=['f1']))
+    run.host[a1].append(run.event(a1, 'context-cut', outcome='held-back', reason='uncovered', request_id=r5, tokens_before=42000))
+    run.host[a1].append(run.event(a1, 'knowledge-undelivered', kind='update', version='v9', reason='actor-ended'))
+    run.host[a1].append(run.event(a1, 'settled', player_requests=2, recall_requests=0, spent_usd='0.10',
+                                  unpriced_requests=0, unpriced_recall_requests=0))
+    a2 = run.actor()
+    run.step(a2, 'input', [key('k')], F('in_play', 3660, fill=2))
+    run.call(a2, 'player_source', dict(source_id=f'{"d"*32}-1'),
+             dict(schema='player-source-read/2', clickable=True, origin=dict(admission='current', actor=a2, step=1)))
+    run.finish()
+    root = tmp_path / 'evals'
+    evaluate(run_dir, FakeBinding(), root)
+    catalog = Catalog(root, runs_dirs=(tmp_path,))
+    info = catalog.find('d' * 32)
+    conn = catalog.connect(info)
+    try:
+        host = tel_view.read(info)
+        assert host is not None
+        assert len(host.coverage_waits) == 2
+        assert host.coverage_waits[0]['ended_by'] == 'cut' and host.coverage_waits[0]['active'] is False
+        assert host.coverage_waits[1]['ended_by'] == 'settled' and host.coverage_waits[1]['active'] is False
+        assert host.coverage_waits[1]['restore_possible'] is False
+        items = story_view.feed(info, conn, 0, 500)['items']
+        cut_entry = next(i for i in items if i['entry_kind'] == 'context_cut')
+        brief_entry = next(i for i in items if i['entry_kind'] == 'knowledge_delivery' and i['knowledge_version'] == 'v2')
+        assert brief_entry['delivery_kind'] == 'post_cut_briefing'
+        assert brief_entry['joined_cut_id'] == cut_entry['id']
+        assert cut_entry['briefing'] is not None and cut_entry['briefing']['delivery_id'] == brief_entry['id']
+        chain = {row['version']: row for row in delivered_view.browse(catalog, info, conn, None, None, None, 0, 100)['version_chain']}
+        assert chain['v9']['delivery_status'] == 'undelivered' and chain['v9']['published'] is False
+        src_call = next(c for c in host.calls if c.tool == 'player_source')
+        assert know_view.source_read(src_call)['non_clickable'] is False
+    finally:
+        conn.close()
+
+    # 2. Foreign fallback status.json must not leak its examined session IDs into gate_verdicts,
+    #    and unpriced hygiene pass must yield hygiene_share=None (never 0.0).
+    foreign_status = tmp_path / 'foreign-status.json'
+    foreign_status.write_text(json.dumps(dict(schema='curator-runner-status/2', session='other-admission', state='polling',
+        examined=[dict(session_id='foreign-session-id', session_kind='admission')])))
+    gate = tmp_path / 'gate.jsonl'
+    gate.write_text(json.dumps(dict(schema='curator-gate/2', operation='submission', operation_id='1' * 32,
+        status='published', base_version='v1', restored_from=None, version='v2', submission='sub-foreign',
+        session='foreign-session-id', from_drafts=[], diagnostics=[])) + '\n')
+    sessions = run_dir / 'curator-runner' / 'sessions' / 'admission-x'
+    (sessions / 'w1').mkdir(parents=True)
+    (sessions / 'w1' / 'summary.json').write_text(json.dumps(dict(session_kind='admission', session_id='own-1',
+        cost_usd='1.00', host_end=dict(reason='done', ok=True))))
+    (sessions / 'h1').mkdir(parents=True)
+    (sessions / 'h1' / 'summary.json').write_text(json.dumps(dict(session_kind='hygiene', session_id='own-h1',
+        host_end=dict(reason='error', ok=False))))
+    sources = FrameSources(curator_runner_status=foreign_status, curator_results=(('live', gate),))
+    payload = curator_ops.run_curator(info, sources, BASE, is_live=True)
+    assert payload['runner']['source_status'] == 'other_run'
+    assert payload['gate_verdicts']['items'] == [] and payload['gate_verdicts']['total_lineage'] == 1
+    assert payload['spend']['hygiene_usd'] is None and payload['spend']['hygiene_share'] is None
+    assert payload['spend']['hygiene_failed'] == 1

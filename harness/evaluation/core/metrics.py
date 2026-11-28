@@ -145,13 +145,20 @@ def _knowledge_context_metrics(facts: HostFacts) -> list[MetricRow]:
     rows = [_row('knowledge.deliveries', deliveries if facts.present else None, deliveries, total or None, no_host)]
     rows.extend(_row('knowledge.deliveries', count, count, total, key=outcome)
         for outcome, count in sorted(facts.knowledge_delivery_outcomes.items()))
-    rows.append(_row('context.uncovered_cuts', facts.uncovered_cuts if facts.present else None, facts.uncovered_cuts,
-        facts.applied_cuts, no_host or ('no_cuts' if facts.applied_cuts == 0 else None)))
+    uncovered_missing = (no_host or ('no_cuts' if facts.applied_cuts == 0
+        else 'unrecorded_uncovered_turns' if facts.cuts_with_uncovered_field == 0 else None))
+    uncovered_value = (facts.uncovered_cuts if facts.present and (facts.cuts_with_uncovered_field > 0 or facts.applied_cuts == 0)
+        else None)
+    rows.append(_row('context.uncovered_cuts', uncovered_value, facts.uncovered_cuts,
+        facts.cuts_with_uncovered_field, uncovered_missing))
     agenda_calls = sum(1 for call in facts.calls if call.tool == 'player_agenda' and not call.refused)
     rows.append(_row('agenda.calls', agenda_calls if facts.present else None, agenda_calls, None, no_host))
     source_calls = [call for call in facts.calls if call.tool == 'player_source']
     ancestor_reads = sum(1 for call in source_calls if isinstance(call.result, dict)
-        and call.result.get('schema') == 'player-source-read/2' and call.result.get('clickable') is False)
+        and call.result.get('schema') == 'player-source-read/2'
+        and isinstance(call.result.get('origin'), dict)
+        and isinstance(call.result['origin'].get('admission'), str)
+        and call.result['origin']['admission'] not in ('', 'current'))
     rows.append(_row('source.ancestor_reads', ancestor_reads if facts.present else None, ancestor_reads,
         len(source_calls) or None, no_host or ('no_source_reads' if not source_calls else None)))
     return rows

@@ -25,7 +25,7 @@ path, and the only lock taken beside the custodian is the shared read lock insid
   Versions present at the runner's first look ever are its `baseline`.
 - `polls.jsonl` (`curator-runner-poll/1`): one row per poll, with the snapshot's timings or why
   there was none, the position and `coverage`.
-- `status.json` (`curator-runner-status/1`), replaced atomically at each poll and at each
+- `status.json` (`curator-runner-status/2`), replaced atomically at each poll and at each
   session's start and end; its fields are listed in `Runner.status`.
 - `stopped.json` (`curator-runner-stopped/1`), replaced atomically once when the runner stops for
   a failure; a runner restarted for the same admission finds it and does not work again.

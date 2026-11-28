@@ -298,10 +298,16 @@ def version_chain(run_dir, exports, host: HostProjection | None, steps):
             delivery_status = 'refused'
         elif 'empty_suppressed' in kinds:
             delivery_status = 'empty_suppressed'
+        elif 'undelivered' in kinds:
+            delivery_status = 'undelivered'
         elif version is not None and version in superseded:
             delivery_status = 'superseded'
+        elif exported:
+            delivery_status = 'exported_not_delivered'
+        elif version in published:
+            delivery_status = 'published_only'
         else:
-            delivery_status = 'exported_not_delivered' if exported else 'published_only'
+            delivery_status = 'trace_only'
         # Keep a delivered example even when later repeats fill the window.
         sample = shown[-MAX_VERSION_DELIVERIES:]
         confirmed = next((item for item in shown if _delivered(item)), None)

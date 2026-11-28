@@ -17,10 +17,9 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+import stat
 import time
 from typing import Any, Mapping
-
-from harness.jsonio import file_sha256
 
 from .binding import Binding
 from .derive import (CORE_READERS, CORE_VERSION, NO_FRAME, READER_CLOCK, READER_FRAME, READER_INPUT, READER_MAP,
@@ -31,8 +30,8 @@ from .host import HostFacts, host_events, host_facts, seq_resolver
 from .metrics import compute_metrics
 from .lineage import DAY_METRIC, ELAPSED_METRIC, KNOWLEDGE_METRIC, METRIC as LINEAGE_METRIC
 LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, KNOWLEDGE_METRIC)
-from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, record_path
-from .sources import MANIFEST_SCHEMA, RunInputs, archive_entry, read_json_file, read_run, run_name
+from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, loads, record_path
+from .sources import MANIFEST_SCHEMA, MAX_JSON_FILE_BYTES, RunInputs, archive_entry, read_run, run_name
 
 
 def _frame_matches(png: Path, sha256: str | None) -> bool:
@@ -94,17 +93,47 @@ def _read_new_steps(inputs: RunInputs, binding: Binding, known: list[StepRow], f
     return steps, readings
 
 
+def _read_opening_knowledge(run_dir: Path) -> tuple[str | None, str | None]:
+    """Read `delivered-knowledge.json` from `run_dir` through a rooted non-symlink descriptor, hashing the exact bytes."""
+    name = 'delivered-knowledge.json'
+    dir_fd: int | None = None
+    fd: int | None = None
+    try:
+        dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY)
+        fd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=dir_fd)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            return None, None
+        with os.fdopen(fd, 'rb', closefd=False) as stream:
+            data = stream.read(MAX_JSON_FILE_BYTES + 1)
+    except OSError:
+        return None, None
+    finally:
+        if fd is not None:
+            os.close(fd)
+        if dir_fd is not None:
+            os.close(dir_fd)
+    if not data or len(data) > MAX_JSON_FILE_BYTES:
+        return None, None
+    try:
+        snapshot = loads(data, name)
+    except EvaluationError:
+        return None, None
+    if not isinstance(snapshot, dict):
+        return None, None
+    schema = snapshot.get('schema')
+    version = snapshot.get('version')
+    if not (isinstance(schema, str) and schema.startswith('delivered-knowledge/') and isinstance(version, str) and version):
+        return None, None
+    return version, hashlib.sha256(data).hexdigest()
+
+
 def _knowledge_versions(inputs: RunInputs, facts: HostFacts, *, digests: bool) -> dict[str, str | None]:
     briefing = next((delivery for delivery in facts.deliveries if delivery.kind == 'briefing'), None)
     opening = briefing.version if briefing is not None else None
     if opening is None:
-        path = inputs.run_dir / 'delivered-knowledge.json'
-        if path.is_file():
-            snapshot = read_json_file(path)
-            version = snapshot.get('version') if isinstance(snapshot, dict) else None
-            opening = version if isinstance(version, str) and version else None
-            if digests:
-                inputs.digests[path.name] = file_sha256(path)
+        opening, digest = _read_opening_knowledge(inputs.run_dir)
+        if digests and opening is not None and digest is not None:
+            inputs.digests['delivered-knowledge.json'] = digest
     return dict(opening_knowledge_version=opening,
         closing_knowledge_version=facts.deliveries[-1].version if facts.deliveries else None)
 

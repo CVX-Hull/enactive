@@ -178,8 +178,11 @@ recorded amounts. `spend_complete` requires all sessions settled, no unsettled
 requests and a readable inventory.
 `ingestion_usd` covers recorded `admission` and `ingestion` sessions. `hygiene_usd`
 covers recorded `hygiene` sessions. `hygiene_share` divides the hygiene subtotal by
-recorded spend when available. `applied_tiers` counts sessions per applied tier and
-`deferrals` totals recorded or explicitly indicated flex deferrals.
+recorded spend only when every session and hygiene pass is priced (otherwise `null`).
+`hygiene_failed` counts failed hygiene passes across all sessions before any list cap.
+`applied_tiers` counts sessions per applied tier, and `deferrals` totals recorded
+flex deferrals (or `null` when none are recorded), with `deferrals_complete` stating
+whether every session reported a count.
 
 `boundary_grooming` is what one operator-configured
 [grooming receipt](curator.md#boundary-grooming-summary-curator-boundary-grooming2) states.
@@ -220,7 +223,7 @@ request number; neither replaces the other.
 | --- | --- |
 | `step` | `tool`, `intent` (`intent_source` is `player_claim`), `keys`, `status` (`ok`, `error`, `refused` or `pending`), `latency_ms`, `arguments_preview`, the request's `reported_provider`, `reported_cost_usd` and token counts, the identifiers, and `result` (mechanical status, reason and receipt dispositions). One request may issue several calls, each carrying the request's cost |
 | `context_cut` | Applied cuts with `outcome: "applied"`, `triggers`, `knowledge_version`, tokens and images before and after, `removed_turns`, `uncovered_turns` and `reason`. They can also record `cut_result` (`target`, `best_effort`, `rescue`), `cumulative_removed_turns`, `briefing_tokens` and `source_ids_count`. Unrecorded values are null. |
-| `coverage_wait` | A span opens on a held-back cut. A repeated reason and covered-operation edge extends the same wait. A different edge, an applied cut or the end of the trace closes the observed span (`ended_by` is `superseded`, `cut` or `trace_end`). At trace end it remains `active`. Fields include `start_request_id`, `end_request_id`, `duration_seconds`, `requests` and `peak_tokens`. |
+| `coverage_wait` | A span opens on a held-back cut. A repeated reason and covered-operation edge extends the same wait. A different edge, an applied cut, actor settlement, a handoff to a successor actor or the end of the last actor's trace closes the observed span (`ended_by` is `superseded`, `cut`, `settled`, `handoff` or `trace_end`). It remains `active` only at `trace_end`. Fields include `start_request_id`, `end_request_id`, `duration_seconds`, `requests` and `peak_tokens`. |
 | `knowledge_delivery` | `delivery_kind` is `opening_briefing`, `post_cut_briefing`, `update`, `empty_suppressed`, `refused` or `undelivered`. The row carries version and request IDs, outcome, lead/index counts, and recorded delta counts and preview. |
 | `agenda_change` | `request_id`, `tool_call_id`, `op`, `cut_count`, `thread_count`, `active_count` and the projected `agenda`. |
 | `finding` | `finding_kind` (`stall`, `death`, `custody_stop`, `handoff` or `run_end`), `seq_end`, `source`, `payload` |
@@ -293,7 +296,8 @@ is listed with its status and no counts.
   the reason when the frame cannot be served. Anchor resolution uses the [frame verification cache](#recorded-frames).
 - `version_chain` combines recorded publications, exports and deliveries. Its
   `delivery_status` distinguishes `delivered`, `refused`, `empty_suppressed`,
-  `superseded`, `exported_not_delivered` and `published_only`. The selected
+  `undelivered`, `superseded`, `exported_not_delivered`, `published_only` and
+  `trace_only`. The selected
   version's `delivery` projects recorded delta bucket counts and previews.
 - `state_groups` groups the returned facts by `state_key` with replacement history
   and omission counts. `anchor_groups` summarizes matching facts by location anchor.

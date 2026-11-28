@@ -170,6 +170,8 @@ def _compact(run_dir, group, label):
     if deferrals is None and (close_reason == 'flex-capacity-deferred'
                               or host_end is not None and host_end['reason'] == 'flex-capacity-deferred'):
         deferrals = 1
+    elif deferrals is None and summary and ('model_status' in summary or host_end is not None or 'sandbox' in summary):
+        deferrals = 0
     row = dict(id=session_id or _safe(f'{group}:{label}') or label, group=group, label=label, session_id=session_id,
         session_kind=_kind(summary), window=_fields(summary['window'], ('session', 'actor', 'first', 'last'))
         if isinstance(summary.get('window'), dict) else None,
@@ -204,17 +206,27 @@ def _spend(rows, unread):
     spent = usd_sum(amounts)
     hygiene = [r for r in rows if r['session_kind'] == 'hygiene']
     ingestion = [r for r in rows if r['session_kind'] in ('admission', 'ingestion')]
-    hyg = usd_sum(n for r in hygiene if (n := usd(r['cost_usd'])) is not None)
-    ing = usd_sum(n for r in ingestion if (n := usd(r['cost_usd'])) is not None)
+    hyg_amounts = [n for r in hygiene if (n := usd(r['cost_usd'])) is not None]
+    ing_amounts = [n for r in ingestion if (n := usd(r['cost_usd'])) is not None]
+    hyg = usd_sum(hyg_amounts)
+    ing = usd_sum(ing_amounts)
+    hygiene_all_priced = len(hyg_amounts) == len(hygiene)
+    all_priced = len(amounts) == len(rows)
+    hygiene_failed = sum(1 for r in hygiene if (r['host_end'] and r['host_end'].get('ok') is False)
+                         or r['session_state'] == 'failed')
     tiers = Counter(tier for r in rows for tier in r['applied_service_tiers'])
+    known_deferrals = [r['deferrals'] for r in rows if type(r['deferrals']) is int]
     return dict(sessions_total=len(rows), sessions_settled=settled, sessions_unsettled=len(rows) - settled,
         spent_usd=usd_text(spent) if amounts else None, unsettled_requests=unsettled,
         spend_complete=settled == len(rows) and unsettled == 0 and not unread,
-        ingestion_usd=usd_text(ing) if any(r['cost_usd'] is not None for r in ingestion) else None,
-        hygiene_usd=usd_text(hyg) if any(r['cost_usd'] is not None for r in hygiene) else None,
-        hygiene_share=float(hyg / spent) if spent and (hygiene or len(ingestion) == len(rows)) else None,
-        ingestion_sessions=len(ingestion), hygiene_sessions=len(hygiene), applied_tiers=dict(tiers),
-        deferrals=sum(r['deferrals'] or 0 for r in rows))
+        ingestion_usd=usd_text(ing) if ing_amounts else None,
+        hygiene_usd=usd_text(hyg) if hyg_amounts else None,
+        hygiene_share=float(hyg / spent) if spent and all_priced and hygiene_all_priced
+        and (hygiene or len(ingestion) == len(rows)) else None,
+        ingestion_sessions=len(ingestion), hygiene_sessions=len(hygiene), hygiene_failed=hygiene_failed,
+        applied_tiers=dict(tiers),
+        deferrals=sum(known_deferrals) if known_deferrals else None,
+        deferrals_complete=len(known_deferrals) == len(rows))
 
 
 def index(info: RunInfo) -> SessionIndex:
@@ -294,7 +306,8 @@ def run_curator(info: RunInfo, sources: FrameSources, now: float, is_live: bool)
     runner = (curator_runner.run_status(info.run_dir, now, examined_ids=ids) if info.run_dir is not None else
               dict(source_status='missing', snapshot=None, read_wall=now, status=None))
     if is_live and runner['source_status'] == 'missing':
-        runner = curator_runner.status(sources.curator_runner_status, now, examined_ids=ids)
+        expected = {info.session, info.run, *found.groups}
+        runner = curator_runner.status(sources.curator_runner_status, now, examined_ids=ids, expected_sessions=expected)
     return dict(runner=runner, spend=found.spend, sessions=found.rows[-MAX_SESSIONS:],
                 sessions_omitted=max(0, len(found.rows) - MAX_SESSIONS),
                 grooming=telemetry.boundary_grooming(info, sources.curator_grooming, groups=found.groups),

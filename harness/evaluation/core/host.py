@@ -132,6 +132,7 @@ class HostFacts:
     knowledge_delivery_events: int = 0
     knowledge_delivery_outcomes: Counter[str] = field(default_factory=Counter)
     applied_cuts: int = 0
+    cuts_with_uncovered_field: int = 0
     uncovered_cuts: int = 0
     _starts: dict[str, list[tuple[float, int]]] = field(default_factory=dict)
     _prefix: dict[int, tuple[int, float]] = field(default_factory=dict)
@@ -349,10 +350,15 @@ def host_facts(actors: Sequence[str], host: dict[str, Sequence[HostEvent]]) -> H
                     facts.deliveries.append(DeliveryEvent(actor, delivery, receiving if isinstance(receiving, str) else None,
                         len(text.encode('utf-8')) if isinstance(text, str) else 0,
                         version if isinstance(version, str) and version else None))
+            elif kind == 'knowledge-undelivered':
+                facts.knowledge_delivery_events += 1
+                facts.knowledge_delivery_outcomes['undelivered'] += 1
             elif kind == 'context-cut' and fields.get('outcome') == 'cut':
                 facts.applied_cuts += 1
                 uncovered = fields.get('uncovered_turns')
-                facts.uncovered_cuts += type(uncovered) is int and uncovered > 0
+                if type(uncovered) is int and uncovered >= 0:
+                    facts.cuts_with_uncovered_field += 1
+                    facts.uncovered_cuts += uncovered > 0
             elif kind == 'control-accepted':
                 facts.controls.append(event)
             elif kind == 'player-finish':

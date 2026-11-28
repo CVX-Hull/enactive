@@ -41,7 +41,7 @@ function SpendCard({spend, runner}) {
       <dt>Interleaved hygiene</dt><dd>${usd2(spend.hygiene_usd)} · ${plural(spend.hygiene_sessions, 'session')}</dd>
       <dt>Hygiene share</dt><dd id="cur-hygiene-share">${spend.hygiene_share === null ? '—' : pct(spend.hygiene_share, 1)}</dd>
       <dt>Tiers applied</dt><dd>${tiers.length ? tiers.map(([t, n]) => `${t} ${n}`).join(' · ') : 'none recorded'}</dd>
-      <dt>Flex 429 deferrals</dt><dd>${count(spend.deferrals)}</dd></dl>` : null}
+      <dt>Flex 429 deferrals</dt><dd>${spend.deferrals === null || spend.deferrals === undefined ? 'unknown' : `${count(spend.deferrals)}${spend.deferrals_complete === false ? ' (partial)' : ''}`}</dd></dl>` : null}
     ${limits && limits !== 'unknown' ? html`<dl class="kv limits" id="cur-limits"><dt>Run cap</dt><dd>${usd2(limits.cap_usd)}</dd><dt>Session cap</dt><dd>${usd2(limits.session_cap_usd)}</dd>
       <dt>Service tier</dt><dd>${known(limits, 'service_tier')}</dd><dt>Deferral limit</dt><dd>${known(limits, 'flex_deferral_limit')}</dd>
       ${limits.hygiene && limits.hygiene !== 'unknown' ? html`<dt>Hygiene share cap</dt><dd>${isNumber(Number(limits.hygiene.max_spend_share)) ? pct(Number(limits.hygiene.max_spend_share)) : 'unknown'}</dd>` : null}</dl>`
@@ -52,7 +52,9 @@ function SpendCard({spend, runner}) {
 function HygieneCard({spend, sessions, runner}) {
   const s = runner.status;
   const passes = sessions.filter(r => r.session_kind === 'hygiene');
-  const failed = passes.filter(r => (r.host_end && r.host_end.ok === false) || r.session_state === 'failed').length;
+  const failed = spend && typeof spend.hygiene_failed === 'number'
+    ? spend.hygiene_failed
+    : passes.filter(r => (r.host_end && r.host_end.ok === false) || r.session_state === 'failed').length;
   const hygiene = s && s.limits && s.limits !== 'unknown' && s.limits.hygiene && s.limits.hygiene !== 'unknown' ? s.limits.hygiene : null;
   const failures = s && s.failures && s.failures !== 'unknown' ? s.failures : null;
   return html`<section class="kpi panel interp" id="cur-hygiene" aria-label="Hygiene health"><h3>Hygiene health</h3>
