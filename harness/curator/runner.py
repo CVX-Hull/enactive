@@ -816,6 +816,12 @@ class Runner:
             return None
         if self.hygiene_failures() >= hs.max_consecutive_failures:
             return None
+        cursor = self.cursor
+        backlog = sum(max(0, len(a.operations) - cursor.get(a.directory, 0)) for a in read.actors)
+        if backlog > hs.max_unexamined_steps:
+            return None
+        if self._confirmed_windows_since_hygiene() < hs.min_windows:
+            return None
         available = getattr(self.hygiene_call, 'available', None)
         if callable(available):
             try:
@@ -823,12 +829,6 @@ class Runner:
                     return None
             except Exception:  # noqa: BLE001 - a hygiene preflight error never halts ingestion
                 return None
-        cursor = self.cursor
-        backlog = sum(max(0, len(a.operations) - cursor.get(a.directory, 0)) for a in read.actors)
-        if backlog > hs.max_unexamined_steps:
-            return None
-        if self._confirmed_windows_since_hygiene() < hs.min_windows:
-            return None
         try:
             trigger = self.hygiene_check()
         except Exception:  # noqa: BLE001 - a hygiene check error never halts ingestion
@@ -912,17 +912,16 @@ class Runner:
                 self.state = 'polling'
                 self._write_status()
                 return True
-            if how[1]:
-                # A validated prefix published before the Flex 429: advance and keep polling.
-                self.state = 'polling'
-                self._write_status()
-                return True
-        if outcome.stop == SPEND_REFUSED:
+            if not how[1]:
+                self._finish('stopped', FLEX_DEFERRED)
+                return False
+            # Validated prefix advanced; fall through to the shared session_failures check.
+        elif outcome.stop == SPEND_REFUSED:
             # Per #1027: blind step halving is removed. Any gate-confirmed close-out publication
             # already advanced covered_prefix via _end; stop cleanly as SPEND_EXHAUSTED either way.
             self._finish('stopped', SPEND_EXHAUSTED)
             return False
-        if outcome.stop is not None:
+        elif outcome.stop is not None:
             self._finish('stopped', outcome.stop)
             return False
         if self.session_failures() >= SESSION_FAILURES:

@@ -103,7 +103,7 @@ const validatorOptions = backing => ({ python: PYTHON, env: { PATH: '/usr/bin:/b
 
 async function session(t, replies, overrides = {}, prepare = undefined) {
   const root = await workspace(t);
-  const backing = await prepare?.(root);
+  const backing = await prepare?.(root, t);
   const events = [], payloads = [];
   let index = 0;
   const fetch = async (url, init) => {
@@ -111,10 +111,11 @@ async function session(t, replies, overrides = {}, prepare = undefined) {
     const next = replies[index++];
     return typeof next === 'function' ? next(init) : next;
   };
-  const baseEnv = { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN, PATH: '/usr/bin:/bin',
-    ...(backing ? { CURATOR_KNOWLEDGE_BACKING: backing } : {}) };
+  const baseEnv = { CURATOR_PROXY_URL: 'http://127.0.0.1:41999', CURATOR_PROXY_TOKEN: TOKEN, PATH: '/usr/bin:/bin' };
+  const resolvedEnv = overrides.env ? { ...overrides.env } : baseEnv;
+  if (backing && !Object.hasOwn(resolvedEnv, 'CURATOR_KNOWLEDGE_BACKING')) resolvedEnv.CURATOR_KNOWLEDGE_BACKING = backing;
   const result = await runCurator({ configuration: configuration(), systemPrompt: 'frozen prompt', brief: '# Session brief', cwd: root,
-    ...overrides, env: { ...baseEnv, ...(overrides.env ?? {}), ...(backing && !overrides.env?.CURATOR_KNOWLEDGE_BACKING ? { CURATOR_KNOWLEDGE_BACKING: backing } : {}) }, fetch,
+    ...overrides, env: resolvedEnv, fetch,
     onEvent: event => { events.push(event); overrides.onEvent?.(event); } });
   return { root, events, payloads, result };
 }
@@ -284,7 +285,7 @@ test('validate_submission reports a validator that cannot run without leaking it
 test('validate_submission runs the real validator over the ordered prefix', async t => {
   requirePythonForValidator();
   const root = await workspace(t);
-  const backing = await knowledge(root);
+  const backing = await knowledge(root, t);
   await writeTool(root, { path: 'submissions/01/submission.json', content: addFact('f1', 'v7') });
   await writeTool(root, { path: 'submissions/02/submission.json', content: addFact('f2', 'v0') });
   await writeTool(root, { path: 'submissions/03/submission.json', content: addFact('f3', 'v1') });
@@ -306,7 +307,7 @@ test('validate_submission runs the real validator over the ordered prefix', asyn
 test('validate_submission passes a submission directory name that starts with "-" as a value', async t => {
   requirePythonForValidator();
   const root = await workspace(t);
-  const backing = await knowledge(root);
+  const backing = await knowledge(root, t);
   await writeTool(root, { path: 'submissions/-repair/submission.json', content: addFact('f1', 'v0') });
   const result = await validateSubmission(root, { submission: '-repair' }, validatorOptions(backing));
   assert.equal(result.isError, false, result.content[0].text);

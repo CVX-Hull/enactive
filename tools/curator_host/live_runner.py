@@ -70,6 +70,7 @@ from harness.curator.runner import (  # noqa: E402
     TagLook,
     staged,
 )
+from harness.curator.session import FLEX_DEFERRED_EXIT_CODE  # noqa: E402
 from harness.curator.window import Window  # noqa: E402
 from harness.evaluation.core.sources import MANIFEST_SCHEMA  # noqa: E402
 from harness.trace.projection import valid_context  # noqa: E402
@@ -87,7 +88,6 @@ HYGIENE_FIELDS = ('enabled', 'min_windows', 'max_unexamined_steps', 'pass_cap_us
                   'max_requests', 'wall_seconds', 'max_consecutive_failures')
 FLEX_DEFAULT_TIMEOUT_SECONDS = 960
 MAX_REQUEST_TIMEOUT_SECONDS = 1800
-FLEX_DEFERRED_EXIT_CODE = 76
 PREFLIGHT_MIN_PROMPT_TOKENS = 1024
 STOPPED, FAILED, INTERRUPTED = 1, 2, 130
 

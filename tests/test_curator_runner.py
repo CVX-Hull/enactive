@@ -515,6 +515,31 @@ def test_hygiene_subcap_exhaustion_does_not_spin_across_idle_polls(tmp_path):
     rows = [json.loads(line) for line in (world.directory/'examined.jsonl').read_text().splitlines()]
     assert len([r for r in rows if r.get('session_kind') == 'hygiene']) == 2
 
+    # When the callable exposes available() == False, _due_hygiene skips before writing any start row.
+    class UnavailableHygiene:
+        def available(self):
+            return False
+
+        def __call__(self, _reading, _label):
+            pytest.fail('unavailable hygiene must not be called')
+
+    world2 = World(tmp_path/'runner2', Settings(trigger_steps=20, ceiling_steps=20, poll_seconds=15, watch_seconds=60))
+    runner2 = Runner(
+        world2.directory, RUN, snapshot=world2.snapshot, session_call=world2.session, look=world2.look,
+        settings=world2.settings, clock=world2.clock, sleep=lambda _: None,
+        hygiene_call=UnavailableHygiene(),
+        hygiene_check=lambda: dict(triggered=True, digest='dig-unavail', reasons=['stale_citations'], counts=dict(stale_citations=1)),
+        hygiene_settings=live.HygieneSettings(min_windows=5, max_unexamined_steps=10),
+    )
+    world2.outcomes = ['accepted'] * 5
+    for n in range(1, 6):
+        world2.reading = read({'001': 20 * n})
+        assert runner2.poll()
+    for _ in range(5):
+        assert runner2.poll()
+    rows2 = [json.loads(line) for line in (world2.directory/'examined.jsonl').read_text().splitlines()]
+    assert not any(r.get('session_kind') == 'hygiene' for r in rows2)
+
 
 def test_flex_deferral_with_validated_prefix_publication_advances_and_continues(world):
     world.reading = read({'001': 20})
@@ -525,6 +550,18 @@ def test_flex_deferral_with_validated_prefix_publication_advances_and_continues(
     assert runner.poll()
     assert runner.cursor == {'001': 20} and runner.flex_deferrals() == 0
     assert status(world)['covered_prefix']['end']['operation'] == 'op-001-20'
+    # A rejected Flex-deferred prefix (e.g. published + rejected verdicts) still respects the 2-consecutive-failure stop.
+    world.reading = read({'001': 80})
+    world.outcomes = [
+        'rejected',
+        lambda window: Outcome('sealed', (
+            {'operation': 'submission', 'status': 'published', 'version': world.publish(window)},
+            {'operation': 'submission', 'status': 'rejected', 'version': None},
+        ), stop=live.FLEX_DEFERRED),
+    ]
+    assert runner.poll()
+    assert not runner.poll()
+    assert status(world)['stop_reason'] == '2 consecutive failed sessions'
 
 
 def test_no_store_waits_and_the_closing_marker_ends_every_read(world):
