@@ -80,10 +80,12 @@ Knowledge moves beside play in four steps, each optional for a run:
 3. **Cut.** The `player-host/13` route can enable `context_cut`. The host then replaces
    older turns with a fresh deterministic briefing (zero background LLM recall) and a cut
    marker carrying `recent_intents`, removed `source_ids`, a bounded substantive
-   `changes_since` delta and committed `player_agenda` threads, removing only turns that
-   the curator's confirmed [unbroken coverage](contracts/player-host.md#coverage-gated-context-cut)
-   has reached. Without that coverage, play continues with image eviction and handoff, or
-   stops at `context-capacity` when no eligible covered cut can fit the next request
+   `changes_since` delta, `uncovered_turns` and committed `player_agenda` threads,
+   preferring turns that the curator's confirmed
+   [unbroken coverage](contracts/player-host.md#coverage-gated-context-cut) has reached.
+   Under sustained curator lag above the secondary pressure ceiling or on hard-capacity
+   rescue, the host applies a bounded deterministic uncovered-cut fallback without advancing
+   `covered_through_operation_id` and while keeping disk WAL ingestion unchanged
    ([#1037](https://github.com/CVX-Hull/enactive/issues/1037)).
 4. **Groom.** After a run is sealed, the operator can run
    [boundary grooming](operations/curator-hosts.md#post-admission-boundary-grooming) to

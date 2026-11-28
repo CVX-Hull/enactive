@@ -455,14 +455,16 @@ capacity/time/spend warnings are re-evaluated against the new request.
 ```mermaid
 flowchart TB
   accTitle: What the player host does on each request
-  accDescr: Between requests the host applies coverage and restore lines and plans staged knowledge updates newest-first jointly with context-cut planning, committing version, cut, reminder placement, image-block eviction and tail notices atomically. Cuts are evaluated only when enabled, no restore was seen and no orderly stop is accepted: a triggered cut picks the smallest eligible prefix meeting low_mark and the image target, falls back to best-effort k = E when that fits and reduces tokens, and independently rescues hard-capacity overflow with the smallest strict-fit prefix before holding back or stopping. Before the HTTP call, spend admission checks the limit, in-flight recall bound, ending reserve and unpriced bound, emitting spend-reserve-reached and waiting up to 2 s for orderly_stop when ordinary work can no longer be admitted while spent is below spend_limit_usd. Settlement stops are handoff, player finish, spend-limit, spend-reserve-timeout and cost-unreported. Pause, uncertain input and the driver's deadlines are independent of this loop.
+  accDescr: Between requests the host applies coverage and restore lines and plans staged knowledge updates newest-first jointly with context-cut planning, committing version, cut, reminder placement, image-block eviction and tail notices atomically. Cuts are evaluated only when enabled, no restore was seen and no orderly stop is accepted: a triggered cut tries covered prefixes first (target, best-effort k = E, or covered strict-fit rescue), then falls back to bounded uncovered cuts above the Tier-2 pressure ceiling or on hard-capacity rescue without advancing covered_through_operation_id before holding back or stopping. Before the HTTP call, spend admission checks the limit, in-flight recall bound, ending reserve and unpriced bound, emitting spend-reserve-reached and waiting up to 2 s for orderly_stop when ordinary work can no longer be admitted while spent is below spend_limit_usd. Settlement stops are handoff, player finish, spend-limit, spend-reserve-timeout and cost-unreported. Pause, uncertain input and the driver's deadlines are independent of this loop.
   R["Request boundary<br/>Apply coverage and restore lines<br/>Plan staged updates newest-first jointly with cuts"] --> Q{"Cuts enabled, no restore seen,<br/>and no orderly stop accepted?"}
   Q -->|"No"| V
   Q -->|"Yes"| T{"Cut trigger armed, or<br/>uncut request fails hard fit?"}
   T -->|"No"| V
-  T -->|"Yes"| L{"Eligible covered prefix<br/>meets targets, best-effort k = E,<br/>or strict-fit rescue?"}
-  L -->|"No (when armed)"| H["Held back (edge-reported)<br/>History unchanged, reason recorded"]
+  T -->|"Yes"| L{"Covered prefix meets target,<br/>best-effort k = E, or<br/>covered strict-fit rescue?"}
   L -->|"Yes"| K["Cut applied (target, best_effort, or rescue)<br/>Fresh briefing, cut marker, surviving turns"]
+  L -->|"No"| U{"Above Tier-2 ceiling or hard-fit<br/>with cuttable uncovered prefix?"}
+  U -->|"Yes"| K
+  U -->|"No (when armed)"| H["Held back (edge-reported)<br/>History unchanged, reason recorded"]
   H --> V
   K --> V["Image-block eviction, reminders &amp; tail notices<br/>(context-capacity, host-timeout, spend-limit)"]
   V --> P{"Projected estimate leaves room<br/>for the reply?"}

@@ -1156,15 +1156,446 @@ def markdown(result: dict) -> str:
     return '\n'.join(lines) + '\n'
 
 
+@dataclass(frozen=True)
+class LagScenario:
+    name: str
+    delay_ms: float
+    outage_start_frac: float | None = None
+    outage_duration_ms: float = 0.0
+    stall_all: bool = False
+
+
+LAG_SCENARIOS = (
+    LagScenario('default_recorded (0s)', 0.0),
+    LagScenario('flex_mild (+120s)', 120_000.0),
+    LagScenario('flex_moderate (+300s)', 300_000.0),
+    LagScenario('flex_heavy_429 (+600s + 15m burst)', 600_000.0, outage_start_frac=0.35, outage_duration_ms=900_000.0),
+    LagScenario('curator_stall (no new coverage)', 0.0, stall_all=True),
+)
+
+LAG_ARMS = (
+    'arm0_baseline',
+    'arm1a_immediate_60k',
+    'arm1d_tiered_90k',
+    'arm1e_tiered_100k',
+    'arm1f_tiered_120k',
+    'arm1c_rescue_only',
+)
+
+
+def _extract_lag_actor_trace(events: list[dict], coverage_map: dict[str, str]) -> dict:
+    start = events[0]
+    cfg = start['context_cut']
+    policy = CutPolicy(
+        cfg['high_mark'], cfg['low_mark'], cfg['min_free'],
+        start['max_context_images'], start['context_image_block'],
+        start['context_window'] - start['max_output_tokens'],
+    )
+    cuts, estimates, images, manifests = {}, {}, {}, {}
+    operations, call_chars, text_chars, tail, updates = {}, {}, {}, {}, {}
+    started_intents, committed_intents = {}, {}
+    for e in events:
+        typ = e['type']
+        rid = e.get('request_id')
+        if typ == 'context-cut':
+            cuts[rid] = e
+        elif typ == 'context-estimate':
+            estimates[rid] = e
+        elif typ == 'context-image-projection':
+            images[rid] = e
+        elif typ == 'context-manifest':
+            manifests[rid] = e
+        elif typ == 'tool-start':
+            call_chars[e['tool_call_id']] = chars(e['tool']) + chars(canonical(e['arguments']))
+            intent = e['arguments'].get('intent') if isinstance(e.get('arguments'), dict) else None
+            if e.get('tool') != 'player_finish' and _valid_intent(intent):
+                started_intents[e['tool_call_id']] = intent
+        elif typ == 'tool-result':
+            result = e['result']
+            for part in result.get('content', []):
+                if part['type'] == 'text':
+                    text_chars[digest(part['text'])] = chars(part['text'])
+            record = result.get('structuredContent')
+            if (result.get('isError') is not True
+                    and not (isinstance(record, dict) and record.get('status') in ('refused', 'rejected'))
+                    and e['tool_call_id'] in started_intents):
+                committed_intents[e['tool_call_id']] = started_intents[e['tool_call_id']]
+            if (e['tool'] in ('computer_input', 'computer_observe', 'player_handoff')
+                    and isinstance(record, dict) and 'operation_id' in record):
+                operations[e['tool_call_id']] = record['operation_id']
+        elif typ == 'tail-notice':
+            tail[rid] = e
+        elif typ == 'knowledge-delivery' and 'text' in e:
+            text_chars[digest(e['text'])] = chars(e['text'])
+            if e['kind'] == 'update' and e.get('outcome') == 'delivered':
+                updates[e['receiving_player_request_id']] = e['version']
+
+    control_at = next((e['monotonic_ms'] for e in events if e['type'] == 'control-accepted'), float('inf'))
+    initial = next(e for e in events if e['type'] == 'knowledge-delivery' and e['kind'] == 'briefing')
+    start_version = initial['version']
+    original_prefix = tokens(chars(initial['text']))
+    fixed_tokens = next(iter(estimates.values()))['heuristic_tokens'] - original_prefix
+
+    publications: list[tuple[float, str, str]] = []
+    seen_pub_ops: set[str] = set()
+    for rid, logged in estimates.items():
+        ts = logged['monotonic_ms']
+        ver = updates.get(rid)
+        if ver and ver in coverage_map and coverage_map[ver] not in seen_pub_ops:
+            seen_pub_ops.add(coverage_map[ver])
+            publications.append((ts, ver, coverage_map[ver]))
+        cut = cuts.get(rid)
+        if cut is not None and cut.get('covered_through_operation_id'):
+            op = cut['covered_through_operation_id']
+            if op not in seen_pub_ops:
+                seen_pub_ops.add(op)
+                publications.append((ts, cut['knowledge_version'], op))
+
+    turns: list[Turn] = []
+    parts: list[dict] = []
+    checks = []
+    archived_removed = 0
+    cur_orig_prefix = original_prefix
+    for idx, (rid, logged) in enumerate(estimates.items()):
+        cut = cuts.get(rid)
+        rewrite = cut is not None and cut['outcome'] == 'cut'
+        image = images[rid]
+        protected = image['protected_images']
+        warning = 0
+        if rid in manifests:
+            manifest = manifests[rid]
+            parts = parts[:manifest['reused_prefix_parts']] + manifest['parts']
+            warning = tokens(parts[-1]['bytes']) if rid in tail else 0
+            if idx > 0:
+                turns.append(latest_turn(parts, operations, call_chars, text_chars, warning, committed_intents))
+        if rewrite:
+            archived_removed += cut['removed_turns']
+            cur_orig_prefix = cut['briefing_tokens']
+        checks.append(dict(
+            rid=rid, ts=logged['monotonic_ms'], logged_tokens=logged['tokens'], has_manifest=rid in manifests,
+            protected=protected, warning=warning, turn_count=len(turns), archived_removed=archived_removed,
+            orig_prefix=cur_orig_prefix, restored=cut is not None and cut.get('reason') == 'restored',
+            orderly_stop=logged['monotonic_ms'] >= control_at,
+        ))
+    return dict(policy=policy, start_version=start_version, fixed_tokens=fixed_tokens,
+                turns=turns, checks=checks, publications=publications)
+
+
+def _schedule_lag_publications(publications: list[tuple[float, str, str]], checks: list[dict],
+                               scenario: LagScenario) -> list[tuple[float, str, str]]:
+    if scenario.stall_all or not publications:
+        return []
+    t0, t1 = checks[0]['ts'], checks[-1]['ts']
+    span = max(1.0, t1 - t0)
+    outage_start = t0 + scenario.outage_start_frac * span if scenario.outage_start_frac is not None else None
+    outage_end = outage_start + scenario.outage_duration_ms if outage_start is not None else None
+    shifted = []
+    for ts, ver, op in publications:
+        new_ts = ts + scenario.delay_ms
+        if outage_start is not None and outage_end is not None and outage_start <= new_ts < outage_end:
+            new_ts = outage_end
+        shifted.append((new_ts, ver, op))
+    shifted.sort(key=lambda row: row[0])
+    return shifted
+
+
+def _simulate_lag_actor(trace: dict, snapshots: dict, projected_start: dict,
+                        scenario: LagScenario, arm: str) -> dict:
+    policy: CutPolicy = trace['policy']
+    turns: list[Turn] = trace['turns']
+    checks: list[dict] = trace['checks']
+    fixed_tokens: int = trace['fixed_tokens']
+    all_recorded_covered_ops = {op for _, _, op in trace['publications']}
+    shifted_pubs = _schedule_lag_publications(trace['publications'], checks, scenario)
+
+    version, frontier, pub_idx, restored = trace['start_version'], None, 0, False
+    projected_removed = covered_removed_through = 0
+    dropped_sources: dict[str, None] = {}
+    dropped_intents: dict[str, None] = {}
+    uncovered_dropped_turn_indices: list[int] = []
+    uncovered_dropped_frames: set[str] = set()
+    active_cut_marker_tokens = 0
+    proposed_prefix = briefing_tokens(projected_start)
+    fresh_prefixes: dict[str | None, int] = {}
+    armed, prior_omissions, hold_state, last_plan_key = False, 0, None, None
+    counts = Counter()
+    total_prompt_tokens = peak_tokens = 0
+    min_headroom = policy.hard_limit
+    max_uncovered_single_cut = total_uncovered_cuts = total_covered_cuts = total_rescues = 0
+    stopped = False
+    completed_requests = 0
+
+    for chk in checks:
+        ts = chk['ts']
+        while pub_idx < len(shifted_pubs) and shifted_pubs[pub_idx][0] <= ts:
+            _, version, frontier = shifted_pubs[pub_idx]
+            pub_idx += 1
+        restored |= chk['restored']
+
+        all_turns = turns[:chk['turn_count']]
+        current = all_turns[projected_removed:]
+        eligible = 0
+        if frontier is not None:
+            for at, turn in enumerate(all_turns[:-1]):
+                if frontier in turn.operations:
+                    covered_idx = at + int(frontier == turn.operations[-1])
+                    if covered_idx > covered_removed_through:
+                        covered_removed_through = covered_idx
+                    break
+            eligible = min(max(0, covered_removed_through - projected_removed), max(0, len(current) - 1))
+        max_uncovered_cuttable = max(0, len(current) - 1)
+        deltas = [n for turn in current for n in turn.eviction_deltas]
+        notes_at_boundary = all_turns[projected_removed - 1].notice_tokens if projected_removed else 0
+        estimated = (
+            fixed_tokens + proposed_prefix + active_cut_marker_tokens + notes_at_boundary + chk['warning']
+            + sum(turn.request_tokens + turn.notice_tokens for turn in current)
+            + eviction_delta(deltas, chk['protected'], policy)
+        )
+        if projected_removed == chk['archived_removed']:
+            estimated = max(estimated, chk['logged_tokens'] - chk['orig_prefix'] + proposed_prefix + chk['warning'])
+        elif not chk['has_manifest']:
+            estimated = max(estimated, chk['logged_tokens'] + proposed_prefix + chk['warning'])
+        uncut = Projection(estimated, proposed_prefix, len(deltas), chk['protected'])
+        omitted = uncut.omissions(policy)
+
+        def eval_prefix(k: int) -> Projection:
+            if version not in fresh_prefixes:
+                fresh_prefixes[version] = briefing_tokens(briefing(snapshots[version], cut=True))
+            fresh_tok = fresh_prefixes[version]
+            rem_tokens = sum(t.request_tokens + t.notice_tokens for t in current[k:])
+            dropped_imgs = sum(t.images for t in current[:k])
+            srcs, ints = dict(dropped_sources), dict(dropped_intents)
+            for t in current[:k]:
+                srcs.update(dict.fromkeys(t.image_sources))
+                for it in t.intents:
+                    _record_intent(ints, it)
+            marker = cut_marker(projected_removed + k, frontier or 'none', version or 'v0', srcs, ints)
+            total_tok = (
+                fixed_tokens + chk['warning'] + fresh_tok + tokens(chars(marker))
+                + rem_tokens + current[k - 1].notice_tokens
+                + eviction_delta(deltas[dropped_imgs:], chk['protected'], policy)
+            )
+            return Projection(total_tok, fresh_tok, len(deltas) - dropped_imgs, chk['protected'])
+
+        chosen_k, outcome, used_uncovered = 0, 'idle', False
+        proj = uncut
+        if restored or chk['orderly_stop']:
+            armed, hold_state, last_plan_key, prior_omissions = False, None, None, omitted
+            if uncut.tokens >= policy.hard_limit:
+                outcome = 'stop'
+        else:
+            armed |= (uncut.tokens - uncut.briefing_tokens > policy.high) or (omitted > prior_omissions)
+            prior_omissions = omitted
+            plan_key = (frontier, eligible, version, len(current) if arm != 'arm0_baseline' else 0)
+            covered_target = covered_best_effort = None
+            if armed and eligible >= policy.min_free and last_plan_key != plan_key:
+                for k in range(policy.min_free, eligible + 1):
+                    p = eval_prefix(k)
+                    if p.tokens < policy.hard_limit:
+                        if p.tokens - p.briefing_tokens <= policy.low and p.images <= policy.max_images - policy.block:
+                            covered_target = (k, p)
+                            break
+                        if k == eligible and p.tokens < uncut.tokens:
+                            covered_best_effort = (k, p)
+            if covered_target is not None:
+                chosen_k, proj = covered_target
+                outcome = 'cut'
+            elif covered_best_effort is not None:
+                k_be, proj_be = covered_best_effort
+                relieves = (proj_be.tokens - proj_be.briefing_tokens <= policy.high
+                            and proj_be.images <= policy.max_images)
+                if arm != 'arm1a_immediate_60k' or relieves:
+                    chosen_k, proj = k_be, proj_be
+                    outcome = 'cut'
+
+            tier_threshold = {
+                'arm1a_immediate_60k': policy.high,
+                'arm1d_tiered_90k': 90_000,
+                'arm1e_tiered_100k': 100_000,
+                'arm1f_tiered_120k': 120_000,
+            }.get(arm)
+            uncov_pressure = (tier_threshold is not None
+                              and ((arm == 'arm1a_immediate_60k' and armed)
+                                   or (uncut.tokens - uncut.briefing_tokens > tier_threshold)))
+            if chosen_k == 0 and uncov_pressure and last_plan_key != plan_key and max_uncovered_cuttable >= policy.min_free:
+                uncov_target = uncov_best = None
+                for k in range(max(policy.min_free, eligible + 1), max_uncovered_cuttable + 1):
+                    p = eval_prefix(k)
+                    if p.tokens < policy.hard_limit:
+                        if p.tokens - p.briefing_tokens <= policy.low and p.images <= policy.max_images - policy.block:
+                            uncov_target = (k, p)
+                            break
+                        if p.tokens < uncut.tokens:
+                            uncov_best = (k, p)
+                if uncov_target is not None:
+                    chosen_k, proj, outcome, used_uncovered = *uncov_target, 'cut', True
+                elif uncov_best is not None:
+                    chosen_k, proj, outcome, used_uncovered = *uncov_best, 'cut', True
+                elif covered_best_effort is not None:
+                    chosen_k, proj, outcome = *covered_best_effort, 'cut'
+
+            if chosen_k == 0 and armed and last_plan_key != plan_key:
+                last_plan_key = plan_key
+            if chosen_k == 0 and uncut.tokens >= policy.hard_limit:
+                for k in range(1, eligible + 1):
+                    p = eval_prefix(k)
+                    if p.tokens < min(uncut.tokens, policy.hard_limit):
+                        chosen_k, proj, outcome = k, p, 'rescue'
+                        break
+                if chosen_k == 0 and arm != 'arm0_baseline':
+                    for k in range(eligible + 1, max_uncovered_cuttable + 1):
+                        p = eval_prefix(k)
+                        if p.tokens < min(uncut.tokens, policy.hard_limit):
+                            chosen_k, proj, outcome, used_uncovered = k, p, 'rescue', True
+                            break
+                if chosen_k == 0:
+                    outcome = 'stop'
+            if chosen_k == 0 and outcome != 'stop' and armed:
+                reason = 'uncovered' if not eligible else ('below-min-free' if eligible < policy.min_free else 'insufficient-cover')
+                st = (reason, frontier)
+                if hold_state == st:
+                    outcome = 'suppressed-hold'
+                else:
+                    hold_state, outcome = st, reason
+
+        counts[outcome] += 1
+        if chosen_k > 0:
+            new_uncov = max(0, chosen_k - eligible)
+            if new_uncov > 0:
+                used_uncovered = True
+                max_uncovered_single_cut = max(max_uncovered_single_cut, new_uncov)
+                for offset in range(eligible, chosen_k):
+                    turn_idx = projected_removed + offset
+                    uncovered_dropped_turn_indices.append(turn_idx)
+                    uncovered_dropped_frames.update(all_turns[turn_idx].image_sources)
+            for t in current[:chosen_k]:
+                dropped_sources.update(dict.fromkeys(t.image_sources))
+                for it in t.intents:
+                    _record_intent(dropped_intents, it)
+            projected_removed += chosen_k
+            if outcome == 'rescue':
+                total_rescues += 1
+            elif used_uncovered:
+                total_uncovered_cuts += 1
+            else:
+                total_covered_cuts += 1
+            if version not in fresh_prefixes:
+                fresh_prefixes[version] = briefing_tokens(briefing(snapshots[version], cut=True))
+            active_cut_marker_tokens = tokens(chars(cut_marker(
+                projected_removed, frontier or 'none', version or 'v0', dropped_sources, dropped_intents)))
+            proposed_prefix = fresh_prefixes[version]
+            armed, hold_state, last_plan_key, prior_omissions = False, None, None, proj.omissions(policy)
+            sent_tokens = proj.tokens
+        else:
+            sent_tokens = estimated
+
+        if outcome == 'stop':
+            stopped = True
+            break
+        completed_requests += 1
+        total_prompt_tokens += sent_tokens
+        peak_tokens = max(peak_tokens, sent_tokens)
+        min_headroom = min(min_headroom, policy.hard_limit - sent_tokens)
+
+    max_recorded_cov_idx = 0
+    for idx, t in enumerate(turns):
+        if any(op in all_recorded_covered_ops for op in t.operations):
+            max_recorded_cov_idx = idx + 1
+    return dict(
+        checks_total=len(checks), completed_requests=completed_requests, stopped=stopped,
+        edge_holds=sum(counts[k] for k in ('uncovered', 'below-min-free', 'insufficient-cover')),
+        covered_cuts=total_covered_cuts, uncovered_cuts=total_uncovered_cuts, rescues=total_rescues,
+        total_prompt_tokens=total_prompt_tokens, peak_tokens=peak_tokens, min_headroom=min_headroom,
+        uncovered_turns_dropped=len(uncovered_dropped_turn_indices),
+        max_uncovered_single_cut=max_uncovered_single_cut,
+        uncovered_turns_later_covered_on_disk=sum(1 for ti in uncovered_dropped_turn_indices if ti < max_recorded_cov_idx),
+        uncovered_frames_dropped=len(uncovered_dropped_frames),
+        uncovered_frames_in_source_ids=sum(1 for f in uncovered_dropped_frames if f in dropped_sources),
+    )
+
+
+def lag_replay(evidence: Path, *, lineage: str = '998') -> dict:
+    descriptor = LINEAGES[lineage]
+    runs = [evidence / f'{descriptor.prefix}-admission-{n:02d}' / 'run' for n in descriptor.admissions]
+    snapshots, _ = load_snapshots(runs, descriptor)
+    actor_traces = []
+    for run in runs:
+        for path in sorted(run.glob('actors/*/host.jsonl')):
+            with path.open(encoding='utf-8') as f:
+                events = [json.loads(line) for line in f if line.strip()]
+            with path.with_name('knowledge-updates.jsonl').open(encoding='utf-8') as f:
+                coverage = {
+                    row['version']: row['operation_id']
+                    for row in map(json.loads, f)
+                    if row['schema'] == 'coverage-update-entry/1'
+                    and not row['restored']
+                    and row['actor_id'] == events[0]['actor_id']
+                }
+            start = next(e for e in events if e['type'] == 'knowledge-delivery' and e['kind'] == 'briefing')
+            snap = snapshots[start['version']]
+            selected = [row['id'] for row in delivery_payload(start)['leads'] if row['id'] in snap.entries]
+            actor_traces.append((_extract_lag_actor_trace(events, coverage), briefing(snap, selected)))
+    scenarios_out = {}
+    for scenario in LAG_SCENARIOS:
+        scenarios_out[scenario.name] = {}
+        for arm in LAG_ARMS:
+            rows = [_simulate_lag_actor(tr, snapshots, prop, scenario, arm) for tr, prop in actor_traces]
+            done = sum(a['completed_requests'] for a in rows)
+            scenarios_out[scenario.name][arm] = dict(
+                admissions_stopped=sum(a['stopped'] for a in rows),
+                admissions=len(rows),
+                completed_requests=done,
+                total_requests=sum(a['checks_total'] for a in rows),
+                edge_holds=sum(a['edge_holds'] for a in rows),
+                covered_cuts=sum(a['covered_cuts'] for a in rows),
+                uncovered_cuts=sum(a['uncovered_cuts'] for a in rows),
+                rescues=sum(a['rescues'] for a in rows),
+                mean_prompt_tokens=round(sum(a['total_prompt_tokens'] for a in rows) / max(1, done)),
+                peak_tokens=max(a['peak_tokens'] for a in rows),
+                min_headroom=min(a['min_headroom'] for a in rows),
+                uncovered_turns_dropped=sum(a['uncovered_turns_dropped'] for a in rows),
+                max_uncovered_single_cut=max(a['max_uncovered_single_cut'] for a in rows),
+                uncovered_turns_later_covered_on_disk=sum(a['uncovered_turns_later_covered_on_disk'] for a in rows),
+                uncovered_frames_dropped=sum(a['uncovered_frames_dropped'] for a in rows),
+                uncovered_frames_in_source_ids=sum(a['uncovered_frames_in_source_ids'] for a in rows),
+            )
+    return dict(schema='player-host-lag-replay/1', lineage=lineage, scenarios=scenarios_out)
+
+
+def lag_markdown(result: dict) -> str:
+    lines = [f"# Offline curator-lag replay on sealed #{result['lineage']}", '']
+    for name, arms in result['scenarios'].items():
+        lines += [f'## Scenario: {name}', '',
+                  '| Arm | Stops | Completed | Edge Holds | Cov / Uncov Cuts | Rescues | Mean Prompt Tok | Peak Tok | Min Headroom | Uncov Turns (Max/Cut) | Later Cov On Disk | Frames Retained |',
+                  '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
+        for arm, r in arms.items():
+            later = f"{r['uncovered_turns_later_covered_on_disk']}/{r['uncovered_turns_dropped']}" if r['uncovered_turns_dropped'] else '0/0'
+            frames = f"{r['uncovered_frames_in_source_ids']}/{r['uncovered_frames_dropped']}" if r['uncovered_frames_dropped'] else '0/0'
+            lines.append(
+                f"| {arm} | {r['admissions_stopped']}/{r['admissions']} | {r['completed_requests']}/{r['total_requests']} "
+                f"| {r['edge_holds']} | {r['covered_cuts']} / {r['uncovered_cuts']} | {r['rescues']} "
+                f"| {r['mean_prompt_tokens']:,} | {r['peak_tokens']:,} | {r['min_headroom']:,} "
+                f"| {r['uncovered_turns_dropped']} ({r['max_uncovered_single_cut']}) | {later} | {frames} |"
+            )
+        lines.append('')
+    return '\n'.join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--evidence', type=Path, help='sealed evidence directory (default is the main checkout store)')
     parser.add_argument('--lineage', choices=(*LINEAGES, 'all'), default='896-b')
+    parser.add_argument('--lag-replay', action='store_true', help='run #1037 curator-lag and flex/429 replay matrix')
     output = parser.add_mutually_exclusive_group()
     output.add_argument('--json', action='store_true')
     output.add_argument('--markdown', action='store_true')
     args = parser.parse_args(argv)
     evidence = args.evidence if args.evidence is not None else default_store()
+    if args.lag_replay:
+        target = '998' if args.lineage == 'all' else args.lineage
+        result = lag_replay(evidence, lineage=target)
+        print(json.dumps(result, indent=2, default=str) if args.json else lag_markdown(result), end='' if not args.json else '\n')
+        return 0
     lineages = {name: benchmark(evidence, lineage=name) for name in
                 (LINEAGES if args.lineage == 'all' else (args.lineage,))}
     result = (dict(schema='player-host-replay-benchmark/2', lineages=lineages)

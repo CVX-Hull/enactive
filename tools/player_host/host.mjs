@@ -1468,11 +1468,11 @@ export async function runHost(options) {
       const boundary = effectiveCoveredOp === null ? -1 : turns.findIndex(turn => turn.creatingOps.includes(effectiveCoveredOp));
       const maxCovered = turns[boundary]?.creatingOps.at(-1) === effectiveCoveredOp ? boundary : boundary - 1;
       const start = cutState?.cutMessageIndex ?? 2;
-      const cuttable = turns.slice(0, Math.max(0, Math.min(maxCovered, turns.length - 2) + 1))
-        .filter(turn => turn.start >= start);
       const firstUnknown = turns.findIndex(turn => turn.start >= start && turn.creatingOps.includes(UNCOVERED_OPERATION));
-      const maxUncoveredIndex = firstUnknown >= 0 ? Math.min(firstUnknown - 1, turns.length - 2) : turns.length - 2;
-      const allCuttable = turns.slice(0, Math.max(0, maxUncoveredIndex + 1)).filter(turn => turn.start >= start);
+      const maxCutIndex = firstUnknown >= 0 ? Math.min(firstUnknown - 1, turns.length - 2) : turns.length - 2;
+      const cuttable = turns.slice(0, Math.max(0, Math.min(maxCovered, maxCutIndex) + 1))
+        .filter(turn => turn.start >= start);
+      const allCuttable = turns.slice(0, Math.max(0, maxCutIndex + 1)).filter(turn => turn.start >= start);
       const eligible = cuttable.length;
       const hardLimit = model.contextWindow - model.maxTokens;
       const uncoveredHighMark = Math.min(Math.max(cfg.high_mark, hardLimit - cfg.low_mark), Math.ceil((cfg.high_mark * 5) / 3));
@@ -1510,7 +1510,7 @@ export async function runHost(options) {
         const promptMessage = userMessage(options.prompt + '\n\n' + fresh.text);
         const alreadyRemoved = cutState?.removedTurns ?? 0;
         const imageTarget = configuration.max_context_images - configuration.context_image_block;
-        const searchPrefix = (candidateTurns, {startK, allowTarget, allowBestEffort, allowRescue}) => {
+        const searchPrefix = (candidateTurns, {normalStartK, rescueStartK, allowTarget, allowBestEffort, bestEffortAny = false, allowRescue}) => {
           const sourceIds = new Set(cutState?.sourceIds);
           const recentIntents = new Set(cutState?.recentIntents);
           let result, fallback, rescuePlan, cutMessageIndex = start;
@@ -1527,8 +1527,8 @@ export async function runHost(options) {
               }
             }
             cutMessageIndex = turn.end;
-            const evaluateNormal = (allowTarget || allowBestEffort) && k >= startK;
-            const evaluateRescue = allowRescue && !rescuePlan && k >= startK;
+            const evaluateNormal = (allowTarget || allowBestEffort) && k >= normalStartK;
+            const evaluateRescue = allowRescue && !rescuePlan && k >= rescueStartK;
             if (!evaluateNormal && !evaluateRescue) continue;
             const removedTurns = alreadyRemoved + k;
             const lastTurnIndex = turns.indexOf(turn);
@@ -1546,7 +1546,7 @@ export async function runHost(options) {
               const meetsTargets = plan.estimate.tokens - briefingTokens <= cfg.low_mark
                 && plan.projection.summary.input_images <= imageTarget;
               if (allowTarget && meetsTargets && plan.fits) result ??= plan;
-              if (allowBestEffort && k === candidateTurns.length && !result && plan.fits && reduces) fallback = plan;
+              if (allowBestEffort && !result && plan.fits && reduces && (bestEffortAny || k === candidateTurns.length)) fallback = plan;
             }
             if (evaluateRescue && plan.fits && reduces) rescuePlan ??= plan;
             if (!allowTarget && !allowBestEffort && rescuePlan) break;
@@ -1554,27 +1554,25 @@ export async function runHost(options) {
           return {result, fallback, rescuePlan};
         };
         const cov = (coveredNormal || (!original.fits && eligible > 0))
-          ? searchPrefix(cuttable, {startK:coveredNormal ? cfg.min_free : 1,
+          ? searchPrefix(cuttable, {normalStartK:cfg.min_free, rescueStartK:1,
             allowTarget:Boolean(coveredNormal), allowBestEffort:Boolean(coveredNormal), allowRescue:!original.fits})
           : null;
-        let plan = cov?.result ?? cov?.fallback ?? null;
-        let cutResult = cov?.result ? 'target' : cov?.fallback ? 'best_effort' : null;
+        let plan = cov?.result ?? cov?.fallback ?? (!original.fits ? cov?.rescuePlan ?? null : null);
+        let cutResult = cov?.result ? 'target' : cov?.fallback ? 'best_effort' : plan ? 'rescue' : null;
         if (!plan && uncoveredNormal && allCuttable.length > eligible) {
-          const uncov = searchPrefix(allCuttable, {startK:Math.max(cfg.min_free, eligible + 1),
-            allowTarget:true, allowBestEffort:true, allowRescue:!original.fits});
+          const uncov = searchPrefix(allCuttable, {normalStartK:Math.max(cfg.min_free, eligible + 1), rescueStartK:eligible + 1,
+            allowTarget:true, allowBestEffort:true, bestEffortAny:true, allowRescue:!original.fits});
           if (uncov.result || uncov.fallback) {
             plan = uncov.result ?? uncov.fallback;
             cutResult = uncov.result ? 'target' : 'best_effort';
-          } else if (!original.fits) {
-            plan = cov?.rescuePlan ?? uncov.rescuePlan ?? null;
-            if (plan) cutResult = 'rescue';
+          } else if (!original.fits && uncov.rescuePlan) {
+            plan = uncov.rescuePlan;
+            cutResult = 'rescue';
           }
         }
-        if (!plan && rescue) {
-          plan = cov?.rescuePlan ?? null;
-          if (!plan && allCuttable.length > eligible) {
-            plan = searchPrefix(allCuttable, {startK:eligible + 1, allowTarget:false, allowBestEffort:false, allowRescue:true}).rescuePlan ?? null;
-          }
+        if (!plan && rescue && allCuttable.length > eligible) {
+          plan = searchPrefix(allCuttable, {normalStartK:Infinity, rescueStartK:eligible + 1,
+            allowTarget:false, allowBestEffort:false, allowRescue:true}).rescuePlan ?? null;
           if (plan) cutResult = 'rescue';
         }
         if (plan) return {plan, demand:[], event:{...decision, outcome:'cut', cut_result:cutResult,
