@@ -13,7 +13,7 @@ import base64
 from decimal import Decimal
 import json
 
-from harness.curator.proxy import IMAGE_TOKENS, Price, Provider, body_token_bound, inline_images, response_events, usage_events
+from harness.curator.proxy import IMAGE_TOKENS, Price, Provider, body_token_bound, canonical_bytes, inline_images, response_events, usage_events
 
 PER = Decimal(1_000_000)
 
@@ -72,22 +72,40 @@ ANTHROPIC = Provider(
 # Provider preferences that only choose among backends for the requested model.
 ROUTING = frozenset({'order', 'only', 'ignore', 'allow_fallbacks', 'require_parameters', 'data_collection', 'zdr'})
 TERRA = 'openai/gpt-6.1-terra'
-CDDA_FRAME_PREFIX = 'data:image/png;base64,' + base64.b64encode(
+PNG_960X640_PREFIX = 'data:image/png;base64,' + base64.b64encode(
     b'\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR' + (960).to_bytes(4) + (640).to_bytes(4)).decode()
 # Four such frames added about 3,600 prompt tokens in the sealed #896-b A7 trace.
 # Reserve for the route's full image detail, including variation across frames.
 TERRA_FRAME_TOKENS = 3_000
 
 
+def _pinned_terra(model: str, request: object) -> bool:
+    routing = request.get('provider') if isinstance(request, dict) else None
+    return (model == TERRA and isinstance(routing, dict)
+            and routing.keys() == {'only', 'order', 'allow_fallbacks', 'require_parameters'}
+            and routing['allow_fallbacks'] is False and routing['require_parameters'] is True
+            and routing['only'] == routing['order'] and routing['only'] in (['openai'], ['openai/flex']))
+
+
 def _openrouter_prompt_bound(model: str, body: bytes, request: object) -> int:
-    if (model != TERRA or not isinstance(request, dict)
-            or request.get('provider') != dict(only=['openai'], order=['openai'],
-                                               allow_fallbacks=False, require_parameters=True)):
+    if not _pinned_terra(model, request):
         return body_token_bound(model, body, request)
-    messages = request.get('messages') or []
+    messages = request.get('messages', [])
     tools = request.get('tools') or []
     if not isinstance(messages, list) or not isinstance(tools, list):
         return body_token_bound(model, body, request)
+    return _terra_bound(body, messages, request) + 32 * len(tools)
+
+
+def suffix_prompt_bound(model: str, suffix_messages: list, request: object) -> int:
+    body = canonical_bytes(suffix_messages)
+    suffix_request = {'messages': suffix_messages}
+    if _pinned_terra(model, request):
+        return _terra_bound(body, suffix_messages, suffix_request)
+    return body_token_bound(model, body, suffix_request) + 256 + 32 * len(suffix_messages)
+
+
+def _terra_bound(body: bytes, messages: list, request: dict) -> int:
     # Text in a message is tokenized as decoded content. Exclude the wire JSON's
     # escaping for that content only. Keep the complete byte bound for arguments,
     # schemas and unfamiliar shapes, and allow for provider-side prompt framing.
@@ -100,9 +118,9 @@ def _openrouter_prompt_bound(model: str, body: bytes, request: object) -> int:
         for value in texts:
             if isinstance(value, str):
                 saved += len(json.dumps(value)) - 2 - len(value.encode('utf-8', 'backslashreplace'))
-    image_adjustment = sum((TERRA_FRAME_TOKENS if data.startswith(CDDA_FRAME_PREFIX) else IMAGE_TOKENS) - len(data)
+    image_adjustment = sum((TERRA_FRAME_TOKENS if data.startswith(PNG_960X640_PREFIX) else IMAGE_TOKENS) - len(data)
                            for data in inline_images(request))
-    return len(body) - saved + image_adjustment + 256 + 32 * (len(messages) + len(tools))
+    return len(body) - saved + image_adjustment + 256 + 32 * len(messages)
 
 
 def _openrouter_tool(tool: dict) -> str | None:
@@ -110,8 +128,8 @@ def _openrouter_tool(tool: dict) -> str | None:
 
 
 def _openrouter_request(request: dict) -> str | None:
-    if request.get('service_tier') != 'default':
-        return 'the default service tier must be explicitly requested'
+    if request.get('service_tier') not in ('default', 'flex'):
+        return 'the service tier must be explicitly requested as default or flex'
     routing = request.get('provider')
     if routing is not None and not (isinstance(routing, dict) and set(routing) <= ROUTING):
         return 'provider routing may only order, require or restrict providers'
@@ -201,4 +219,5 @@ OPENROUTER = Provider(
                'tools', 'tool_choice', 'reasoning', 'provider', 'store', 'service_tier'}),
     frozenset({'text', 'image_url', 'function', 'reasoning.text', 'reasoning.summary', 'reasoning.encrypted'}),
     tool_refusal=_openrouter_tool, cost=_openrouter_cost, request_refusal=_openrouter_request,
-    affinity_header='x-session-id', response_error=_openrouter_error, prompt_bound=_openrouter_prompt_bound, **COMMON)
+    affinity_header='x-session-id', response_error=_openrouter_error, prompt_bound=_openrouter_prompt_bound,
+    suffix_bound=suffix_prompt_bound, **COMMON)

@@ -53,7 +53,7 @@ def _require_curator_host() -> str:
 
 def host_config(tmp_path: Path, arm='terra', **override):
     values = dict(effort='medium', max_requests=10, max_output_tokens=4096, request_timeout_seconds=30, wall_seconds=60,
-                  max_context_images=4, context_image_block=2, workbench_timeout_seconds=30, budget_usd=1.0)
+                  max_context_images=4, workbench_timeout_seconds=30, budget_usd=1.0)
     values.update(override)
     config = shadow.host_configuration(shadow.ARMS[arm], PRICES, **values)
     directory = (tmp_path/'host-config').resolve()
@@ -136,6 +136,10 @@ def test_a_scripted_session_runs_through_the_proxy_and_the_sandbox_and_is_gated(
     calls = [(r['name'], r['ok']) for r in rows if r['type'] == 'tool-call']
     assert calls == [('read_file', True), ('list_dir', True), ('read_file', True), ('view_frame', True), ('run_workbench', True),
                      ('write_file', True), ('write_file', True), ('read_file', False), ('finish', True)]
+    read_paths = [r['path'] for r in rows if r['type'] == 'tool-call' and r['name'] == 'read_file']
+    assert read_paths == ['brief.md', 'knowledge/knowledge.json', '../escape']
+    view_calls = [r for r in rows if r['type'] == 'tool-call' and r['name'] == 'view_frame']
+    assert len(view_calls) == 1 and view_calls[0]['frames']
     ends = [r for r in rows if r['type'] == 'request-end']
     assert [(r['prompt_tokens'], r['completion_tokens'], r['cached_tokens'], r['reasoning_tokens'], r['cost']) for r in ends] == \
         [(1000, 40, 0, 10, 0.0012), (1100, 40, 800, 10, 0.0012), (1200, 40, 800, 10, 0.0012)]
@@ -462,7 +466,7 @@ def test_both_arms_configure_a_host_the_proxy_allows():
     for arm in shadow.ARMS.values():
         config = shadow.host_configuration(arm, PRICES, effort=arm.effort, max_requests=5, max_output_tokens=4096,
                                            request_timeout_seconds=30, wall_seconds=60, max_context_images=4,
-                                           context_image_block=2, workbench_timeout_seconds=30, budget_usd=1.0)
+                                           workbench_timeout_seconds=30, budget_usd=1.0)
         assert config['model']['compat']['maxTokensField'] == 'max_completion_tokens'
         assert config['model']['compat']['openRouterRouting']['only'] == [arm.provider]
         script = ("import {validateConfiguration} from './host.mjs';"
@@ -476,7 +480,8 @@ def test_both_arms_configure_a_host_the_proxy_allows():
 SUMMARY_FIELDS = {'window', 'coverage', 'schema', 'kind', 'arm', 'model', 'effort', 'lineage', 'trace_session', 'memory', 'cap_usd', 'started_wall',
                   'run_state', 'wall_seconds', 'cost_usd', 'proxy', 'stopped_by_cap', 'session_id', 'record', 'session_state',
                   'sandbox', 'errors', 'refused', 'submissions', 'accepted', 'rejected', 'unresolved', 'verdicts', 'drafts', 'published_after',
-                  'requests', 'time_to_first_request_seconds', 'first_request_prompt_tokens', 'tokens', 'host_reported_cost_usd',
+                  'requests', 'time_to_first_request_seconds', 'first_request_prompt_tokens', 'requested_service_tier', 'applied_service_tiers',
+                  'tokens', 'host_reported_cost_usd',
                   'tool_calls', 'host_end', 'model_status', 'host_budget_usd', 'published_before', 'session_kind'}
 
 
@@ -806,8 +811,8 @@ def test_grooming_cannot_follow_windows(tmp_path, monkeypatch, capsys):
 
 @native
 def test_the_run_stops_when_the_cap_is_reached(tmp_path, monkeypatch):
-    # A base-tier request fits once, then the settled charge leaves too little for the next.
-    with StandIn(cost=0.02) as stand_in:
+    # A base-tier request fits once, then the settled charge leaves too little for the prefix-suffix next.
+    with StandIn(cost=0.03) as stand_in:
         runtime = tmp_path/'runtime'
         evidence = synthetic_evidence(tmp_path, '397', ('sd1a1', 'sd1a2'))
         monkeypatch.setenv(shadow.KEY_VARIABLE, KEY)
@@ -820,9 +825,11 @@ def test_the_run_stops_when_the_cap_is_reached(tmp_path, monkeypatch):
     assert run['stopped'] == 'cap-reached' and run['sessions_run'] == 1 and not (out/'397'/'sd1a2').exists()
     assert first['stopped_by_cap'] is True and 'spend cap reached' in first['proxy']['refusal_reasons']
     assert len(stand_in.requests) == 1
-    assert Decimal(run['total_cost_usd']) == Decimal('0.02') <= Decimal('0.052')
+    assert Decimal(run['total_cost_usd']) == Decimal('0.03') <= Decimal('0.052')
     assert first['session_state'] == 'sealed' and first['host_end'] == dict(reason='spend-reservation-refused', ok=True)
     assert first['model_status'] == [200, 429] and first['published_after'] == 'v0' and first['submissions'] == 0
+    ledger = shadow._lines(out/'397'/'sd1a1'/'proxy-ledger.jsonl')
+    assert [row.get('reservation_mode') for row in ledger] == ['full-bound', 'prefix-suffix']
 
 
 @native

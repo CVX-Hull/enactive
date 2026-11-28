@@ -367,19 +367,23 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
     with StandIn(cost=0) as stand_in:
         config_path = tmp_path / 'runner-config.json'
         config_path.write_text(json.dumps(dict(
-            schema='curator-runner-config/1', knowledge_root=str(knowledge_root), arm='terra',
-            cap_usd='2.00', session_cap_usd='1.00', upstream=stand_in.url,
+            schema='curator-runner-config/2', knowledge_root=str(knowledge_root), arm='terra',
+            service_tier='flex', cap_usd='2.00', session_cap_usd='1.00', upstream=stand_in.url,
             trigger_steps=2, ceiling_steps=2,
             host=dict(max_requests=10, max_output_tokens=4096, wall_seconds=120),
         )))
         config = live_runner.read_config(config_path, runtime)
+        assert config['service_tier'] == 'flex' and config['host']['request_timeout_seconds'] == 960
         repo = Repository(config['knowledge_root'], shadow.GAME)
         repo.ensure()
         sessions = live_runner.Sessions(tmp_path / 'runner', config, repo, shadow.LOOPBACK_KEY)
+        hygiene_sessions = live_runner.HygieneSessions(tmp_path / 'runner', config, repo, shadow.LOOPBACK_KEY, sessions=sessions)
         with LiveWriter(run) as writer:
             record_package(run, labels=dict(world='rehearsal-world', lineage=None, admission=None),
                            context=dict(ruleset='standard'), live=True)
             runner = Runner(tmp_path / 'runner', run.name, snapshot=staged(run), session_call=sessions,
+                            hygiene_call=hygiene_sessions,
+                            hygiene_check=lambda: dict(triggered=False, digest='d', reasons=[], counts={}),
                             look=TagLook(repo), settings=Settings(trigger_steps=2, ceiling_steps=2, poll_seconds=0.1, watch_seconds=0.1))
             writer(op='new_actor')
             for expected_version in ('v1', 'v2'):
@@ -390,6 +394,13 @@ def test_combined_wave3_boundary_grooming_closeout_with_seatbelt_stand_in(tmp_pa
             assert writer(op='close')['wal'] == 0
         # Before grooming, `v2` retired `f1` so `guide` carries 1 stale citation.
         assert groom.stale_records(repo, 'v2') == 1
+        # Verify flex tier & prefix-suffix reservation mode reached the proxy ledger.
+        ledgers = list((tmp_path / 'runner' / 'sessions').rglob('proxy-ledger.jsonl'))
+        assert ledgers and any(
+            json.loads(line).get('reservation_mode') == 'prefix-suffix'
+            and json.loads(line).get('requested_service_tier') == 'flex'
+            for path in ledgers for line in path.read_text().splitlines() if line.strip()
+        )
         assert groom.main(['--run', str(run), '--config', str(config_path), '--runtime-root', str(runtime),
                            '--out', str(out), '--cap-usd', '1.00']) == 0
 

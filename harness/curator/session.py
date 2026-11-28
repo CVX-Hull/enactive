@@ -39,6 +39,7 @@ TRACE_PACKAGE = Path(__file__).resolve().parents[1]/'trace'
 WRITABLE = ('submissions', 'drafts', 'scratch')
 WORKBENCH_DEPENDENCIES = ('numpy', 'PIL', 'jsonschema', 'jsonschema_specifications', 'referencing', 'attrs', 'rpds')
 PROVIDER_ERROR_EXIT_CODE = 75
+FLEX_DEFERRED_EXIT_CODE = 76
 MAX_SUBMISSIONS_BYTES = 16 << 20
 
 
@@ -165,8 +166,9 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
     if session_kind in ('grooming', 'hygiene'):
         lines += ['', 'Read `grooming.md` for this session. The trace contains the last admission\'s cited '
                   'frames and the first and last framed operations of each actor.']
-    lines += ['', 'Read current facts and articles in `knowledge/current-facts.jsonl`. '
-              'Use `knowledge/facts.jsonl` for specific historical records.']
+    lines += ['', 'Read `knowledge/index.md` and targeted `knowledge/records/<id>.json` files. '
+              'Use `run_workbench(["knowledge", "search", "<query>"])` to find records or '
+              '`run_workbench(["knowledge", "get", "<id>"])` to fetch a specific record.']
     lines += ['', 'Frames are in `trace/frames/`; `python -m harness.trace.workbench --help` lists tools '
               '(run from `workbench/`).', '', '## Drafts', '']
     lines += [f"- `{d['id']}` ({d['lifecycle']['state']}, untouched for {d['lifecycle'].get('untouched_sessions', 0)} "
@@ -181,10 +183,7 @@ def brief(repo: Repository, version: str, trace_manifest: dict, drafts: list[dic
               'Player hints in the selected trace tool calls are fallible public reports, not published facts. '
               'Check their source evidence before proposing knowledge. No additional operator hints.']
     records = repo.records(version)
-    active_world = trace_manifest['sessions'][-1].get('world') if trace_manifest['sessions'] else None
-    lines += ['', *_axes_section(trace_manifest, records), '',
-              *hygiene.state_key_section(records, world=active_world), '',
-              *type_usage.section(records)]
+    lines += ['', *_axes_section(trace_manifest, records), '', *type_usage.section(records)]
     if session_kind in ('grooming', 'hygiene'):
         lines += ['', *_grooming_worklist(records), '', *hygiene.worklist_section(records)]
     lines += ['', '## Close-out', '',
@@ -236,6 +235,31 @@ def _grooming_worklist(records: list[dict]) -> list[str]:
             '', '### Advisory', '', *(advisory or ['None.'])]
 
 
+def _stage_knowledge(knowledge: Path, backing: Path, records: list[dict], world: str | None) -> None:
+    directory = knowledge / 'records'
+    directory.mkdir(parents=True)
+    for name in ('knowledge.json', 'provenance.json', 'coverage.json'):
+        source = backing / name
+        if source.is_file():
+            target = knowledge / name
+            shutil.copyfile(source, target)
+            target.chmod(0o444)
+
+    lines = ['# Knowledge index', '', '## Articles', '']
+    for record in sorted(records, key=check.owner):
+        identity = check.owner(record)
+        (directory / f'{identity}.json').write_text(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n',
+                                                    encoding='utf-8')
+        if record['record'] == 'article':
+            title = ' '.join(record['title'].split())
+            lead = ' '.join(record['lead'].split())
+            if len(lead) > 160:
+                lead = lead[:159].rstrip() + '…'
+            lines.append(f'- {identity}: {title} — {lead}')
+    lines += ['', *hygiene.state_key_section(records, world=world), '']
+    (knowledge / 'index.md').write_text('\n'.join(lines), encoding='utf-8')
+
+
 def _stage_workbench(workspace: Path) -> None:
     workbench = workspace / 'workbench'
     harness = workbench / 'harness'
@@ -244,7 +268,7 @@ def _stage_workbench(workspace: Path) -> None:
     curator = harness / 'curator'
     curator.mkdir()
     (curator / '__init__.py').write_text('')
-    for name in ('check.py', 'validate.py', 'hygiene.py'):
+    for name in ('check.py', 'validate.py', 'hygiene.py', 'search.py'):
         shutil.copyfile(Path(__file__).with_name(name), curator / name)
     shutil.copyfile(Path(__file__).resolve().parents[1] / 'jsonio.py', harness / 'jsonio.py')
     schemas = workbench / 'schemas'
@@ -274,7 +298,8 @@ def run_session(repo: Repository, trace_sessions: list[Path], config: SessionCon
         record_dir.mkdir(parents=True)
         return _run(repo, trace_sessions, config, memory, journal, window, session_id, record_dir, session_kind)
     finally:
-        for target in (repo.state/'workspaces'/session_id, repo.state/'workspaces'/f'{session_id}.home'):
+        for name in (session_id, f'{session_id}.home', f'{session_id}.backing'):
+            target = repo.state/'workspaces'/name
             try:
                 _remove(target)
             except OSError as exc:
@@ -311,7 +336,8 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         version = repo.published()
         _, reserved_ids, reservations, reserved_state_keys = _history(repo)
         records = repo.records(version)
-        repo.export(version, workspace/'knowledge')
+        backing = (repo.state/'workspaces'/f'{session_id}.backing').resolve()
+        repo.export(version, backing)
         trace_manifest = restrict(workspace/'trace', project(trace_sessions, workspace/'trace', memory=memory, journal=journal), window)
         provenance = repo.provenance()
         if session_kind in ('grooming', 'hygiene'):
@@ -330,8 +356,7 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
                        reserved_state_keys=sorted(reserved_state_keys),
                        reserved_sessions=reservations, session_kind=session_kind, window_frames=window_frames,
                        session_labels=labels, declared_axes=sorted(check.declared_axes(reservations, labels)))
-        knowledge = workspace / 'knowledge'
-        validation_context = knowledge / 'validation-context.json'
+        validation_context = backing / 'validation-context.json'
         validation_context.write_text(json.dumps(context, ensure_ascii=False), encoding='utf-8')
         validation_context.chmod(0o444)
         # The active trace labels can make an off-timeline end irrelevant on this lineage.
@@ -345,10 +370,9 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
             timeline = provenance
         active_labels = next(reversed(labels.values()), {})
         by_id = {r['id']: r for r in records if r['record'] == 'fact'}
-        with (knowledge / 'current-facts.jsonl').open('w', encoding='utf-8') as stream:
-            for record in records:
-                if check.current(record) or check.ended_still_alive(record, active_labels, timeline, by_id):
-                    stream.write(json.dumps(record, ensure_ascii=False, separators=(',', ':')) + '\n')
+        visible = [record for record in records
+                   if check.current(record) or check.ended_still_alive(record, active_labels, timeline, by_id)]
+        _stage_knowledge(workspace / 'knowledge', backing, visible, active_labels.get('world'))
         for name in WRITABLE:
             (workspace/name).mkdir()
         drafts = Drafts(repo.state)
@@ -385,9 +409,11 @@ def _run(repo: Repository, trace_sessions: list[Path], config: SessionConfig, me
         (record_dir/'manifest.json').write_text(json.dumps(manifest, indent=1, sort_keys=True))
         shutil.copyfile(workspace/'brief.md', record_dir/'brief.md')
         layout = sandbox.Layout(workspace=workspace, home=home, writable=tuple(workspace/n for n in WRITABLE),
-                                tools=tuple(config.tools) + tuple(r for r in dependencies if r not in config.tools))
+                                tools=(*config.tools, *(r for r in dependencies if r not in config.tools)),
+                                readable=(backing,))
         env = dict(PYTHONPATH=os.pathsep.join([str(workspace/'workbench'), *map(str, dependencies)]),
                    **config.extra_env)
+        env['CURATOR_KNOWLEDGE_BACKING'] = str(backing)
         with (record_dir/'host-output.log').open('wb') as output:
             result = sandbox.run(list(config.argv), layout, proxy_port=config.proxy_port,
                                  token=getattr(config.proxy, 'token', None), limits=config.limits,
@@ -447,7 +473,10 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         errors.append(f'close-out: {len(survivors)} host processes survived; nothing was collected')
     provider_error = (result is not None and result.stopped is None
                       and result.returncode == PROVIDER_ERROR_EXIT_CODE)
-    aborted = bool(errors) or result is None or result.stopped is not None or (result.returncode != 0 and not provider_error)
+    flex_deferred = (result is not None and result.stopped is None
+                     and result.returncode == FLEX_DEFERRED_EXIT_CODE)
+    prefix_closeout = provider_error or flex_deferred
+    aborted = bool(errors) or result is None or result.stopped is not None or (result.returncode != 0 and not prefix_closeout)
     collectable = result is not None and not survivors
     refused: list[str] = []
     draft_report: dict = {}
@@ -474,20 +503,21 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         aborted = aborted or bool(errors)
         try:
             if drafts is not None and _plain_directory(workspace/'drafts'):
-                draft_report = drafts.collect(workspace/'drafts', session_id, before or {}, age=not aborted and not provider_error)
+                draft_report = drafts.collect(workspace/'drafts', session_id, before or {}, age=not aborted and not prefix_closeout)
         except Exception as exc:  # noqa: BLE001
             errors.append(f'close-out: drafts: {_error(exc)}')
         aborted = aborted or bool(errors)
         gated = record_dir/'submissions'
         if not aborted and gated.is_dir() and not any(r.startswith('submissions:') for r in refused):
             submissions = sorted(path for path in gated.iterdir() if path.is_dir())
-            if provider_error:
+            if prefix_closeout:
                 try:
                     count = _validated_prefix(record_dir, submissions)
                 except OSError as exc:
                     errors.append(f'close-out: validation events: {_error(exc)}')
                     count = 0
-                refused.extend(f'submission {path.name!r}: outside the validated provider-error prefix'
+                kind_label = 'flex-capacity-deferred' if flex_deferred else 'provider-error'
+                refused.extend(f'submission {path.name!r}: outside the validated {kind_label} prefix'
                                for path in submissions[count:])
                 submissions = submissions[:count]
             for submission in submissions:
@@ -512,8 +542,11 @@ def _close_out(repo, session_id, record_dir, workspace, manifest, result, errors
         manifest = dict(schema='container-manifest/1', id=session_id, kind='curator-session', owner_role='curator',
                         inputs={}, pinned={}, budgets={}, lifecycle=dict(state='aborted'), provenance={},
                         retention=dict(policy='session record kept; workspace deleted'))
+    stopped_label = ('provider-error' if provider_error
+                     else 'flex-capacity-deferred' if flex_deferred
+                     else getattr(result, 'stopped', None))
     manifest['lifecycle'] = dict(manifest['lifecycle'], state='aborted' if aborted else 'sealed', ended_wall=time.time(),
-                                 stopped='provider-error' if provider_error else getattr(result, 'stopped', None),
+                                 stopped=stopped_label,
                                  returncode=getattr(result, 'returncode', None),
                                  survivors=survivors, errors=errors, refused=refused)
     if result is not None:

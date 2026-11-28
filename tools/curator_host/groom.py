@@ -59,7 +59,7 @@ def failure_reason(summary: dict) -> str | None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run', required=True, type=Path, help='the sealed run directory')
-    parser.add_argument('--config', required=True, type=Path, help='the admission’s curator-runner-config/1 file')
+    parser.add_argument('--config', required=True, type=Path, help='the admission’s curator-runner-config/2 file')
     parser.add_argument('--out', required=True, type=Path, help='a fresh directory inside the runtime root')
     parser.add_argument('--cap-usd', help='a positive decimal dollar cap for this grooming session')
     parser.add_argument('--runtime-root', type=Path, default=live_runner.ROOT/'.runtime')

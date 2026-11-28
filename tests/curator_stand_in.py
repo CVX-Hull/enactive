@@ -44,7 +44,7 @@ def script(messages: list[dict], attack: str | None = None, *, unfiled: bool = F
     grooming = any('Session kind: grooming.' in _text(m) for m in messages if m.get('role') == 'user')
     if grooming:
         if turns == 0:
-            return [('read_file', {'path': 'brief.md'}), ('read_file', {'path': 'knowledge/facts.jsonl'}),
+            return [('read_file', {'path': 'brief.md'}), ('read_file', {'path': 'knowledge/index.md'}),
                     ('read_file', {'path': 'grooming.md'}), ('read_file', {'path': 'trace/manifest.json'})]
         if turns == 1:
             tools = '\n'.join(_text(m) for m in messages if m.get('role') == 'tool')

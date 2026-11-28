@@ -1396,21 +1396,23 @@ def test_retire_wrong_is_terminal_and_checks_evidence_world(tmp_path):
 
 def validation_workspace(repo, tmp_path, frames, *, kind='admission', incoming=None):
     workspace = tmp_path / 'sess'
+    backing = tmp_path / 'sess.backing'
+    workspace.mkdir(parents=True, exist_ok=True)
     base = repo.published()
     _, reserved_ids, reservations, reserved_state_keys = _history(repo)
-    repo.export(base, workspace / 'knowledge')
+    repo.export(base, backing)
     context = dict(base_version=base, reserved_ids=sorted(reserved_ids), reserved_state_keys=sorted(reserved_state_keys), reserved_sessions=reservations,
                    session_kind=kind, window_frames=frames, session_labels=incoming or {},
                    declared_axes=sorted(check.declared_axes(reservations, incoming or {})))
-    (workspace/'knowledge'/'validation-context.json').write_text(json.dumps(context))
-    return workspace
+    (backing/'validation-context.json').write_text(json.dumps(context))
+    return workspace, backing
 
 
 def test_validation_parity_for_ordered_multi_submission_repairs_with_a_rejected_prefix_file(tmp_path):
     repo = make_repo(tmp_path)
     assert publish(repo, tmp_path, [change_fact(), change_article()])['status'] == 'published'
     assert publish(repo, tmp_path, [restate('f1', 'new')])['status'] == 'published'
-    workspace = validation_workspace(repo, tmp_path, {}, kind='grooming')
+    workspace, backing = validation_workspace(repo, tmp_path, {}, kind='grooming')
     submissions = [
         submission(workspace, [dict(op='revise_article', slug='guide', title='Stale')],
                    name='01', base_version='v1'),
@@ -1419,7 +1421,7 @@ def test_validation_parity_for_ordered_multi_submission_repairs_with_a_rejected_
         submission(workspace, [dict(op='remap_citations', **{'from': ['f1'], 'to': 'new', 'in': ['guide']})],
                    name='03', base_version='v3'),
     ]
-    result = validate(workspace, '03')
+    result = validate(workspace, '03', backing=backing)
     assert result['ok'] and not result['all_passed']
     assert [entry['candidate_version'] for entry in result['prefix']] == [None, 'v3', 'v4']
     assert repo.published() == 'v2'
@@ -1441,9 +1443,9 @@ def test_validation_and_gate_reserve_session_labels_across_restore(tmp_path, dif
     assert restore(repo, expected_base='v1', target='v0')['version'] == 'v2'
     incoming = {SEALED: labels() | different}
     positions = {FRAME1: position(incoming[SEALED]['name'], 1)}
-    workspace = validation_workspace(repo, tmp_path, positions, incoming=incoming)
+    workspace, backing = validation_workspace(repo, tmp_path, positions, incoming=incoming)
     path = submission(workspace, [change_fact('new')], name='01', base_version='v2')
-    result = validate(workspace, '01')
+    result = validate(workspace, '01', backing=backing)
     verdict = run(repo, path, frames=positions, session_labels=incoming)
     assert not result['ok'] and verdict['status'] == 'rejected'
     assert result['diagnostics'] == verdict['diagnostics']
@@ -1455,10 +1457,10 @@ def test_validation_reports_the_derived_scope_change_and_matches_the_published_r
     incoming = {SEALED: labels()}
     assert publish(repo, tmp_path, [change_fact(), change_fact('bound', binds=['world']), change_article()],
                    session_labels=incoming)['status'] == 'published'
-    workspace = validation_workspace(repo, tmp_path, {}, incoming=incoming)
+    workspace, backing = validation_workspace(repo, tmp_path, {}, incoming=incoming)
     edit = dict(op='revise_article', slug='guide', body=[dict(text='A revised claim.', facts=['bound'])])
     path = submission(workspace, [edit], name='01', base_version='v1')
-    result = validate(workspace, '01')
+    result = validate(workspace, '01', backing=backing)
     assert result['all_passed'] and result['scope_changes'] == [
         {'slug': 'guide', 'from': {'game': repo.game}, 'to': {'game': repo.game, 'world': 'pond'}},
     ]
@@ -1471,9 +1473,9 @@ def test_unicode_line_separator_in_prose_survives_publication_and_validation(tmp
     prose = 'An observation.\u2028Its implication.'
     assert publish(repo, tmp_path, [change_fact(text=prose)])['status'] == 'published'
     assert repo.records()[0]['text'] == prose
-    workspace = validation_workspace(repo, tmp_path, {})
+    workspace, backing = validation_workspace(repo, tmp_path, {})
     path = submission(workspace, [restate('f1', 'new', text=prose)], name='01', base_version='v1')
-    assert validate(workspace, '01')['ok']
+    assert validate(workspace, '01', backing=backing)['ok']
     assert run(repo, path, frames={})['status'] == 'published'
     assert repo.records()[-1]['text'] == prose
 

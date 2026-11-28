@@ -11,7 +11,7 @@ What reaches the provider is allowlisted, not filtered:
   every request; the host's own value is never forwarded.
 - **Body.** Top-level fields and content blocks are allowlisted. Inline text and base64
   images pass. Fetched or stored sources (URLs, files), documents, provider-run tools
-  (server tools, MCP servers, containers), stored provider state and pricing tiers are
+  (server tools, MCP servers, containers), stored provider state and unapproved pricing tiers are
   refused.
 
 Without that, a few-hundred-byte request could make the provider fetch any URL or bill far
@@ -124,6 +124,7 @@ class Provider:
     affinity_header: str | None = None  # session-affinity header the proxy itself sets, if the provider has one
     response_error: Callable[[bytes], dict | None] = no_response_error  # safe provider-specific classifications only
     prompt_bound: Callable[[str, bytes, object], int] | None = None
+    suffix_bound: Callable[[str, list, object], int] | None = None
 
     def __post_init__(self):
         # The proxy sets these itself; a provider must not let the host's values through.
@@ -242,6 +243,34 @@ OPAQUE = frozenset({'input', 'arguments', 'input_schema', 'parameters', 'data', 
                     'source', 'cache_control'})
 
 
+def canonical_bytes(value: object) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(',', ':')).encode()
+
+
+def _prompt_header(request: dict) -> bytes:
+    return canonical_bytes({key: value for key, value in request.items()
+                            if key not in ('messages', 'max_tokens', 'max_completion_tokens')})
+
+
+def _prompt_tokens(usage: dict[str, int]) -> int | None:
+    fields = ('prompt_tokens',) if 'prompt_tokens' in usage else (
+        'input_tokens', 'cache_creation_input_tokens', 'cache_read_input_tokens')
+    if fields[0] not in usage:
+        return None
+    counts = [usage.get(field, 0) for field in fields]
+    return sum(counts) if all(type(count) is int and count >= 0 for count in counts) else None
+
+
+def _applied_service_tier(body: bytes) -> str | None:
+    tier = None
+    for event in response_events(body):
+        response = event.get('response')
+        candidate = event.get('service_tier') or (response.get('service_tier') if isinstance(response, dict) else None)
+        if isinstance(candidate, str) and candidate:
+            tier = candidate
+    return tier
+
+
 def usage_of(body: bytes) -> dict[str, int] | None:
     """Token usage from a JSON or server-sent-event response, or None when absent.
 
@@ -252,11 +281,11 @@ def usage_of(body: bytes) -> dict[str, int] | None:
     for found in usage_events(body):
         for key, value in found.items():
             if isinstance(value, int) and not isinstance(value, bool):
-                usage[key] = max(usage.get(key, 0), value)
+                usage[key] = max(usage.get(key, value), value)
         nested = found.get('cache_creation')
         if isinstance(nested, dict) and 'cache_creation_input_tokens' not in found:
             total = sum(v for v in nested.values() if isinstance(v, int) and not isinstance(v, bool))
-            usage['cache_creation_input_tokens'] = max(usage.get('cache_creation_input_tokens', 0), total)
+            usage['cache_creation_input_tokens'] = max(usage.get('cache_creation_input_tokens', total), total)
     return usage or None
 
 
@@ -290,7 +319,8 @@ class ModelProxy:
 
     def __init__(self, *, provider: Provider, upstream: str, key: str, prices: dict[str, Price],
                  cap_usd: Decimal, ledger: Path, max_output_tokens: int = 64_000,
-                 betas: frozenset[str] = frozenset(), routing: dict | None = None):
+                 betas: frozenset[str] = frozenset(), routing: dict | None = None,
+                 upstream_timeout: float = 960.0):
         parts = urlsplit(upstream)
         if parts.scheme not in ('https', 'http') or not parts.hostname or parts.path not in ('', '/'):
             raise ValueError('Upstream must be a bare http(s) origin')
@@ -302,6 +332,7 @@ class ModelProxy:
         # When set, every request must carry exactly this value in its `provider` field (which of the
         # provider's backends may serve it), so a host cannot widen it to fallbacks or other backends.
         self.routing = None if routing is None else json.loads(json.dumps(routing))
+        self.upstream_timeout = upstream_timeout
         self.token = secrets.token_hex(32)
         # One provider session-affinity value for this proxy, hence for the session, so the provider keeps the
         # session on one backend and its prompt cache. The proxy sets it; a value from the host is never
@@ -313,6 +344,7 @@ class ModelProxy:
         self.revoked = False
         self.breaches = 0
         self._lock = threading.Lock()
+        self._settled_prefix: tuple[int, list[bytes], bytes] | None = None
         self._ledger_lock = threading.Lock()  # blocked disk I/O must not prevent bounded accounting shutdown
         self._condition = threading.Condition(self._lock)
         self._closed = False
@@ -323,31 +355,51 @@ class ModelProxy:
         self._thread: threading.Thread | None = None
 
     # -- accounting -------------------------------------------------------
-    def _reserve(self, model: str, body: bytes, output_limit: int, request: object = None) -> Decimal | str:
+    def _reserve(self, model: str, body: bytes, output_limit: int, request: object = None,
+                 *, receipt: dict | None = None) -> Decimal | str:
         price = self.prices.get(model)
         if price is None:
             return f'model {model!r} has no frozen price'
         if not (0 < output_limit <= self.max_output_tokens):
             return f'output limit must be between 1 and {self.max_output_tokens}'
         input_tokens = (self.provider.prompt_bound or body_token_bound)(model, body, request)
-        worst = price.reservation(input_tokens, output_limit)
+        mode = 'full-bound'
+        messages = request.get('messages') if isinstance(request, dict) else None
         with self._lock:
             if self.revoked or self._closed:
                 return 'session token revoked'
+            if self._settled_prefix is not None and isinstance(messages, list):
+                previous_tokens, previous_messages, previous_header = self._settled_prefix
+                size = len(previous_messages)
+                if (len(messages) >= size and _prompt_header(request) == previous_header
+                        and all(canonical_bytes(messages[i]) == previous_messages[i] for i in range(size))):
+                    suffix = messages[size:]
+                    if self.provider.suffix_bound is not None:
+                        suffix_tokens = self.provider.suffix_bound(model, suffix, request)
+                    else:
+                        suffix_tokens = body_token_bound(model, canonical_bytes(suffix), {'messages': suffix})
+                        suffix_tokens += 256 + 32 * len(suffix)
+                    input_tokens = min(input_tokens, previous_tokens + suffix_tokens)
+                    mode = 'prefix-suffix'
+            worst = price.reservation(input_tokens, output_limit)
+            if receipt is not None:
+                receipt['reservation_mode'] = mode
             if self.spent + self.reserved + worst > self.cap:
                 return 'spend cap reached'
             self.reserved += worst
             self._active += 1
         return worst
 
-    def _settle(self, reservation: Decimal, actual: Decimal | None, status: int) -> tuple[Decimal, bool, str | None]:
+    def _settle(self, reservation: Decimal, actual: Decimal | None, status: int, *,
+                request: dict, usage: dict | None, error: str | None,
+                accounting_error: str | None, response_error: dict | None = None) -> tuple[Decimal, bool, str | None]:
         """Charge the actual cost (or the reservation when unknown). Fail closed on surprises.
 
         A provider refusal passes an actual cost of zero, so it releases its reservation and revokes nothing.
         """
-        accounting_error = None
+        settlement_error = None
         if actual is not None and (not actual.is_finite() or actual < 0):
-            actual, accounting_error = None, 'invalid-cost'
+            actual, settlement_error = None, 'invalid-cost'
         charge = reservation if actual is None else actual
         breach = actual is not None and actual > reservation
         with self._lock:
@@ -356,14 +408,21 @@ class ModelProxy:
             try:
                 spent = self.spent + charge
             except DecimalException:
-                charge, accounting_error = reservation, 'unrepresentable-cost'
+                charge, settlement_error = reservation, 'unrepresentable-cost'
                 spent = self.spent + charge
             self.reserved -= reservation
             self.spent = spent
-            if breach or accounting_error or (actual is None and status == 200):
+            if breach or settlement_error or (actual is None and status == 200):
                 self.revoked = True
             self.breaches += breach
-        return charge, breach, accounting_error
+            messages = request.get('messages')
+            if (status == 200 and actual is not None and error is None and response_error is None and accounting_error is None
+                    and settlement_error is None and not breach and usage is not None and isinstance(messages, list)):
+                prompt_tokens = _prompt_tokens(usage)
+                if prompt_tokens is not None and prompt_tokens > 0:
+                    self._settled_prefix = (prompt_tokens, [canonical_bytes(message) for message in messages],
+                                            _prompt_header(request))
+        return charge, breach, settlement_error
 
     def _record(self, **entry):
         entry['time'] = time.time()
@@ -458,10 +517,12 @@ class ModelProxy:
                 listed = self.headers.get(proxy.provider.beta_header) if proxy.provider.beta_header else None
                 betas = [b.strip() for b in (listed or '').split(',') if b.strip()]
                 dropped = sorted(set(betas) - proxy.betas)
+                receipt = dict(reservation_mode=None, requested_service_tier=request.get('service_tier'),
+                               applied_service_tier=None)
                 reservation = proxy._reserve(model if isinstance(model, str) else '', body,
-                                             output_limit if type(output_limit) is int else 0, request)
+                                             output_limit if type(output_limit) is int else 0, request, receipt=receipt)
                 if isinstance(reservation, str):
-                    return self.refuse(429, reservation, model=model)
+                    return self.refuse(429, reservation, model=model, **receipt)
                 status, received, actual, error = 502, b'', None, None
                 self.upstream_status = None
                 try:
@@ -473,6 +534,7 @@ class ModelProxy:
                     try:
                         accounting_error, response_error, usage = None, None, None
                         try:
+                            receipt['applied_service_tier'] = _applied_service_tier(received)
                             usage = usage_of(received) if received else None
                             actual = None if usage is None else proxy.provider.cost(proxy.prices[model], usage, received)
                             response_error = proxy.provider.response_error(received) if received else None
@@ -484,7 +546,9 @@ class ModelProxy:
                         provider_refused = (status >= 400 and error is None and usage is None
                                             and accounting_error is None)
                         charge, breach, settlement_error = proxy._settle(
-                            reservation, Decimal(0) if provider_refused else actual, status)
+                            reservation, Decimal(0) if provider_refused else actual, status,
+                            request=request, usage=usage, error=error, accounting_error=accounting_error,
+                            response_error=response_error)
                         proxy._record(path=path, model=model, status=status, reserved=reservation, charged=charge,
                                       usage_missing=actual is None or settlement_error is not None,
                                       provider_refused=provider_refused,
@@ -492,7 +556,7 @@ class ModelProxy:
                                       **(dict(accounting_error=accounting_error or settlement_error)
                                          if accounting_error or settlement_error else {}),
                                       **(dict(response_error=response_error) if response_error else {}),
-                                      affinity_sha256=proxy.affinity_digest if proxy.provider.affinity_header else None)
+                                      affinity_sha256=proxy.affinity_digest if proxy.provider.affinity_header else None, **receipt)
                     except Exception as exc:  # noqa: BLE001 - an unwritten receipt cannot certify settlement
                         with proxy._condition:
                             proxy._receipt_error = type(exc).__name__
@@ -518,7 +582,7 @@ class ModelProxy:
             def forward(self, path: str, body: bytes, betas: list[str]) -> tuple[int, bytes]:
                 up = proxy.upstream
                 connection_type = http.client.HTTPSConnection if up.scheme == 'https' else http.client.HTTPConnection
-                connection = connection_type(up.hostname, up.port, timeout=600)
+                connection = connection_type(up.hostname, up.port, timeout=proxy.upstream_timeout)
                 passed = FORWARD_HEADERS | proxy.provider.forward_headers
                 headers = {k: v for k, v in self.headers.items() if k.lower() in passed}
                 if betas and proxy.provider.beta_header:

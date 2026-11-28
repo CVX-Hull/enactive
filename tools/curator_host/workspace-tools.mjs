@@ -5,7 +5,7 @@
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, readdir, rename, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { dirname, join } from 'node:path';
 
 export const WRITABLE_DIRECTORIES = ['submissions', 'drafts', 'scratch'];
@@ -176,8 +176,11 @@ export async function viewFrame(root, { frame }) {
     const data = Buffer.alloc(info.size);
     const { bytesRead } = await handle.read(data, 0, info.size, 0);
     if (bytesRead !== info.size || !data.subarray(0, 8).equals(PNG_MAGIC)) throw new ToolError(`frame ${id} is not a PNG`);
+    const base64 = data.toString('base64');
     return { content: [{ type: 'text', text: `frame ${id} (${info.size} bytes)` },
-      { type: 'image', data: data.toString('base64'), mimeType: 'image/png' }], details: undefined, isError: false };
+      { type: 'image', data: base64, mimeType: 'image/png' }],
+      sha256: createHash('sha256').update(data).digest('hex'), rawBytes: info.size, base64Bytes: base64.length,
+      frameId: id, details: undefined, isError: false };
   } finally { await handle.close(); }
 }
 
@@ -220,7 +223,8 @@ export async function runWorkbench(root, { args }, { python, env, timeoutSeconds
     throw new ToolError(`args must be 1 to ${WORKBENCH_MAX_ARGS} strings of at most 1000 characters`);
   }
   requirePython(python);
-  const { code, error, truncated, timedOut, stdout: out, stderr: err } = await capture(python, ['-m', 'harness.trace.workbench', ...args],
+  const command = args[0] === 'knowledge' ? ['-m', 'harness.curator.search', ...args.slice(1)] : ['-m', 'harness.trace.workbench', ...args];
+  const { code, error, truncated, timedOut, stdout: out, stderr: err } = await capture(python, command,
     { cwd: join(root, 'workbench'), env, timeoutSeconds, limit: WORKBENCH_OUTPUT_BYTES });
   const notes = [truncated ? `[output truncated at ${WORKBENCH_OUTPUT_BYTES} bytes; narrow the query]` : '',
     timedOut ? `[timed out after ${timeoutSeconds} s]` : '', error ? `[could not run: ${error.code ?? 'error'}]` : ''].filter(Boolean);

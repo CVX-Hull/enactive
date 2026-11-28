@@ -18,9 +18,10 @@ def test_session_forwards_provider_error_alongside_terminal_proxy_stop(tmp_path,
     sessions = live_runner.Sessions.__new__(live_runner.Sessions)
     sessions.out, sessions.repo, sessions.key = tmp_path, None, 'offline-fixture'
     sessions.tools = object()
-    sessions.config_path = sessions.config_dir = sessions.model_config = sessions.prices = None
+    sessions.config_path = sessions.config_dir = sessions.model_config = None
+    sessions.prices = live_runner.shadow.load_prices(live_runner.shadow.DEFAULT_PRICES)
     sessions.spent = Decimal(0)
-    sessions.config = dict(cap=Decimal(1), session_cap=None, arm='fixture', upstream='fixture',
+    sessions.config = dict(cap=Decimal(1), session_cap=None, arm='terra', upstream='fixture',
                            host=dict(wall_seconds=1, max_output_tokens=100))
     summary = dict(proxy=dict(revoked=revoked), sandbox=dict(stopped='provider-error', survivors=[]),
                    stopped_by_cap=False, session_id='fixture', session_state='failed', run_state='completed',

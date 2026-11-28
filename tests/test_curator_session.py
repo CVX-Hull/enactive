@@ -177,7 +177,9 @@ def test_accepting_a_submission_promotes_the_drafts_it_names(tmp_path, world):
 
 def test_the_workspace_cannot_write_published_knowledge_or_the_trace(tmp_path, world):
     repo, trace = world
-    attack = ("import json\nfor p in ('knowledge/facts.jsonl','knowledge/current-facts.jsonl','knowledge/validation-context.json','trace/manifest.json','brief.md'):\n"
+    attack = ("import os\nfrom pathlib import Path\nbacking = Path(os.environ['CURATOR_KNOWLEDGE_BACKING'])\n"
+              "for p in (backing/'facts.jsonl', backing/'validation-context.json', "
+              "'knowledge/index.md', 'trace/manifest.json', 'brief.md'):\n"
               "    try: open(p,'a').write('x'); print('WROTE', p)\n"
               "    except OSError: print('denied', p)\n")
     record = run_session(repo, trace, host(tmp_path, 'attack', attack))
@@ -201,16 +203,35 @@ with open(p, 'w') as stream:
     assert record['published_after'] == 'v2', record
     records = (repo.path/'facts.jsonl').read_bytes()
     verify = '''
-import json
+import json, os, sys
 from pathlib import Path
-history = [json.loads(line) for line in Path('knowledge/facts.jsonl').read_text().splitlines()]
-active = [json.loads(line) for line in Path('knowledge/current-facts.jsonl').read_text().splitlines()]
+knowledge = Path('knowledge')
+backing = Path(os.environ['CURATOR_KNOWLEDGE_BACKING'])
+assert backing.parent == Path.cwd().parent and backing.name == Path.cwd().name + '.backing'
+assert {path.name for path in knowledge.iterdir()} <= {
+    'index.md', 'records', 'knowledge.json', 'provenance.json', 'coverage.json'}
+assert 'Current world state keys' in (knowledge/'index.md').read_text()
+assert {path.name for path in (knowledge/'records').iterdir()} == {'f2.json'}
+assert (knowledge/'knowledge.json').stat().st_mode & 0o777 == 0o444
+history = [json.loads(line) for line in (backing/'facts.jsonl').read_text().splitlines()]
 assert [row['id'] for row in history] == ['f1', 'f2']
 assert history[0]['superseded_by'] == ['f2']
-assert active == history[1:]
+assert json.loads((knowledge/'records'/'f2.json').read_text()) == history[1]
+sys.path[:0] = os.environ['PYTHONPATH'].split(os.pathsep)
+from harness.curator.search import main
+main(['search', 'cupboard'])
+main(['search', 'cupboad hlds botles'])
+main(['get', 'f1'])
 '''
     record = run_session(repo, trace, host(tmp_path, 'check-current', verify))
     assert record['manifest']['lifecycle']['state'] == 'sealed', record
+    session_id = record['manifest']['id']
+    output = repo.state/'sessions'/session_id/'host-output.log'
+    lexical, fuzzy, historical = map(json.loads, output.read_text().splitlines())
+    assert (lexical['id'], lexical['via']) == ('f2', 'match')
+    assert (fuzzy['id'], fuzzy['via']) == ('f2', 'fuzzy')
+    assert historical['id'] == 'f1'
+    assert not (repo.state/'workspaces'/f'{session_id}.backing').exists()
     assert (repo.path/'facts.jsonl').read_bytes() == records
     assert not (repo.path/'current-facts.jsonl').exists()
 
@@ -450,17 +471,24 @@ json.dump(data, open(p, 'w'))
     assert repo.provenance()['last_admission']['coverage']['last_step'] == 4
 
 
+@pytest.mark.parametrize('exit_code, expected_stop', [
+    (75, 'provider-error'),
+    (76, 'flex-capacity-deferred'),
+])
 @pytest.mark.parametrize('edited, published', [(None, 2), ('02', 1), ('01', 0)])
-def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world, monkeypatch, edited, published):
-    from harness.curator.session import PROVIDER_ERROR_EXIT_CODE
+def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world, monkeypatch, exit_code, expected_stop, edited, published):
     from harness.curator.validate import validate
 
     repo, traces = world
     drafts_aged = []
 
-    def scripted(_argv, layout, *, stdout, **_kwargs):
+    def scripted(_argv, layout, *, stdout, extra_env, **_kwargs):
         workspace = layout.workspace
-        frame = next(iter(json.loads((workspace/'knowledge'/'validation-context.json').read_text())['window_frames']))
+        backing = Path(extra_env['CURATOR_KNOWLEDGE_BACKING'])
+        assert backing in layout.readable and backing not in layout.tools
+        assert not (workspace/'knowledge'/'validation-context.json').exists()
+        monkeypatch.setenv('CURATOR_KNOWLEDGE_BACKING', str(backing))
+        frame = next(iter(json.loads((backing/'validation-context.json').read_text())['window_frames']))
         for i in range(1, 4):
             directory = workspace/'submissions'/f'{i:02}'
             directory.mkdir()
@@ -478,7 +506,7 @@ def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world,
         if edited:
             path = workspace/'submissions'/edited/'submission.json'
             path.write_text(path.read_text() + '\n')
-        return sandbox.Result(PROVIDER_ERROR_EXIT_CODE, None, 0, 0, 0.1, [])
+        return sandbox.Result(exit_code, None, 0, 0, 0.1, [])
 
     from harness.curator.containers import Drafts
     original_collect = Drafts.collect
@@ -491,7 +519,7 @@ def test_provider_error_seals_only_the_longest_validated_prefix(tmp_path, world,
     monkeypatch.setattr(Drafts, 'collect', collect)
     result = run_session(repo, traces, SessionConfig(argv=('stand-in',)))
     life = result['manifest']['lifecycle']
-    assert life['state'] == 'sealed' and life['stopped'] == 'provider-error', result
+    assert life['state'] == 'sealed' and life['stopped'] == expected_stop, result
     assert [v['status'] for v in result['verdicts']] == ['published'] * published
     assert result['published_after'] == f'v{published}' and drafts_aged == [False]
     record_dir = repo.state/'sessions'/result['manifest']['id']
@@ -512,3 +540,29 @@ print(result.stdout.strip())
     log = (repo.state/'sessions'/record['manifest']['id']/'host-output.log').read_text()
     assert record['published_after'] == 'v1', (record, log)
     assert json.loads(log)['prefix'][0]['candidate_version'] == 'v1'
+
+
+def test_knowledge_search_only_hops_from_active_eligible_records_and_matches_article_claims():
+    from harness.curator.search import search
+
+    def fact(identity, text, **fields):
+        return dict(dict(id=identity, record='fact', text=text, tags=[], links=[], scope={'game': 'testgame'},
+                         lifecycle_state='active'), **fields)
+
+    records = [
+        fact('seed', 'Electrical resistance', when='furnace', lifecycle_state='contested',
+             links=[dict(rel='see_also', target='related'), dict(rel='contradicts', target='conflict')]),
+        fact('related', 'Voltage'),
+        fact('conflict', 'Opposing reading', lifecycle_state='contested'),
+        fact('wrong-world', 'furnace', scope={'game': 'testgame', 'world': 'other'}),
+        fact('ended', 'furnace', lifecycle_state='ended'),
+        fact('shadow', 'furnace', shadowed_by=['seed']),
+        dict(id='manual@v1', slug='manual', record='article', title='Manual', tags=[], links=[],
+             lead='Technical notes', body=[dict(text='Operate the furnace using insulated controls.', facts=['seed'])],
+             scope={'game': 'testgame'}, lifecycle_state='active'),
+    ]
+    hits = {hit['id']: hit for hit in search(records, {}, 'furnace', world='selected')}
+    assert set(hits) == {'seed', 'related', 'manual'}
+    assert hits['seed']['status'] == ['contested'] and hits['seed']['contradicts'] == ['conflict']
+    assert hits['related']['via'] == 'hop'
+    assert hits['manual']['snippet'] == 'Operate the furnace using insulated controls.'

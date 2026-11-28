@@ -44,8 +44,16 @@ neither advance nor fail. An interruption that lands after a session returned bu
 `end` row is written is still recorded as `interrupted`: coverage is then understated, never
 overstated.
 
-A spend reservation refusal without a publication leaves the cursor in place. The next
-poll retries from that step over half as many steps. A refusal at one step is terminal.
+A spend reservation refusal without a gate-confirmed close-out publication leaves the cursor
+in place and stops the runner cleanly (no blind step halving). Temporary non-real-time capacity
+deferrals (`flex-capacity-deferred`) retry the same window on the next poll up to `FLEX_DEFERRALS`
+consecutive times without halving steps or counting against session failures.
+
+Between ingestion windows, when the unexamined backlog is small and enough confirmed ingestion
+windows have published since the last hygiene attempt, the runner may dispatch a bounded
+text-only `hygiene` session (`session_kind: 'hygiene'`, `advanced: False`) recorded in
+`examined.jsonl` without advancing the cursor. Two consecutive hygiene failures disable hygiene
+for the rest of the admission without halting ingestion.
 
 **Why it stops** (`stop_reason`). It *ends* with `store-closing` when the closing marker refuses
 its read, `store-closed` when the run directory holds the custodian's `receipt.json`, and
@@ -53,8 +61,9 @@ its read, `store-closed` when the run directory holds the custodian's `receipt.j
 `2 consecutive failed sessions`, `3 consecutive snapshots failed or passed their bound`,
 `read refused: no-read-lock` (no reader is configured), `error: <type>` (an unexpected exception
 in the runner itself), or a session's own stop reason: `proxy-revoked` (a charge passed its
-reservation), `spend-reservation-refused` (a one-step window cannot reserve),
-`spend-cap-exhausted` (the runner's cap is spent),
+reservation), `spend-cap-exhausted` (the runner's cap, session preflight headroom, or a refused
+reservation stopped the runner after recording any confirmed close-out publication),
+`flex-capacity-deferred` (consecutive non-real-time capacity deferrals hit their bound),
 `proxy-unsettled` (requests the proxy could not settle), `cleanup-unconfirmed` (host processes
 survived, or the host ran and its result is missing) and `host-unavailable: <why>`.
 
@@ -72,6 +81,7 @@ that snapshot does not hold it.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
@@ -99,10 +109,14 @@ STATUS, EXAMINED, VERSIONS, POLLS, STOPPED, SNAPSHOTS = (
 RECEIPT = 'receipt.json'  # the custodian's terminal receipt, written as it exits
 SPEND_REFUSED = 'spend-reservation-refused'
 SPEND_EXHAUSTED = 'spend-cap-exhausted'
+FLEX_DEFERRED = 'flex-capacity-deferred'
+HYGIENE_SUBCAP_EXHAUSTED = 'hygiene-subcap-exhausted'
 UNKNOWN = 'unknown'
-NOT_RUN = ('lock-refused', 'not-started', 'host-unavailable')  # endings in which no session ran
+NOT_RUN = ('lock-refused', 'not-started', 'host-unavailable', HYGIENE_SUBCAP_EXHAUSTED)  # endings in which no session ran
 SESSION_FAILURES = 2  # consecutive failed sessions that stop the runner
+FLEX_DEFERRALS = 3  # consecutive flex capacity deferrals that stop the runner
 SNAPSHOT_FAILURES = 3  # consecutive snapshots that failed or passed their bound
+HARD_STOP_REASONS = ('proxy-revoked', 'proxy-unsettled', 'cleanup-unconfirmed')
 
 
 class RunnerError(ValueError):
@@ -130,6 +144,37 @@ class Settings:
             value = getattr(self, name)
             if type(value) not in (int, float) or not 0 < value < 86400:
                 raise ValueError(f'{name} must be a positive number of seconds')
+
+
+@dataclass(frozen=True)
+class HygieneSettings:
+    """Cadence, sub-cap and failure shutoff bounds for interleaved hygiene-only grooming."""
+
+    enabled: bool = True
+    min_windows: int = 5
+    max_unexamined_steps: int = 10
+    pass_cap_usd: Decimal = Decimal('0.30')
+    max_spend_share: Decimal = Decimal('0.10')
+    max_requests: int = 10
+    wall_seconds: int = 90
+    max_consecutive_failures: int = 2
+
+    def __post_init__(self):
+        if type(self.enabled) is not bool:
+            raise ValueError('hygiene.enabled must be a boolean')
+        for name in ('min_windows', 'max_requests', 'max_consecutive_failures'):
+            value = getattr(self, name)
+            if type(value) is not int or value < 1:
+                raise ValueError(f'hygiene.{name} must be a positive integer')
+        if type(self.max_unexamined_steps) is not int or self.max_unexamined_steps < 0:
+            raise ValueError('hygiene.max_unexamined_steps must be a non-negative integer')
+        if type(self.wall_seconds) is not int or self.wall_seconds <= 30:
+            raise ValueError('hygiene.wall_seconds must be an integer exceeding 30')
+        if not isinstance(self.pass_cap_usd, Decimal) or not self.pass_cap_usd.is_finite() or self.pass_cap_usd <= 0:
+            raise ValueError('hygiene.pass_cap_usd must be a positive Decimal')
+        if (not isinstance(self.max_spend_share, Decimal) or not self.max_spend_share.is_finite()
+                or not (Decimal(0) <= self.max_spend_share <= Decimal(1))):
+            raise ValueError('hygiene.max_spend_share must be a Decimal between 0 and 1')
 
 
 @dataclass(frozen=True)
@@ -175,6 +220,8 @@ class Outcome:
 
 Snapshotter = Callable[[Path], Reading]  # stage into this new parent, or raise as `stage` does
 Session = Callable[[Reading, Window, str], Outcome]  # run one session over a window, under a label
+HygieneSession = Callable[[Reading, str], Outcome]  # run one text-only hygiene session, under a label
+HygieneCheck = Callable[[], dict]  # deterministic hygiene_trigger(records) result
 Look = Callable[[], dict[str, dict]]  # every tag: {version: {coverage, restored_from}}
 
 
@@ -276,6 +323,11 @@ def classify(outcome: Outcome) -> tuple[str, bool, bool]:
     """How a session ended, whether the cursor advances over its window, and whether it failed."""
     if outcome.refused:
         return 'lock-refused', False, False
+    if outcome.stop == HYGIENE_SUBCAP_EXHAUSTED and outcome.state is None and outcome.error is None:
+        return HYGIENE_SUBCAP_EXHAUSTED, False, False
+    if (outcome.stop == FLEX_DEFERRED
+            and not any(v.get('status') in ('published', 'unknown') for v in outcome.verdicts)):
+        return FLEX_DEFERRED, False, False
     if (outcome.stop == SPEND_REFUSED and outcome.state == 'sealed'
             and not any(v.get('status') in ('published', 'unknown') for v in outcome.verdicts)):
         return SPEND_REFUSED, False, False
@@ -335,10 +387,12 @@ class Runner:
 
     def __init__(self, directory: Path, session: str, *, snapshot: Snapshotter, session_call: Session, look: Look,
                  settings: Settings = Settings(), clock=time, sleep: Callable[[float], None] = time.sleep,
-                 run: Path | None = None):
+                 run: Path | None = None, hygiene_call: HygieneSession | None = None,
+                 hygiene_check: HygieneCheck | None = None, hygiene_settings: HygieneSettings = HygieneSettings()):
         """`run` is the live run directory, checked at each poll for the custodian's receipt."""
         self.directory, self.session, self.run_directory = Path(directory), session, run
         self.snapshot, self.session_call, self.look = snapshot, session_call, look
+        self.hygiene_call, self.hygiene_check, self.hygiene_settings = hygiene_call, hygiene_check, hygiene_settings
         self.settings, self.clock, self.sleep = settings, clock, sleep
         self.directory.mkdir(parents=True, exist_ok=True)
         shutil.rmtree(self.directory/SNAPSHOTS, ignore_errors=True)  # a killed runner's staged snapshot
@@ -377,7 +431,7 @@ class Runner:
     def cursor(self) -> dict[str, int]:
         cursor: dict[str, int] = {}
         for row in self._ends():
-            if row['advanced']:
+            if row['advanced'] and row.get('session_kind', 'admission') != 'hygiene' and isinstance(row.get('window'), dict):
                 actor = row['window']['actor']
                 cursor[actor] = max(cursor.get(actor, 0), row['window']['last'])
         return cursor
@@ -392,22 +446,88 @@ class Runner:
             end = ends.get(row['label'])
             if end is not None and end['outcome'] in NOT_RUN:
                 continue  # nothing ran over this range
-            listed.append(dict(label=row['label'], window=row['window'], session_id=end and end['session_id'],
-                               outcome=end['outcome'] if end else ('in-session' if self.current and
-                                                                   self.current['label'] == row['label'] else 'interrupted'),
-                               advanced=bool(end and end['advanced']), started_wall=row['started_wall'],
-                               ended_wall=end and end['ended_wall']))
+            entry = dict(label=row['label'], window=row['window'], session_id=end and end['session_id'],
+                         outcome=end['outcome'] if end else ('in-session' if self.current and
+                                                             self.current['label'] == row['label'] else 'interrupted'),
+                         advanced=bool(end and end['advanced']), started_wall=row['started_wall'],
+                         ended_wall=end and end['ended_wall'])
+            if row.get('session_kind') == 'hygiene':
+                entry['session_kind'] = 'hygiene'
+            listed.append(entry)
         return listed
 
     def session_failures(self) -> int:
         count = 0
         for row in reversed(self._ends()):
-            if row['outcome'] in (*NOT_RUN, 'interrupted', SPEND_REFUSED):
+            if row.get('session_kind') == 'hygiene':
+                continue
+            if row['outcome'] in (*NOT_RUN, 'interrupted', SPEND_REFUSED, FLEX_DEFERRED):
                 continue
             if not row['failed']:
                 break
             count += 1
         return count
+
+    def flex_deferrals(self) -> int:
+        count = 0
+        for row in reversed(self._ends()):
+            if row.get('session_kind') == 'hygiene':
+                continue
+            if row['outcome'] in (*NOT_RUN, 'interrupted'):
+                continue
+            if row['outcome'] != FLEX_DEFERRED:
+                break
+            count += 1
+        return count
+
+    def hygiene_failures(self) -> int:
+        count = 0
+        for row in reversed(self._ends()):
+            if row.get('session_kind') != 'hygiene':
+                continue
+            if row['outcome'] in (*NOT_RUN, 'interrupted', FLEX_DEFERRED):
+                continue
+            if not row['failed']:
+                break
+            count += 1
+        return count
+
+    def _last_clean_hygiene_digest(self) -> str | None:
+        for row in reversed(self._ends()):
+            if row.get('session_kind') != 'hygiene':
+                continue
+            if row['outcome'] in ('accepted', 'nothing-submitted') and not row['failed']:
+                digest = (row.get('details') or {}).get('hygiene_digest')
+                if isinstance(digest, str):
+                    return digest
+        return None
+
+    def _confirmed_windows_since_hygiene(self) -> int:
+        confirmed, _, _ = self.publications()
+        confirmed_labels = {c['label'] for c in confirmed}
+        count = 0
+        for row in reversed(self._ends()):
+            if row.get('session_kind') == 'hygiene':
+                if row['outcome'] == HYGIENE_SUBCAP_EXHAUSTED or row['outcome'] not in (*NOT_RUN, 'interrupted'):
+                    break
+                continue
+            if row['label'] in confirmed_labels:
+                count += 1
+        return count
+
+    def hygiene_publications(self) -> list[str]:
+        """Confirmed hygiene-published versions (tag seen, not a restore)."""
+        versions = []
+        for row in self._ends():
+            if row.get('session_kind') != 'hygiene':
+                continue
+            for verdict in row['verdicts']:
+                version = verdict.get('version')
+                if verdict.get('status') == 'published' and version:
+                    entry = self.versions.get(version)
+                    if entry is not None and entry.get('restored_from') is None:
+                        versions.append(version)
+        return sorted(set(versions), key=_number)
 
     # The publication watch ------------------------------------------------------------------------
 
@@ -460,8 +580,14 @@ class Runner:
         """Confirmed versions with their windows, publications that could not be confirmed, and the
         earliest restore seen in this admission (None if none)."""
         claims: dict[str, dict] = {}
+        hygiene_versions: set[str] = set()
         unconfirmed = []
         for row in self._ends():
+            if row.get('session_kind') == 'hygiene':
+                for verdict in row['verdicts']:
+                    if verdict.get('status') == 'published' and verdict.get('version'):
+                        hygiene_versions.add(verdict['version'])
+                continue
             for verdict in row['verdicts']:
                 if verdict.get('status') == 'published' and verdict.get('version'):
                     claims[verdict['version']] = row
@@ -483,7 +609,7 @@ class Runner:
                                       last_operation=start.get('last_operation', UNKNOWN), coverage=entry['coverage']))
         restore = None
         for version, entry in sorted(self.versions.items(), key=lambda item: _number(item[0])):
-            if entry['baseline'] or version in claims:
+            if entry['baseline'] or version in claims or version in hygiene_versions:
                 continue
             if entry['restored_from'] is None:
                 unconfirmed.append(dict(version=version, label=None, reason='no examined session reports it'))
@@ -499,7 +625,8 @@ class Runner:
         else:
             known = []
         listed = {actor for actor, _, _ in known}
-        extra = sorted({row['window']['actor'] for row in self.rows} - listed)
+        extra = sorted({row['window']['actor'] for row in self.rows
+                        if isinstance(row.get('window'), dict) and row['window'].get('actor')} - listed)
         return known + [(actor, None, False) for actor in extra]
 
     def _place(self, actor: str, step: int) -> dict:
@@ -675,17 +802,82 @@ class Runner:
                                  coverage=self.progress()))
         window = choose(read, self.cursor, self.settings)
         if window is None:
+            trigger = self._due_hygiene(read)
+            if trigger is not None:
+                return self._hygiene_session(read, trigger)
             self._write_status()
             return True
-        for end in reversed(self._ends()):
-            if end['outcome'] != SPEND_REFUSED:
-                continue
-            prior = Window.read(end['window'])
-            if (prior.session, prior.actor, prior.first) == (window.session, window.actor, window.first):
-                size = (prior.last - prior.first + 1) // 2
-                window = Window(window.session, window.actor, window.first, min(window.last, window.first + max(1, size) - 1))
-                break
         return self._session(read, window)
+
+    def _due_hygiene(self, read: Reading) -> dict | None:
+        """Return the deterministic hygiene trigger payload when an interleaved hygiene pass is eligible."""
+        hs = self.hygiene_settings
+        if not hs.enabled or self.hygiene_call is None or self.hygiene_check is None:
+            return None
+        if self.hygiene_failures() >= hs.max_consecutive_failures:
+            return None
+        cursor = self.cursor
+        backlog = sum(max(0, len(a.operations) - cursor.get(a.directory, 0)) for a in read.actors)
+        if backlog > hs.max_unexamined_steps:
+            return None
+        if self._confirmed_windows_since_hygiene() < hs.min_windows:
+            return None
+        available = getattr(self.hygiene_call, 'available', None)
+        if callable(available):
+            try:
+                if not available():
+                    return None
+            except Exception:  # noqa: BLE001 - a hygiene preflight error never halts ingestion
+                return None
+        try:
+            trigger = self.hygiene_check()
+        except Exception:  # noqa: BLE001 - a hygiene check error never halts ingestion
+            return None
+        if not isinstance(trigger, dict) or not trigger.get('triggered'):
+            return None
+        digest = trigger.get('digest')
+        if isinstance(digest, str) and digest == self._last_clean_hygiene_digest():
+            return None
+        return trigger
+
+    def _hygiene_session(self, read: Reading, trigger: dict) -> bool:
+        label = f'hygiene-{uuid.uuid4().hex[:8]}'
+        self._look()
+        start = dict(schema=EXAMINED_SCHEMA, event='start', session_kind='hygiene', label=label, window=None,
+                     hygiene_trigger=dict(digest=trigger.get('digest'), reasons=trigger.get('reasons', []),
+                                          counts=trigger.get('counts', {})),
+                     started_wall=self.clock.time(), coverage=self.progress())
+        with self.lock:
+            self.rows.append(start)
+            self._append(EXAMINED, start)
+            self.current = dict(label=label, session_kind='hygiene', window=None, started_wall=start['started_wall'])
+        self.state = 'in-session'
+        self._write_status()
+        stop, watcher = self._watching()
+        try:
+            outcome = self.hygiene_call(read, label)
+        except Exception as exc:  # noqa: BLE001 - a failed hygiene pass never crashes ingestion
+            outcome = Outcome(state=None, error=f'{type(exc).__name__}: {str(exc)[:400]}')
+        finally:
+            stop.set()
+            watcher.join()
+        self._look()
+        name, _, failed = classify(outcome)
+        if outcome.stop == SPEND_REFUSED:
+            failed = True
+        details = dict(outcome.details)
+        if not failed and name in ('accepted', 'nothing-submitted') and isinstance(trigger.get('digest'), str):
+            details['hygiene_digest'] = trigger['digest']
+        annotated = Outcome(state=outcome.state, verdicts=outcome.verdicts, session_id=outcome.session_id,
+                            refused=outcome.refused, stop=outcome.stop, error=outcome.error, details=details,
+                            provider_error=outcome.provider_error)
+        self._end(label, annotated, (name, False, failed))
+        if outcome.stop in HARD_STOP_REASONS:
+            self._finish('stopped', outcome.stop)
+            return False
+        self.state = 'polling'
+        self._write_status()
+        return True
 
     def _session(self, read: Reading, window: Window) -> bool:
         label = f'{window.actor}-{window.first}-{window.last}-{uuid.uuid4().hex[:8]}'
@@ -712,8 +904,24 @@ class Runner:
         self._look()  # once after it returns
         how = classify(outcome)
         self._end(label, outcome, how)
-        retry_spend = outcome.stop == SPEND_REFUSED and (how[1] or (how[0] == SPEND_REFUSED and window.first < window.last))
-        if outcome.stop is not None and not retry_spend:
+        if outcome.stop == FLEX_DEFERRED:
+            if how[0] == FLEX_DEFERRED:
+                if self.flex_deferrals() >= FLEX_DEFERRALS:
+                    self._finish('stopped', FLEX_DEFERRED)
+                    return False
+                self.state = 'polling'
+                self._write_status()
+                return True
+            if not how[1]:
+                self._finish('stopped', FLEX_DEFERRED)
+                return False
+            # Validated prefix advanced; fall through to the shared session_failures check.
+        elif outcome.stop == SPEND_REFUSED:
+            # Per #1027: blind step halving is removed. Any gate-confirmed close-out publication
+            # already advanced covered_prefix via _end; stop cleanly as SPEND_EXHAUSTED either way.
+            self._finish('stopped', SPEND_EXHAUSTED)
+            return False
+        elif outcome.stop is not None:
             self._finish('stopped', outcome.stop)
             return False
         if self.session_failures() >= SESSION_FAILURES:
@@ -732,6 +940,8 @@ class Runner:
                    verdicts=[dict(operation=v.get('operation'), status=v.get('status'), version=v.get('version'))
                              for v in outcome.verdicts],
                    details=outcome.details, ended_wall=self.clock.time())
+        if start.get('session_kind') == 'hygiene':
+            end['session_kind'] = 'hygiene'
         with self.lock:
             self.rows.append(end)
             self.current = None

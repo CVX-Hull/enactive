@@ -7,7 +7,9 @@ Nothing here decides what distance means "the same screen"; callers measure that
 """
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
+import struct
 
 import numpy as np
 from PIL import Image
@@ -34,6 +36,30 @@ def load(path) -> np.ndarray:
             return np.asarray(image.convert('RGB'), dtype=np.uint8)
     finally:
         Image.MAX_IMAGE_PIXELS = previous
+
+
+def pixel_sha256(path) -> str:
+    """Hash decoded RGB pixels and their dimensions."""
+    return _pixel_sha256(load(path))
+
+
+def _pixel_sha256(image: np.ndarray) -> str:
+    digest = hashlib.sha256(struct.pack('>II', *image.shape[:2]))
+    digest.update(image.tobytes())
+    return digest.hexdigest()
+
+
+def _absolute_diff(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    _check(a)
+    _check(b)
+    if a.shape != b.shape:
+        raise ValueError(f'image sizes differ: {a.shape[:2]} vs {b.shape[:2]}')
+    return np.abs(a.astype(np.int16) - b.astype(np.int16))
+
+
+def changed_percent(a: np.ndarray, b: np.ndarray, threshold: int = 16) -> float:
+    """Percent of pixels with any RGB channel differing by more than the threshold."""
+    return 100.0 * float((_absolute_diff(a, b).max(axis=2) > threshold).mean())
 
 
 def _gray(image: np.ndarray, width: int, height: int) -> np.ndarray:
@@ -79,15 +105,11 @@ def region_diff(a: np.ndarray, b: np.ndarray, grid: tuple[int, int] = (4, 4), th
     ``changed_fraction`` is the share of pixels whose largest channel difference exceeds ``threshold``;
     ``mean_abs_diff`` is the mean absolute channel difference. ``box`` is ``[x0, y0, x1, y1]`` (x1, y1 exclusive).
     """
-    _check(a)
-    _check(b)
-    if a.shape != b.shape:
-        raise ValueError(f'image sizes differ: {a.shape[:2]} vs {b.shape[:2]}')
     rows, cols = grid
     height, width = a.shape[:2]
     if rows < 1 or cols < 1 or rows > height or cols > width:
         raise ValueError(f'grid {grid} does not fit a {width}x{height} image')
-    diff = np.abs(a.astype(np.int16) - b.astype(np.int16))
+    diff = _absolute_diff(a, b)
     cells = []
     for row in range(rows):
         y0, y1 = row * height // rows, (row + 1) * height // rows

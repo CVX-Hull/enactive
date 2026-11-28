@@ -61,7 +61,7 @@ def verdict_summary(verdicts: list[dict]) -> dict:
                 verdicts=[dict(operation=v.get('operation'), status=v.get('status'), submission=v.get('submission'),
                                version=v.get('version'), diagnostics=v.get('diagnostics')) for v in verdicts])
 PRICES_SCHEMA = 'curator-prices/1'
-HOST_SCHEMA = 'curator-host/1'
+HOST_SCHEMA = 'curator-host/2'
 HOST_DIR = ROOT/'tools'/'curator_host'
 # The only parts of the host package the sandboxed process may read: the Node host and its
 # dependencies, its prompt, and `launch.py`, the one Python file the sandbox's argv runs. The runner,
@@ -73,6 +73,8 @@ GAME = 'cdda'
 KEY_VARIABLE = 'OPENROUTER_API_KEY'
 HOST_BUDGET_SHARE = Decimal('0.85')  # the host's budget as a share of its session's proxy cap
 LOOPBACK_KEY = 'loopback-test-key'  # a local test upstream never receives the operator's key
+SERVICE_TIERS = ('default', 'flex')
+MIN_UPSTREAM_TIMEOUT_SECONDS = 960.0  # >= 15 min queueing tolerance for non-real-time flex tiers
 
 # Sampled sessions only, in lineage order. 397: the seven admissions. 372: the six runs named by
 # the issue. Nothing else can be selected.
@@ -230,13 +232,18 @@ def route_key(upstream: str, runtime_root: Path) -> str | None:
 
 def host_configuration(arm: Arm, prices: dict[str, Price], *, effort: str, max_requests: int, max_output_tokens: int,
                        request_timeout_seconds: int, wall_seconds: int, max_context_images: int,
-                       context_image_block: int, workbench_timeout_seconds: int, budget_usd: float) -> dict:
+                       workbench_timeout_seconds: int, budget_usd: float,
+                       service_tier: str = 'default', text_only: bool = False,
+                       provider: str | None = None) -> dict:
+    if service_tier not in SERVICE_TIERS:
+        raise ShadowError(f'service_tier must be one of {", ".join(SERVICE_TIERS)}')
+    route_provider = provider or arm.provider
     price = prices[arm.model]
     per = lambda value: float(value)  # noqa: E731 - the host's cost entries are informational numbers
     return dict(
         schema=HOST_SCHEMA, effort=effort, max_requests=max_requests, request_timeout_seconds=request_timeout_seconds,
-        budget_usd=budget_usd,
-        wall_seconds=wall_seconds, max_context_images=max_context_images, context_image_block=context_image_block,
+        budget_usd=budget_usd, service_tier=service_tier, text_only=bool(text_only),
+        wall_seconds=wall_seconds, max_context_images=0 if text_only else max_context_images,
         workbench_timeout_seconds=workbench_timeout_seconds,
         model=dict(id=arm.model, name=arm.name, reasoning=True, input=['text', 'image'],
                    cost=dict(input=per(price.input), output=per(price.output), cacheRead=per(price.cache_read),
@@ -245,7 +252,7 @@ def host_configuration(arm: Arm, prices: dict[str, Price], *, effort: str, max_r
                    compat=dict(supportsDeveloperRole=False, supportsStore=False, supportsUsageInStreaming=True,
                                supportsReasoningEffort=True, supportsStrictMode=False,
                                maxTokensField='max_completion_tokens', thinkingFormat='openrouter',
-                               openRouterRouting=dict(only=[arm.provider], order=[arm.provider],
+                               openRouterRouting=dict(only=[route_provider], order=[route_provider],
                                                       allow_fallbacks=False, require_parameters=True))))
 
 
@@ -335,6 +342,7 @@ def _lines(path: Path) -> list[dict]:
 
 def telemetry(rows: list[dict]) -> dict:
     """Digest of the host's JSON-lines telemetry."""
+    start = next((r for r in rows if r.get('type') == 'host-start'), None)
     starts = [r for r in rows if r.get('type') == 'request-start']
     ends = [r for r in rows if r.get('type') == 'request-end' and not r.get('retry')]
     calls = [r for r in rows if r.get('type') == 'tool-call']
@@ -344,9 +352,12 @@ def telemetry(rows: list[dict]) -> dict:
     by_name: dict[str, int] = {}
     for call in calls:
         by_name[call['name']] = by_name.get(call['name'], 0) + 1
+    applied_tiers = sorted({r['applied_service_tier'] for r in ends if isinstance(r.get('applied_service_tier'), str)})
     return dict(
         requests=len(starts), time_to_first_request_seconds=round(starts[0]['monotonic_ms'] / 1000, 3) if starts else None,
         first_request_prompt_tokens=next((r['prompt_tokens'] for r in ends if isinstance(r.get('prompt_tokens'), int)), None),
+        requested_service_tier=start.get('requested_service_tier') if start else None,
+        applied_service_tiers=applied_tiers,
         tokens=dict(prompt=total('prompt_tokens'), completion=total('completion_tokens'), cached=total('cached_tokens'),
                     cache_write=total('cache_write_tokens'), reasoning=total('reasoning_tokens')),
         host_reported_cost_usd=str(sum(Decimal(str(c)) for c in costs)) if costs else None,
@@ -382,9 +393,11 @@ def run_one(*, arm_name: str, lineage: str, name: str, trace: Path, repo: Reposi
     session_dir = out/lineage/name
     session_dir.mkdir(parents=True)
     arm = ARMS[arm_name]
+    upstream_timeout = max(MIN_UPSTREAM_TIMEOUT_SECONDS, float(model_config['request_timeout_seconds']) + 60.0)
     proxy = ModelProxy(provider=OPENROUTER, upstream=upstream, key=key, prices={arm.model: prices[arm.model]},
                        cap_usd=cap, ledger=session_dir/'proxy-ledger.jsonl', max_output_tokens=max_output_tokens,
-                       routing=model_config['model']['compat']['openRouterRouting'])
+                       routing=model_config['model']['compat']['openRouterRouting'],
+                       upstream_timeout=upstream_timeout)
     # A killed runner may leave a billed request without a settlement receipt.
     # Hold this session's entire cap across a restart until its closure is recorded.
     _write(session_dir/'proxy-start.json', dict(cap_usd=str(cap)))
@@ -522,7 +535,8 @@ def run_shadow(args: argparse.Namespace, key: str) -> dict:
         arm, prices, effort=args.effort or arm.effort, max_requests=args.max_requests,
         max_output_tokens=args.max_output_tokens, request_timeout_seconds=args.request_timeout_seconds,
         wall_seconds=args.wall_seconds - 30, max_context_images=args.max_context_images,
-        context_image_block=args.context_image_block, workbench_timeout_seconds=60, budget_usd=float(cap))
+        workbench_timeout_seconds=60, budget_usd=float(cap),
+        service_tier=args.service_tier, provider=args.provider)
     out.mkdir(parents=True)
     config_dir = out/'host-config'
     config_dir.mkdir()
@@ -631,10 +645,11 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument('--max-output-tokens', type=int, default=16384)
     p.add_argument('--request-timeout-seconds', type=int, default=240)
     p.add_argument('--wall-seconds', type=int, default=1800, help='sandbox wall-clock limit for each session')
-    # Eviction rewrites the prompt prefix, so it is kept rare: a wide window and a block of half of it.
-    # Sixteen of the largest recorded frames stay under the proxy's 8 MiB body limit; 24 would not.
+    p.add_argument('--service-tier', default='default', choices=list(SERVICE_TIERS),
+                   help='service tier requested on every provider call (default or flex)')
+    p.add_argument('--provider', default=None, help="optional provider slug override (e.g. 'openai/flex')")
+    # Sixteen native 960x640 frames fit under the proxy's 8 MiB body limit with zero mid-session eviction.
     p.add_argument('--max-context-images', type=int, default=16)
-    p.add_argument('--context-image-block', type=int, default=8)
     p.add_argument('--stop-on-abort', action='store_true')
     p.add_argument('--stop-on-reject', action='store_true',
                    help="stop the run when the gate rejects a session's submission (its facts are then lost)")

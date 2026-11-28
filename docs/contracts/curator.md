@@ -355,7 +355,7 @@ store.
 | Path | Holds | Writable |
 | --- | --- | --- |
 | `trace/` | The [trace projection](measurement-tools.md#trace-projection), narrowed to the session's window | No |
-| `knowledge/` | Published version without `.git`, `current-facts.jsonl` (current records only) and `validation-context.json` | No |
+| `knowledge/` | `knowledge.json`, `provenance.json`, optional `coverage.json`, compact `index.md` (articles + per-world `state_key` index), and per-record `records/<id>.json` (no bulk `current-facts.jsonl` or `facts.jsonl`; full pinned backing snapshot is mounted read-only outside the workspace for `validate_submission` and `run_workbench(["knowledge", ...])`) | No |
 | `brief.md` | Software-written: window, declared axes, drafts, worklist, recent gate results and tag list | No |
 | `grooming.md` | The grooming instructions, in grooming sessions | No |
 | `workbench/` | Staged validator copy (`harness/curator`, `harness/trace`, `schemas` and `jsonschema` runtime) | No |
@@ -370,7 +370,7 @@ cannot start a line.
 one current fact or article with its usage count, `df/N`, majority flag (`df > N/2`), and
 tag-vs-scope overlap. Unused tags leave the list automatically; `statement_kind` is fixed
 and needs no list. [`hygiene.py`](../../harness/curator/hygiene.py) supplies the per-world
-`state_key` index in admission briefs and the deterministic advisory worklist (article-size
+`state_key` index in `knowledge/index.md` and the deterministic advisory worklist (article-size
 cutoff `8,192` UTF-8 bytes, bibliographic coupling, near-duplicate candidates, potential
 contradictions, and key-alias candidates) in grooming and `hygiene` briefs.
 
@@ -421,7 +421,7 @@ coverage-gated cuts for the run ([player-host coverage updates](player-host.md#a
 | Rule | Admission session | Grooming session |
 | --- | --- | --- |
 | Trace | The supplied sessions or one window | Last admission's cited frames, steps, tool calls and actor boundary operations |
-| Store | Current records in `current-facts.jsonl` and published tree | Current records in `current-facts.jsonl` and published tree |
+| Store | `knowledge/index.md`, `knowledge/records/<id>.json`, and `run_workbench(["knowledge", "search"|"get", ...])` | Same targeted store surface (`hygiene` passes are text-only with `view_frame` omitted) |
 | Instructions | Brief and [shared instructions](../../tools/curator_host/prompt.md) | Also [`grooming.md`](../../tools/curator_host/grooming.md) |
 | Window | Full or restricted | Full only |
 | `retag` | Refused | Allowed (at most once per submission) |

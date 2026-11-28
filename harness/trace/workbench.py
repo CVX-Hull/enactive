@@ -1,7 +1,7 @@
 """Workbench commands over a projected `trace/` (#452). Read-only; prints JSON lines.
 
   python -m harness.trace.workbench steps   <trace> [--actor DIR] [--from N] [--to N] [--kind K]
-  python -m harness.trace.workbench frames  <trace> [--actor DIR] [--from N] [--to N]
+  python -m harness.trace.workbench frames  <trace> [--actor DIR] [--from N] [--to N] [--with-diff]
   python -m harness.trace.workbench tools   <trace> [--actor DIR] [--tool NAME]
   python -m harness.trace.workbench diff    <trace> <frame-a> <frame-b> [--grid RxC] [--min-changed F]
   python -m harness.trace.workbench similar <trace> <frame> [--k K] [--max-distance D]
@@ -53,6 +53,8 @@ def main(argv=None, out=sys.stdout) -> int:
             p.add_argument('--to', dest='end', type=int)
         if name == 'steps':
             p.add_argument('--kind')
+        if name == 'frames':
+            p.add_argument('--with-diff', action='store_true')
         if name == 'tools':
             p.add_argument('--tool')
     d = sub.add_parser('diff')
@@ -75,16 +77,37 @@ def main(argv=None, out=sys.stdout) -> int:
     def emit(row):
         out.write(json.dumps(row, sort_keys=True, ensure_ascii=False) + '\n')
 
-    if args.command in ('steps', 'frames'):
+    if args.command == 'steps':
         for name, directory in _actors(args.trace, args.actor):
             for step in _rows(directory/'steps.jsonl'):
                 if step['seq'] < args.start or (args.end is not None and step['seq'] > args.end):
                     continue
-                if args.command == 'steps' and (args.kind is None or step['kind'] == args.kind):
+                if args.kind is None or step['kind'] == args.kind:
                     emit(dict(actor=name, **step))
-                elif args.command == 'frames' and step.get('frame'):
-                    emit(dict(actor=name, seq=step['seq'], frame=step['frame'],
-                              path=str(_frame(args.trace, step['frame']))))
+    elif args.command == 'frames':
+        first_by_hash: dict[str, str] = {}
+        for name, directory in _actors(args.trace, args.actor):
+            previous = None
+            for step in _rows(directory/'steps.jsonl'):
+                source_id, seq = step.get('frame'), step['seq']
+                if not source_id or (args.end is not None and seq > args.end):
+                    continue
+                if seq < args.start and not args.with_diff:
+                    continue
+                path = _frame(args.trace, source_id)
+                row = dict(actor=name, seq=seq, frame=source_id, path=str(path))
+                if args.with_diff:
+                    pixels = images.load(path)
+                    digest = images._pixel_sha256(pixels)
+                    earlier = first_by_hash.get(digest)
+                    first_by_hash.setdefault(digest, source_id)
+                    changed = (images.changed_percent(previous, pixels)
+                               if previous is not None and previous.shape == pixels.shape else None)
+                    row.update(pixel_sha256=digest, duplicate_of=earlier,
+                               changed_pct=changed)
+                    previous = pixels
+                if seq >= args.start:
+                    emit(row)
     elif args.command == 'tools':
         for name, directory in _actors(args.trace, args.actor):
             for call in _rows(directory/'tools.jsonl'):

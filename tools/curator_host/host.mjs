@@ -1,4 +1,4 @@
-// One curator session on Pi agent-core: a frozen prompt, seven workspace tools, the model proxy as the
+// One curator session on Pi agent-core: a frozen prompt, bounded workspace tools, the model proxy as the
 // only endpoint. See docs/operations/curator-hosts.md. The host never sees the provider key; it
 // presents the per-session proxy token as its API key and writes JSON-lines telemetry without it.
 import { Agent } from '@earendil-works/pi-agent-core';
@@ -7,15 +7,17 @@ import { stream } from '@earendil-works/pi-ai/api/openai-completions';
 import { retryProviderRequest } from '@earendil-works/pi-ai/utils/provider-retry';
 import { ToolError, listDir, readFile, runWorkbench, validateSubmission, viewFrame, writeFile } from './workspace-tools.mjs';
 
-export const SCHEMA = 'curator-host/1';
+export const SCHEMA = 'curator-host/2';
 /** run.mjs's exit code for a `provider-error` stop; harness/curator/session.py's PROVIDER_ERROR_EXIT_CODE. */
 export const PROVIDER_ERROR_EXIT_CODE = 75;
+export const FLEX_DEFERRED_EXIT_CODE = 76;
+export const REQUEST_BODY_BUDGET_BYTES = 7_500_000;
 export const CONFIG_LIMIT_BYTES = 65536;
+const MAX_CONTEXT_IMAGES = 16;
 const MAX_SUMMARY_CHARS = 2000;
 const NARRATION_BYTES = 1024;
 const RETRY_STATUSES = [502, 503, 504];
-const MAX_RETRY_DELAY_MS = 60_000;
-const SERVICE_TIER = 'default';
+const MAX_RETRY_DELAY_MS = { default: 60_000, flex: 120_000 };
 const levels = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const positive = value => Number.isSafeInteger(value) && value > 0;
@@ -31,17 +33,17 @@ function closed(value, allowed) {
   requireThat(object(value) && Object.keys(value).every(key => allowed.includes(key)));
 }
 
-function retryHeaders(response) {
+function retryHeaders(response, maxRetryDelayMs) {
   if (RETRY_STATUSES.includes(response.status)) return new Headers({ 'retry-after': '1' });
   if (response.status !== 429 || response.headers.get('x-should-retry') === 'false') return null;
   const after = response.headers.get('retry-after')?.trim();
-  if (!after) return null; // Local proxy budget refusals have no server retry instruction.
+  if (!after) return null;
   const seconds = /^\d+(?:\.\d+)?$/.test(after) ? Number(after) : NaN;
   const date = Date.parse(after);
   // Date.parse alone accepts incomplete dates such as "Wed, 1".
   const delay = Number.isFinite(seconds) ? seconds * 1000
     : Number.isFinite(date) && new Date(date).toUTCString() === after ? date - Date.now() : NaN;
-  if (!Number.isFinite(delay) || delay > MAX_RETRY_DELAY_MS) return null;
+  if (!Number.isFinite(delay) || delay > maxRetryDelayMs) return null;
   return new Headers({ 'retry-after': after });
 }
 
@@ -49,14 +51,18 @@ function retryHeaders(response) {
 export function validateConfiguration(configuration) {
   requireThat(Buffer.byteLength(JSON.stringify(configuration ?? null)) <= CONFIG_LIMIT_BYTES, 'configuration-too-large');
   closed(configuration, ['schema', 'model', 'effort', 'max_requests', 'request_timeout_seconds', 'wall_seconds',
-    'max_context_images', 'context_image_block', 'workbench_timeout_seconds', 'budget_usd']);
+    'max_context_images', 'workbench_timeout_seconds', 'budget_usd', 'service_tier', 'text_only']);
   requireThat(configuration.schema === SCHEMA);
+  requireThat(['default', 'flex'].includes(configuration.service_tier));
+  requireThat(!Object.hasOwn(configuration, 'text_only') || typeof configuration.text_only === 'boolean');
   requireThat(typeof configuration.budget_usd === 'number' && Number.isFinite(configuration.budget_usd) && configuration.budget_usd > 0);
-  for (const key of ['max_requests', 'request_timeout_seconds', 'wall_seconds', 'max_context_images', 'context_image_block', 'workbench_timeout_seconds']) {
+  for (const key of ['max_requests', 'request_timeout_seconds', 'wall_seconds', 'workbench_timeout_seconds']) {
     requireThat(positive(configuration[key]));
   }
-  requireThat(configuration.context_image_block <= configuration.max_context_images);
-  requireThat(configuration.request_timeout_seconds * 1000 <= 2_147_483_647 && configuration.wall_seconds * 1000 <= 2_147_483_647);
+  requireThat(Number.isSafeInteger(configuration.max_context_images)
+    && configuration.max_context_images >= (configuration.text_only ? 0 : 1)
+    && configuration.max_context_images <= MAX_CONTEXT_IMAGES);
+  requireThat(configuration.request_timeout_seconds <= 1800 && configuration.wall_seconds * 1000 <= 2_147_483_647);
   const model = configuration.model;
   closed(model, ['id', 'name', 'reasoning', 'input', 'cost', 'contextWindow', 'maxTokens', 'thinkingLevelMap', 'compat']);
   requireThat(/^[a-z0-9][a-z0-9_.-]{0,63}\/[a-z0-9][a-z0-9_.:-]{0,127}$/.test(model.id ?? '') && text(model.name));
@@ -74,7 +80,7 @@ export function validateConfiguration(configuration) {
   }
   closed(model.compat, ['supportsDeveloperRole', 'supportsStore', 'supportsUsageInStreaming', 'supportsReasoningEffort',
     'supportsStrictMode', 'maxTokensField', 'thinkingFormat', 'openRouterRouting']);
-  // The proxy forwards `max_completion_tokens` and requires the default tier; `max_tokens` is refused.
+  // The proxy forwards `max_completion_tokens` and refuses `max_tokens`.
   requireThat(model.compat.maxTokensField === 'max_completion_tokens' && model.compat.thinkingFormat === 'openrouter');
   requireThat(model.compat.supportsStore === false && model.compat.supportsUsageInStreaming === true);
   requireThat(model.compat.supportsReasoningEffort === model.reasoning);
@@ -92,34 +98,6 @@ export function proxyFrom(env) {
   requireThat(/^http:\/\/127\.0\.0\.1:[0-9]{1,5}$/.test(url ?? ''), 'invalid-proxy-url');
   requireThat(/^[A-Za-z0-9_-]{16,256}$/.test(token ?? ''), 'missing-proxy-token');
   return { baseUrl: `${url}/api/v1`, token };
-}
-
-/** Block eviction of the oldest images beyond `maxImages`, so the serialized prefix stays stable
- * between evictions and a request stays well under the proxy's body limit. */
-export function projectImages(messages, maxImages, block) {
-  const images = [];
-  for (const [messageIndex, message] of messages.entries()) {
-    if (!Array.isArray(message.content)) continue;
-    for (const [contentIndex, part] of message.content.entries()) {
-      if (part.type === 'image') {
-        // view_frame puts "frame <source id> (<n> bytes)" right before each image it returns.
-        const label = /^frame (\S+) \(/.exec(message.content[contentIndex - 1]?.text ?? '');
-        images.push({ messageIndex, contentIndex, toolCallId: message.toolCallId ?? null, sourceId: label ? label[1] : null });
-      }
-    }
-  }
-  const overflow = images.length - maxImages;
-  if (overflow <= 0) return { messages, omitted: 0 };
-  const omitted = images.slice(0, Math.min(Math.ceil(overflow / block) * block, images.length));
-  const projected = structuredClone(messages);
-  for (const image of omitted) {
-    // The marker depends on the frame alone, so it is byte-identical on every later request.
-    projected[image.messageIndex].content[image.contentIndex] = { type: 'text',
-      text: image.sourceId
-        ? `[Earlier frame image omitted to bound the request (tool call ${image.toolCallId}, frame ${image.sourceId}); call view_frame with frames ["${image.sourceId}"] to see it again.]`
-        : `[Earlier frame image omitted to bound the request (tool call ${image.toolCallId}); call view_frame again to see it.]` };
-  }
-  return { messages: projected, omitted: omitted.length };
 }
 
 /* Budget phases, as a share of the session's requests or dollars, whichever is further along. */
@@ -194,14 +172,21 @@ function requestFailure(message, status, chunks, sawFinish, accountingComplete) 
 /** Run one session in `options.cwd`. `options.fetch` lets tests stand in for the proxy. */
 export async function runCurator(options) {
   const configuration = validateConfiguration(options.configuration);
-  const proxy = proxyFrom(options.env ?? process.env);
+  const env = options.env ?? process.env;
+  const proxy = proxyFrom(env);
   const root = options.cwd ?? process.cwd();
   const started = performance.now();
   const emit = (type, fields = {}) => options.onEvent?.({ type, wall_time: new Date().toISOString(),
     monotonic_ms: Math.round(performance.now() * 1000) / 1000, ...fields });
   const model = { ...configuration.model, api: 'openai-completions', provider: 'openrouter', baseUrl: proxy.baseUrl };
   const effort = configuration.effort;
-  let agent, fatal, finished, spendRefused = false, requests = 0, toolCalls = 0, requestId, requestTimer, inFlight = false;
+  const textOnly = Boolean(configuration.text_only);
+  const maxRetries = textOnly ? 0 : 1;
+  const maxRetryDelayMs = MAX_RETRY_DELAY_MS[configuration.service_tier];
+  let agent, fatal, finished, spendRefused = false, flexDeferred = false;
+  let requests = 0, toolCalls = 0, requestId, requestTimer, inFlight = false;
+  let appliedServiceTier, appendedImages = 0, lastRequestPayloadBytes = 0, pendingAppendedBytes = 0;
+  const seenImageHashes = new Map();
   let rawUsage, httpStatus, providerChunks = 0, sawFinish = false, lastPromptTokens = 0, contextWarning = false, spent = 0;
   // Notes sent so far, each with the number of history messages it followed (append-only).
   const placedNotes = [];
@@ -226,10 +211,11 @@ export async function runCurator(options) {
     return response;
   };
 
-  const python = options.python ?? (options.env ?? process.env).CURATOR_PYTHON;
-  const workbenchEnv = { PATH: (options.env ?? process.env).PATH ?? '/usr/bin:/bin', LANG: 'C.UTF-8', PYTHONDONTWRITEBYTECODE: '1',
-    HOME: (options.env ?? process.env).HOME ?? root, TMPDIR: (options.env ?? process.env).TMPDIR ?? root,
-    ...((options.env ?? process.env).PYTHONPATH ? { PYTHONPATH: (options.env ?? process.env).PYTHONPATH } : {}) };
+  const python = options.python ?? env.CURATOR_PYTHON;
+  const workbenchEnv = { PATH: env.PATH ?? '/usr/bin:/bin', LANG: 'C.UTF-8', PYTHONDONTWRITEBYTECODE: '1',
+    HOME: env.HOME ?? root, TMPDIR: env.TMPDIR ?? root,
+    ...(env.PYTHONPATH ? { PYTHONPATH: env.PYTHONPATH } : {}),
+    ...(env.CURATOR_KNOWLEDGE_BACKING !== undefined ? { CURATOR_KNOWLEDGE_BACKING: env.CURATOR_KNOWLEDGE_BACKING } : {}) };
 
   const tools = [
     { name: 'list_dir', label: 'list_dir', description: 'List a directory in the workspace (paths are relative to it). Shows each entry\'s kind and size.',
@@ -244,9 +230,38 @@ export async function runCurator(options) {
       parameters: Type.Object({ frames: Type.Array(Type.String({ maxLength: 160 }), { minItems: 1, maxItems: 4 }) }),
       run: async args => {
         if (!Array.isArray(args.frames) || args.frames.length < 1 || args.frames.length > 4) throw new ToolError('frames must list one to four source ids');
-        const content = [];
-        for (const frame of args.frames) content.push(...(await viewFrame(root, { frame })).content);
-        return { content, details: undefined, isError: false };
+        const content = [], duplicateFrames = [], cappedFrames = [];
+        // Commit this call's images together: a later invalid frame can still fail the whole call.
+        const appended = new Map();
+        let batchBytes = 0;
+        for (const frame of args.frames) {
+          const frameResult = await viewFrame(root, { frame });
+          const { frameId, sha256, base64Bytes } = frameResult;
+          const firstFrameId = seenImageHashes.get(sha256) ?? appended.get(sha256);
+          if (firstFrameId !== undefined) {
+            duplicateFrames.push(frameId);
+            content.push({ type: 'text', text: `[frame ${frameId} is pixel-identical to earlier frame ${firstFrameId} (sha256 ${sha256.slice(0, 12)}); image not re-appended]` });
+            continue;
+          }
+          const imageBytes = base64Bytes + 512;
+          const estimatedNextBytes = lastRequestPayloadBytes + pendingAppendedBytes + batchBytes + imageBytes;
+          const imageCount = appendedImages + appended.size;
+          const reason = imageCount >= configuration.max_context_images ? 'image'
+            : estimatedNextBytes > REQUEST_BODY_BUDGET_BYTES ? 'byte' : null;
+          if (reason) {
+            cappedFrames.push(frameId);
+            content.push({ type: 'text', text: `[frame ${frameId} not appended: session ${reason} cap reached (${imageCount}/${configuration.max_context_images} images, ~${estimatedNextBytes} bytes); earlier images kept intact for cache stability]` });
+            continue;
+          }
+          content.push(...frameResult.content);
+          appended.set(sha256, frameId);
+          batchBytes += imageBytes;
+        }
+        appendedImages += appended.size;
+        pendingAppendedBytes += batchBytes;
+        for (const [sha256, frameId] of appended) seenImageHashes.set(sha256, frameId);
+        return { content, details: undefined, isError: false,
+          appendedFrames: [...appended.values()], duplicateFrames, cappedFrames };
       } },
     { name: 'write_file', label: 'write_file', description: 'Write a text file, replacing it whole, under submissions/, drafts/ or scratch/ only. Parent directories are created.',
       parameters: Type.Object({ path: Type.String({ maxLength: 512 }), content: Type.String({ maxLength: 524288 }) }),
@@ -262,7 +277,7 @@ export async function runCurator(options) {
           prefix: validation.all_passed ? validation.prefix.map(row => ({ path: row.path, sha256: row.sha256 })) : [] });
         return result;
       } },
-    { name: 'run_workbench', label: 'run_workbench', description: 'Run `python -m harness.trace.workbench` from workbench/ with these arguments (a list of strings, for example ["steps", "../trace", "--from", "1", "--to", "20"]). Run it with ["--help"] for the commands.',
+    { name: 'run_workbench', label: 'run_workbench', description: 'Run trace analysis from workbench/ with these arguments. Use ["--help"] for trace commands, ["knowledge", "search", "<query>"] to find records, or ["knowledge", "get", "<id>"] to retrieve one.',
       parameters: Type.Object({ args: Type.Array(Type.String({ maxLength: 1000 }), { minItems: 1, maxItems: 40 }) }),
       run: args => runWorkbench(root, args, { python, env: workbenchEnv, timeoutSeconds: configuration.workbench_timeout_seconds }) },
     { name: 'finish', label: 'finish', description: 'End the session. Everything not already written to submissions/ or drafts/ is discarded.',
@@ -271,7 +286,7 @@ export async function runCurator(options) {
         finished = { summary: args.summary };
         return { content: [{ type: 'text', text: 'Session ending.' }], details: undefined, isError: false, terminate: true };
       } },
-  ].map(tool => ({
+  ].filter(tool => !textOnly || tool.name !== 'view_frame').map(tool => ({
     name: tool.name, label: tool.label, description: tool.description, parameters: tool.parameters,
     async execute(toolCallId, args) {
       if (fatal) throw new HostError(fatal);
@@ -290,17 +305,25 @@ export async function runCurator(options) {
         result.failure = error instanceof ToolError ? error.message.slice(0, 200) : error.name;
       }
       toolCalls++;
+      const outBytes = resultBytes(result);
+      if (tool.name !== 'view_frame') pendingAppendedBytes += outBytes + 256;
+      const { appendedFrames, duplicateFrames, cappedFrames, failure, ...toolResult } = result;
+      const toolArguments = tool.name === 'read_file' ? { path: args.path,
+        ...(args.offset !== undefined ? { offset: args.offset } : {}),
+        ...(args.max_bytes !== undefined ? { max_bytes: args.max_bytes } : {}) }
+        : tool.name === 'view_frame' ? { frames: args.frames, appended_frames: appendedFrames ?? [],
+          duplicate_frames: duplicateFrames ?? [], capped_frames: cappedFrames ?? [] } : {};
       emit('tool-call', { request_id: requestId ?? null, tool_call_id: toolCallId, name: tool.name, ok: result.isError !== true,
-        duration_ms: Math.round((performance.now() - before) * 1000) / 1000, bytes: resultBytes(result),
-        ...(result.failure ? { error: result.failure } : {}) });
-      delete result.failure;
-      return result;
+        duration_ms: Math.round((performance.now() - before) * 1000) / 1000, bytes: outBytes,
+        ...toolArguments, ...(failure ? { error: failure } : {}) });
+      return toolResult;
     },
   }));
 
   try {
     requireThat(text(options.systemPrompt) && text(options.brief), 'invalid-input');
-    emit('host-start', { schema: SCHEMA, model: model.id, effort, requested_service_tier: SERVICE_TIER, max_requests: configuration.max_requests,
+    emit('host-start', { schema: SCHEMA, model: model.id, effort, requested_service_tier: configuration.service_tier, text_only: textOnly,
+      max_requests: configuration.max_requests,
       max_output_tokens: model.maxTokens, context_window: model.contextWindow, request_timeout_seconds: configuration.request_timeout_seconds,
       wall_seconds: configuration.wall_seconds, max_context_images: configuration.max_context_images,
       provider_routing: structuredClone(model.compat.openRouterRouting), tools: tools.map(tool => tool.name) });
@@ -315,7 +338,6 @@ export async function runCurator(options) {
           if (fatal) return messages;
           try {
             if (lastPromptTokens + model.maxTokens >= model.contextWindow) { stop('context-capacity'); return messages; }
-            const projection = projectImages(messages, configuration.max_context_images, configuration.context_image_block);
             // Each request's note stays in the history where it was first sent and is never rewritten, so
             // every request extends the previous one byte for byte (#489: the provider's cache reuses only
             // a request that a later one extends; a tail rewritten each request is never reused). A retry
@@ -329,15 +351,15 @@ export async function runCurator(options) {
               notes.push(`The context window is nearly full: about ${room} tokens of room remain before the host stops the session. Write any submission or draft now and call finish.`);
             }
             placedNotes.push({ at: messages.length, message: { role: 'user', timestamp: Date.now(), content: [{ type: 'text', text: notes.join(' ') }] } });
-            return withPlacedNotes(projection.messages, placedNotes);
+            return withPlacedNotes(messages, placedNotes);
           } catch { stop('context-projection-failed'); return messages; }
         },
-        finishTurn: () => (fatal || finished || spendRefused ? { action: 'end' } : undefined),
+        finishTurn: () => (fatal || finished || spendRefused || flexDeferred ? { action: 'end' } : undefined),
         streamFn: (streamModel, context, streamOptions) => {
           if (fatal) return failureStream(streamModel, fatal);
           if (requests >= configuration.max_requests) { stop('request-limit'); return failureStream(streamModel, fatal); }
           try {
-            rawUsage = undefined; httpStatus = undefined; providerChunks = 0; sawFinish = false;
+            rawUsage = undefined; httpStatus = undefined; providerChunks = 0; sawFinish = false; appliedServiceTier = undefined;
             let generationId;
             clearTimeout(requestTimer);
             requestTimer = setTimeout(() => stop('request-timeout'), configuration.request_timeout_seconds * 1000);
@@ -347,7 +369,9 @@ export async function runCurator(options) {
               let attempt = 0;
               const retry = (id, headers) => {
                 if (requests >= configuration.max_requests) { stop('request-limit'); throw new HostError(fatal); }
+                inFlight = false;
                 emit('request-end', { request_id: id, status: httpStatus ?? null, stop_reason: 'error', retry: true,
+                  applied_service_tier: appliedServiceTier ?? null,
                   failure: requestFailure({ stopReason: 'error' }, httpStatus, providerChunks, sawFinish, false) });
                 // Only host-selected classes reach the SDK's abortable wait.
                 const error = new Error('retryable-provider');
@@ -363,13 +387,15 @@ export async function runCurator(options) {
                 const id = requestId = `request-${++requests}`;
                 inFlight = true;
                 httpStatus = undefined;
-                emit('request-start', { request_id: id, attempt, payload_bytes: Buffer.byteLength(init.body),
+                lastRequestPayloadBytes = Buffer.byteLength(init.body);
+                pendingAppendedBytes = 0;
+                emit('request-start', { request_id: id, attempt, payload_bytes: lastRequestPayloadBytes,
                   message_count: payload.messages?.length ?? 0, image_parts: init.body.split('"type":"image_url"').length - 1 });
                 let response;
                 try { response = await actualFetch(url, init); }
                 catch (error) {
                   httpStatus = null;
-                  if (attempt === 1 && !signal.aborted && !fatal) {
+                  if (attempt <= maxRetries && !signal.aborted && !fatal) {
                     retry(id, new Headers({ 'retry-after': '1' }));
                   }
                   throw error;
@@ -381,23 +407,27 @@ export async function runCurator(options) {
                   spendRefused = true;
                   return response;
                 }
-                if (response.status >= 400) {
-                  const headers = retryHeaders(response);
-                  if (attempt === 1 && headers && !signal.aborted && !fatal) {
+                const flexCapacity = httpStatus === 429 && configuration.service_tier === 'flex';
+                if (httpStatus >= 400 && attempt <= maxRetries && !signal.aborted && !fatal
+                    && (!flexCapacity || requests < configuration.max_requests)) {
+                  const headers = retryHeaders(response, maxRetryDelayMs);
+                  if (headers) {
                     void response.body?.cancel().catch(() => {});
                     retry(id, headers);
                   }
                 }
+                if (flexCapacity) flexDeferred = true;
                 return response;
-              }, { maxRetries: 1, maxRetryDelayMs: MAX_RETRY_DELAY_MS, signal });
+              }, { maxRetries, maxRetryDelayMs, signal });
             };
             return stream(streamModel, context, { ...streamOptions, apiKey: proxy.token, fetch: observedFetch, env: {}, signal,
               maxRetries: 0, cacheRetention: 'short', maxTokens: model.maxTokens, timeoutMs: configuration.request_timeout_seconds * 1000,
               reasoningEffort: effort === 'off' ? undefined : effort,
-              // Omission can inherit a workspace tier. Use the pinned SDK's payload hook,
-              // as the player host does, so the proxy sees an explicit standard-tier request.
-              onPayload: payload => ({ ...payload, service_tier: SERVICE_TIER }),
+              // Omission can inherit a workspace tier. Always send the frozen selection.
+              onPayload: payload => ({ ...payload, service_tier: configuration.service_tier }),
               onProviderStreamEvent: chunk => {
+                const tier = chunk?.service_tier ?? chunk?.response?.service_tier;
+                if (typeof tier === 'string') appliedServiceTier = tier;
                 // Keep the bounded lookup reference before a later stream failure can lose usage.
                 // It supports read-only billing reconciliation; it is never a credential or content.
                 if (!generationId && typeof chunk?.id === 'string' && /^gen-[A-Za-z0-9_-]{1,150}$/.test(chunk.id)) {
@@ -419,17 +449,20 @@ export async function runCurator(options) {
         if (event.type !== 'message_end' || event.message.role !== 'assistant') return;
         clearTimeout(requestTimer);
         const message = event.message;
+        pendingAppendedBytes += Buffer.byteLength(JSON.stringify(message));
         const text_ = narration(message.content);
         if (text_.text || text_.omitted_bytes) emit('assistant-text', { request_id: requestId ?? null, ...text_ });
         if (inFlight) {
           const usage = rawUsage ?? {};
           const number = value => (typeof value === 'number' && Number.isFinite(value) ? value : null);
           const failure = spendRefused ? { kind: 'spend-reservation-refused', phase: 'http-error' }
-            : requestFailure(message, httpStatus, providerChunks, sawFinish,
-            number(usage.prompt_tokens) !== null && number(usage.completion_tokens) !== null && number(usage.cost) !== null);
+            : flexDeferred ? { kind: 'flex-capacity-deferred', phase: 'http-error' }
+              : requestFailure(message, httpStatus, providerChunks, sawFinish,
+                number(usage.prompt_tokens) !== null && number(usage.completion_tokens) !== null && number(usage.cost) !== null);
           lastPromptTokens = number(usage.prompt_tokens) ?? lastPromptTokens;
           spent += number(usage.cost) ?? 0;
           emit('request-end', { request_id: requestId, status: httpStatus ?? null, stop_reason: message.stopReason,
+            applied_service_tier: appliedServiceTier ?? null,
             usage_reported: number(usage.prompt_tokens) !== null && number(usage.completion_tokens) !== null,
             prompt_tokens: number(usage.prompt_tokens), completion_tokens: number(usage.completion_tokens),
             cached_tokens: number(usage.prompt_tokens_details?.cached_tokens), cache_write_tokens: number(usage.prompt_tokens_details?.cache_write_tokens),
@@ -437,12 +470,12 @@ export async function runCurator(options) {
             ...(failure ? { failure } : {}) });
         }
         inFlight = false;
-        if (['error', 'aborted', 'length'].includes(message.stopReason) && !fatal && !spendRefused) {
+        if (['error', 'aborted', 'length'].includes(message.stopReason) && !fatal && !spendRefused && !flexDeferred) {
           stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
         }
       });
       await agent.prompt(options.brief);
-      if (!fatal && !finished && !spendRefused) stop('ended-without-finish');
+      if (!fatal && !finished && !spendRefused && !flexDeferred) stop('ended-without-finish');
     } finally {
       clearTimeout(requestTimer);
       clearTimeout(wallTimer);
@@ -450,8 +483,8 @@ export async function runCurator(options) {
   } catch (error) {
     if (!fatal) fatal = error instanceof HostError ? error.reason : 'host-failed';
   }
-  const result = { ok: !fatal && (finished !== undefined || spendRefused),
-    reason: fatal ?? (spendRefused ? 'spend-reservation-refused' : 'finished'), requests, tool_calls: toolCalls };
+  const reason = fatal ?? (flexDeferred ? 'flex-capacity-deferred' : spendRefused ? 'spend-reservation-refused' : 'finished');
+  const result = { ok: !fatal && !flexDeferred && (finished !== undefined || spendRefused), reason, requests, tool_calls: toolCalls };
   emit('host-end', { ...result, summary_chars: finished ? finished.summary.length : 0, elapsed_ms: Math.round(performance.now() - started) });
   return result;
 }

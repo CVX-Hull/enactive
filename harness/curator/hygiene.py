@@ -7,6 +7,7 @@ and byte-bounded.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import hashlib
 from itertools import combinations
 import math
 import re
@@ -171,7 +172,7 @@ def state_key_section(records: list[dict], *, world: str | None = None, max_byte
     return lines
 
 
-def worklist(records: list[dict]) -> dict:
+def worklist(records: list[dict], *, limit: int | None = MAX_ITEMS_PER_SECTION) -> dict:
     """Compute deterministic typed-incidence signals and pairwise advisory hygiene candidates."""
     active = sorted((r for r in records if check.current(r)), key=check.owner)
     facts = [r for r in active if r['record'] == 'fact']
@@ -267,7 +268,7 @@ def worklist(records: list[dict]) -> dict:
         if not kept:
             kept = doc_words[fid]
         clean_words[fid] = kept
-        idf_vecs[fid] = {tok: math.log((n_facts + 1) / (token_df[tok] + 1)) + 1.0 for tok in kept}
+        idf_vecs[fid] = {tok: math.log((n_facts + 1) / (token_df[tok] + 1)) + 1.0 for tok in sorted(kept)}
 
     contradicts_pairs: set[tuple[str, str]] = set()
     for fact in facts:
@@ -336,16 +337,33 @@ def worklist(records: list[dict]) -> dict:
         active_records=total_active,
         active_facts=n_facts,
         active_articles=len(articles),
-        majority_tags=majority_tags[:MAX_ITEMS_PER_SECTION],
-        majority_subjects=majority_subjects[:MAX_ITEMS_PER_SECTION],
-        tag_scope_overlap=tag_scope_overlap[:MAX_ITEMS_PER_SECTION],
-        oversized_articles=oversized_articles[:MAX_ITEMS_PER_SECTION],
-        bibliographic_coupling=bibliographic_coupling[:MAX_ITEMS_PER_SECTION],
-        chronological_see_also=chronological_see_also[:MAX_ITEMS_PER_SECTION],
-        duplicate_candidates=duplicate_candidates[:MAX_ITEMS_PER_SECTION],
-        potential_contradictions=potential_contradictions[:MAX_ITEMS_PER_SECTION],
-        key_alias_candidates=key_alias_candidates[:MAX_ITEMS_PER_SECTION],
+        majority_tags=majority_tags[:limit],
+        majority_subjects=majority_subjects[:limit],
+        tag_scope_overlap=tag_scope_overlap[:limit],
+        oversized_articles=oversized_articles[:limit],
+        bibliographic_coupling=bibliographic_coupling[:limit],
+        chronological_see_also=chronological_see_also[:limit],
+        duplicate_candidates=duplicate_candidates[:limit],
+        potential_contradictions=potential_contradictions[:limit],
+        key_alias_candidates=key_alias_candidates[:limit],
     )
+
+
+def hygiene_trigger(records: list[dict]) -> dict:
+    """Identify due hygiene work and fingerprint the full advisory and must-clear lists."""
+    report = worklist(records, limit=None)
+    stale = sorted(check._stale_pairs(records))
+    overlapping = {row[side] for row in report['bibliographic_coupling'] for side in ('left', 'right')}
+    counts = dict(
+        stale_citations=len(stale),
+        duplicate_pairs=len(report['duplicate_candidates']),
+        oversized_overlapping_articles=sum(row['slug'] in overlapping for row in report['oversized_articles']),
+        total_advisory=sum(len(rows) for rows in report.values() if isinstance(rows, list)),
+    )
+    thresholds = dict(stale_citations=1, duplicate_pairs=3, oversized_overlapping_articles=1, total_advisory=8)
+    reasons = [key for key, threshold in thresholds.items() if counts[key] >= threshold]
+    digest = hashlib.sha256(canonical({'worklist': report, 'must_clear': stale}, sort_keys=True).encode()).hexdigest()
+    return dict(triggered=bool(reasons), digest=digest, reasons=reasons, counts=counts)
 
 
 def worklist_section(records: list[dict], *, max_bytes: int = MAX_SECTION_BYTES) -> list[str]:

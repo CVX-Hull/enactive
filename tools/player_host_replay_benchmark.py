@@ -1583,11 +1583,368 @@ def lag_markdown(result: dict) -> str:
     return '\n'.join(lines)
 
 
+@dataclass(frozen=True)
+class CadencePolicy:
+    name: str
+    trigger_steps: int
+    ceiling_steps: int
+    cut_demand_min_steps: int | None = None
+
+
+CADENCE_POLICIES = (
+    CadencePolicy('cadence_20_40 (baseline)', 20, 40),
+    CadencePolicy('cadence_40_40', 40, 40),
+    CadencePolicy('cadence_40_60', 40, 60),
+    CadencePolicy('cadence_60_60', 60, 60),
+    CadencePolicy('cadence_cut_demand (20..60)', 60, 60, cut_demand_min_steps=20),
+)
+
+CADENCE_SCENARIOS = (
+    LagScenario('default_recorded (0s)', 0.0),
+    LagScenario('flex_mild (+120s)', 120_000.0),
+    LagScenario('flex_moderate (+300s)', 300_000.0),
+    LagScenario('flex_heavy_429 (+600s + 15m burst)', 600_000.0, outage_start_frac=0.35, outage_duration_ms=900_000.0),
+)
+
+DEFAULT_CURATOR_WINDOW_MS = 90_000.0
+
+
+def _simulate_cadence_actor(trace: dict, snapshots: dict, projected_start: dict,
+                            scenario: LagScenario, cadence: CadencePolicy,
+                            *, base_window_ms: float = DEFAULT_CURATOR_WINDOW_MS) -> dict:
+    """Simulate a curator window cadence beside #1037's tiered 100k uncovered-cut player host."""
+    policy: CutPolicy = trace['policy']
+    turns: list[Turn] = trace['turns']
+    checks: list[dict] = trace['checks']
+    fixed_tokens: int = trace['fixed_tokens']
+    t0, t1 = checks[0]['ts'], checks[-1]['ts']
+    span = max(1.0, t1 - t0)
+    outage_start = t0 + scenario.outage_start_frac * span if scenario.outage_start_frac is not None else None
+    outage_end = outage_start + scenario.outage_duration_ms if outage_start is not None else None
+
+    # Map every operation to the latest recorded snapshot version available in the trace so cut briefings
+    # use real sealed snapshots without inventing knowledge.
+    all_ops: list[str] = [op for turn in turns for op in turn.operations]
+    op_to_version: dict[str, str] = {}
+    recorded_version = trace['start_version']
+    pub_by_op = {op: ver for _, ver, op in trace['publications']}
+    for op in all_ops:
+        if op in pub_by_op:
+            recorded_version = pub_by_op[op]
+        op_to_version[op] = recorded_version
+
+    version, frontier, restored = trace['start_version'], None, False
+    projected_removed = covered_removed_through = 0
+    dropped_sources: dict[str, None] = {}
+    dropped_intents: dict[str, None] = {}
+    uncovered_dropped_turn_indices: list[int] = []
+    uncovered_dropped_frames: set[str] = set()
+    active_cut_marker_tokens = 0
+    proposed_prefix = briefing_tokens(projected_start)
+    fresh_prefixes: dict[str | None, int] = {}
+    armed, prior_omissions, hold_state, last_plan_key = False, 0, None, None
+    counts = Counter()
+    total_prompt_tokens = peak_tokens = 0
+    min_headroom = policy.hard_limit
+    max_uncovered_single_cut = total_uncovered_cuts = total_covered_cuts = total_rescues = 0
+    stopped = False
+    completed_requests = 0
+
+    # Dynamic curator runner state for this actor.
+    curator_cursor = 0
+    curator_busy_until = float('-inf')
+    pending_pub: tuple[float, str, str] | None = None
+    windows_dispatched = 0
+    windows_published = 0
+    steps_covered_by_windows = 0
+
+    for chk in checks:
+        ts = chk['ts']
+        if pending_pub is not None and ts >= pending_pub[0]:
+            _, version, frontier = pending_pub
+            pending_pub = None
+            windows_published += 1
+        restored |= chk['restored']
+
+        all_turns = turns[:chk['turn_count']]
+        finished_ops = [op for turn in all_turns for op in turn.operations]
+        current = all_turns[projected_removed:]
+        eligible = 0
+        if frontier is not None:
+            for at, turn in enumerate(all_turns[:-1]):
+                if frontier in turn.operations:
+                    covered_idx = at + int(frontier == turn.operations[-1])
+                    if covered_idx > covered_removed_through:
+                        covered_removed_through = covered_idx
+                    break
+            eligible = min(max(0, covered_removed_through - projected_removed), max(0, len(current) - 1))
+        max_uncovered_cuttable = max(0, len(current) - 1)
+        deltas = [n for turn in current for n in turn.eviction_deltas]
+        notes_at_boundary = all_turns[projected_removed - 1].notice_tokens if projected_removed else 0
+        estimated = (
+            fixed_tokens + proposed_prefix + active_cut_marker_tokens + notes_at_boundary + chk['warning']
+            + sum(turn.request_tokens + turn.notice_tokens for turn in current)
+            + eviction_delta(deltas, chk['protected'], policy)
+        )
+        if projected_removed == chk['archived_removed']:
+            estimated = max(estimated, chk['logged_tokens'] - chk['orig_prefix'] + proposed_prefix + chk['warning'])
+        elif not chk['has_manifest']:
+            estimated = max(estimated, chk['logged_tokens'] + proposed_prefix + chk['warning'])
+
+        # Dispatch next curator window when runner is idle and cadence trigger fires.
+        if ts >= curator_busy_until and pending_pub is None:
+            waiting = len(finished_ops) - curator_cursor
+            demand_hit = (
+                cadence.cut_demand_min_steps is not None
+                and waiting >= cadence.cut_demand_min_steps
+                and (estimated - proposed_prefix > policy.high)
+            )
+            if waiting >= cadence.trigger_steps or demand_hit:
+                size = min(waiting, cadence.ceiling_steps)
+                end_op = finished_ops[curator_cursor + size - 1]
+                curator_cursor += size
+                windows_dispatched += 1
+                steps_covered_by_windows += size
+                pub_ts = ts + base_window_ms + scenario.delay_ms
+                if outage_start is not None and outage_end is not None and outage_start <= pub_ts < outage_end:
+                    pub_ts = outage_end
+                curator_busy_until = pub_ts
+                pending_pub = (pub_ts, op_to_version.get(end_op, version), end_op)
+
+        uncut = Projection(estimated, proposed_prefix, len(deltas), chk['protected'])
+        omitted = uncut.omissions(policy)
+
+        def eval_prefix(k: int) -> Projection:
+            if version not in fresh_prefixes:
+                fresh_prefixes[version] = briefing_tokens(briefing(snapshots[version], cut=True))
+            fresh_tok = fresh_prefixes[version]
+            rem_tokens = sum(t.request_tokens + t.notice_tokens for t in current[k:])
+            dropped_imgs = sum(t.images for t in current[:k])
+            srcs, ints = dict(dropped_sources), dict(dropped_intents)
+            for t in current[:k]:
+                srcs.update(dict.fromkeys(t.image_sources))
+                for it in t.intents:
+                    _record_intent(ints, it)
+            marker = cut_marker(projected_removed + k, frontier or 'none', version or 'v0', srcs, ints)
+            total_tok = (
+                fixed_tokens + chk['warning'] + fresh_tok + tokens(chars(marker))
+                + rem_tokens + current[k - 1].notice_tokens
+                + eviction_delta(deltas[dropped_imgs:], chk['protected'], policy)
+            )
+            return Projection(total_tok, fresh_tok, len(deltas) - dropped_imgs, chk['protected'])
+
+        chosen_k, outcome, used_uncovered = 0, 'idle', False
+        proj = uncut
+        if restored or chk['orderly_stop']:
+            armed, hold_state, last_plan_key, prior_omissions = False, None, None, omitted
+            if uncut.tokens >= policy.hard_limit:
+                outcome = 'stop'
+        else:
+            armed |= (uncut.tokens - uncut.briefing_tokens > policy.high) or (omitted > prior_omissions)
+            prior_omissions = omitted
+            plan_key = (frontier, eligible, version, len(current))
+            covered_target = covered_best_effort = None
+            if armed and eligible >= policy.min_free and last_plan_key != plan_key:
+                for k in range(policy.min_free, eligible + 1):
+                    p = eval_prefix(k)
+                    if p.tokens < policy.hard_limit:
+                        if p.tokens - p.briefing_tokens <= policy.low and p.images <= policy.max_images - policy.block:
+                            covered_target = (k, p)
+                            break
+                        if k == eligible and p.tokens < uncut.tokens:
+                            covered_best_effort = (k, p)
+            if covered_target is not None:
+                chosen_k, proj = covered_target
+                outcome = 'cut'
+            elif covered_best_effort is not None:
+                chosen_k, proj = covered_best_effort
+                outcome = 'cut'
+
+            if chosen_k == 0 and uncut.tokens >= policy.hard_limit:
+                for k in range(1, eligible + 1):
+                    p = eval_prefix(k)
+                    if p.tokens < min(uncut.tokens, policy.hard_limit):
+                        chosen_k, proj, outcome = k, p, 'rescue'
+                        break
+
+            # #1037 tiered 100k uncovered-cut fallback.
+            uncov_pressure = (uncut.tokens - uncut.briefing_tokens) > 100_000
+            if chosen_k == 0 and uncov_pressure and last_plan_key != plan_key and max_uncovered_cuttable >= policy.min_free:
+                uncov_target = uncov_best = None
+                for k in range(max(policy.min_free, eligible + 1), max_uncovered_cuttable + 1):
+                    p = eval_prefix(k)
+                    if p.tokens < policy.hard_limit:
+                        if p.tokens - p.briefing_tokens <= policy.low and p.images <= policy.max_images - policy.block:
+                            uncov_target = (k, p)
+                            break
+                        if p.tokens < uncut.tokens:
+                            uncov_best = (k, p)
+                if uncov_target is not None:
+                    chosen_k, proj, outcome, used_uncovered = *uncov_target, 'cut', True
+                elif uncov_best is not None:
+                    chosen_k, proj, outcome, used_uncovered = *uncov_best, 'cut', True
+                elif covered_best_effort is not None:
+                    chosen_k, proj, outcome = *covered_best_effort, 'cut'
+
+            if chosen_k == 0 and armed and last_plan_key != plan_key:
+                last_plan_key = plan_key
+            if chosen_k == 0 and uncut.tokens >= policy.hard_limit:
+                for k in range(eligible + 1, max_uncovered_cuttable + 1):
+                    p = eval_prefix(k)
+                    if p.tokens < min(uncut.tokens, policy.hard_limit):
+                        chosen_k, proj, outcome, used_uncovered = k, p, 'rescue', True
+                        break
+                if chosen_k == 0:
+                    outcome = 'stop'
+            if chosen_k == 0 and outcome != 'stop' and armed:
+                reason = 'uncovered' if not eligible else ('below-min-free' if eligible < policy.min_free else 'insufficient-cover')
+                st = (reason, frontier)
+                if hold_state == st:
+                    outcome = 'suppressed-hold'
+                else:
+                    hold_state, outcome = st, reason
+
+        counts[outcome] += 1
+        if chosen_k > 0:
+            new_uncov = max(0, chosen_k - eligible)
+            if new_uncov > 0:
+                used_uncovered = True
+                max_uncovered_single_cut = max(max_uncovered_single_cut, new_uncov)
+                for offset in range(eligible, chosen_k):
+                    turn_idx = projected_removed + offset
+                    uncovered_dropped_turn_indices.append(turn_idx)
+                    uncovered_dropped_frames.update(all_turns[turn_idx].image_sources)
+            for t in current[:chosen_k]:
+                dropped_sources.update(dict.fromkeys(t.image_sources))
+                for it in t.intents:
+                    _record_intent(dropped_intents, it)
+            projected_removed += chosen_k
+            if outcome == 'rescue':
+                total_rescues += 1
+            elif used_uncovered:
+                total_uncovered_cuts += 1
+            else:
+                total_covered_cuts += 1
+            if version not in fresh_prefixes:
+                fresh_prefixes[version] = briefing_tokens(briefing(snapshots[version], cut=True))
+            active_cut_marker_tokens = tokens(chars(cut_marker(
+                projected_removed, frontier or 'none', version or 'v0', dropped_sources, dropped_intents)))
+            proposed_prefix = fresh_prefixes[version]
+            armed, hold_state, last_plan_key, prior_omissions = False, None, None, proj.omissions(policy)
+            sent_tokens = proj.tokens
+        else:
+            sent_tokens = estimated
+
+        if outcome == 'stop':
+            stopped = True
+            break
+        completed_requests += 1
+        total_prompt_tokens += sent_tokens
+        peak_tokens = max(peak_tokens, sent_tokens)
+        min_headroom = min(min_headroom, policy.hard_limit - sent_tokens)
+
+    # Flush any tail window at admission end (as Runner.choose does when actor ends).
+    if curator_cursor < len(all_ops):
+        tail_waiting = len(all_ops) - curator_cursor
+        windows_dispatched += (tail_waiting + cadence.ceiling_steps - 1) // cadence.ceiling_steps
+        steps_covered_by_windows += tail_waiting
+
+    return dict(
+        checks_total=len(checks), completed_requests=completed_requests, stopped=stopped,
+        windows_dispatched=windows_dispatched, windows_published_in_play=windows_published,
+        steps_covered_by_windows=steps_covered_by_windows,
+        edge_holds=sum(counts[k] for k in ('uncovered', 'below-min-free', 'insufficient-cover')),
+        covered_cuts=total_covered_cuts, uncovered_cuts=total_uncovered_cuts, rescues=total_rescues,
+        total_prompt_tokens=total_prompt_tokens, peak_tokens=peak_tokens, min_headroom=min_headroom,
+        uncovered_turns_dropped=len(uncovered_dropped_turn_indices),
+        max_uncovered_single_cut=max_uncovered_single_cut,
+        uncovered_frames_dropped=len(uncovered_dropped_frames),
+        uncovered_frames_in_source_ids=sum(1 for f in uncovered_dropped_frames if f in dropped_sources),
+    )
+
+
+def cadence_replay(evidence: Path, *, lineage: str = '998') -> dict:
+    descriptor = LINEAGES[lineage]
+    runs = [evidence / f'{descriptor.prefix}-admission-{n:02d}' / 'run' for n in descriptor.admissions]
+    snapshots, _ = load_snapshots(runs, descriptor)
+    actor_traces = []
+    for run in runs:
+        for path in sorted(run.glob('actors/*/host.jsonl')):
+            with path.open(encoding='utf-8') as f:
+                events = [json.loads(line) for line in f if line.strip()]
+            with path.with_name('knowledge-updates.jsonl').open(encoding='utf-8') as f:
+                coverage = {
+                    row['version']: row['operation_id']
+                    for row in map(json.loads, f)
+                    if row['schema'] == 'coverage-update-entry/1'
+                    and not row['restored']
+                    and row['actor_id'] == events[0]['actor_id']
+                }
+            start = next(e for e in events if e['type'] == 'knowledge-delivery' and e['kind'] == 'briefing')
+            snap = snapshots[start['version']]
+            selected = [row['id'] for row in delivery_payload(start)['leads'] if row['id'] in snap.entries]
+            actor_traces.append((_extract_lag_actor_trace(events, coverage), briefing(snap, selected)))
+    scenarios_out = {}
+    for scenario in CADENCE_SCENARIOS:
+        scenarios_out[scenario.name] = {}
+        baseline_windows = None
+        for cadence in CADENCE_POLICIES:
+            rows = [_simulate_cadence_actor(tr, snapshots, prop, scenario, cadence) for tr, prop in actor_traces]
+            done = sum(a['completed_requests'] for a in rows)
+            win = sum(a['windows_dispatched'] for a in rows)
+            if baseline_windows is None:
+                baseline_windows = win
+            reduction_pct = round(100.0 * (baseline_windows - win) / max(1, baseline_windows), 1)
+            scenarios_out[scenario.name][cadence.name] = dict(
+                admissions_stopped=sum(a['stopped'] for a in rows),
+                admissions=len(rows),
+                completed_requests=done,
+                total_requests=sum(a['checks_total'] for a in rows),
+                windows_dispatched=win,
+                window_reduction_pct=reduction_pct,
+                windows_published_in_play=sum(a['windows_published_in_play'] for a in rows),
+                edge_holds=sum(a['edge_holds'] for a in rows),
+                covered_cuts=sum(a['covered_cuts'] for a in rows),
+                uncovered_cuts=sum(a['uncovered_cuts'] for a in rows),
+                rescues=sum(a['rescues'] for a in rows),
+                mean_prompt_tokens=round(sum(a['total_prompt_tokens'] for a in rows) / max(1, done)),
+                peak_tokens=max(a['peak_tokens'] for a in rows),
+                min_headroom=min(a['min_headroom'] for a in rows),
+                uncovered_turns_dropped=sum(a['uncovered_turns_dropped'] for a in rows),
+                max_uncovered_single_cut=max(a['max_uncovered_single_cut'] for a in rows),
+                uncovered_frames_dropped=sum(a['uncovered_frames_dropped'] for a in rows),
+                uncovered_frames_in_source_ids=sum(a['uncovered_frames_in_source_ids'] for a in rows),
+            )
+    return dict(schema='player-host-cadence-replay/1', lineage=lineage,
+                player_host_arm='arm1e_tiered_100k', base_window_ms=DEFAULT_CURATOR_WINDOW_MS,
+                scenarios=scenarios_out)
+
+
+def cadence_markdown(result: dict) -> str:
+    lines = [f"# Offline curator cadence replay on sealed #{result['lineage']} (with #1037 tiered 100k fallback)", '']
+    for name, policies in result['scenarios'].items():
+        lines += [f'## Scenario: {name}', '',
+                  '| Cadence | Windows (Delta) | In-Play Pubs | Stops | Cov / Uncov Cuts | Rescues | Mean Prompt Tok | Peak Tok | Min Headroom | Uncov Turns (Max/Cut) | Frames Retained |',
+                  '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
+        for pname, r in policies.items():
+            delta = f"-{r['window_reduction_pct']:.1f}%" if r['window_reduction_pct'] > 0 else '0.0%'
+            frames = f"{r['uncovered_frames_in_source_ids']}/{r['uncovered_frames_dropped']}" if r['uncovered_frames_dropped'] else '0/0'
+            lines.append(
+                f"| {pname} | {r['windows_dispatched']} ({delta}) | {r['windows_published_in_play']} "
+                f"| {r['admissions_stopped']}/{r['admissions']} | {r['covered_cuts']} / {r['uncovered_cuts']} "
+                f"| {r['rescues']} | {r['mean_prompt_tokens']:,} | {r['peak_tokens']:,} | {r['min_headroom']:,} "
+                f"| {r['uncovered_turns_dropped']} ({r['max_uncovered_single_cut']}) | {frames} |"
+            )
+        lines.append('')
+    return '\n'.join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--evidence', type=Path, help='sealed evidence directory (default is the main checkout store)')
     parser.add_argument('--lineage', choices=(*LINEAGES, 'all'), default=None)
     parser.add_argument('--lag-replay', action='store_true', help='run #1037 curator-lag and flex/429 replay matrix')
+    parser.add_argument('--cadence-replay', action='store_true', help='run #1027 curator cadence replay on #1037 tiered 100k fallback')
     output = parser.add_mutually_exclusive_group()
     output.add_argument('--json', action='store_true')
     output.add_argument('--markdown', action='store_true')
@@ -1597,6 +1954,11 @@ def main(argv: list[str] | None = None) -> int:
         target = '998' if args.lineage in (None, 'all') else args.lineage
         result = lag_replay(evidence, lineage=target)
         print(json.dumps(result, indent=2, default=str) if args.json else lag_markdown(result), end='' if not args.json else '\n')
+        return 0
+    if args.cadence_replay:
+        target = '998' if args.lineage in (None, 'all') else args.lineage
+        result = cadence_replay(evidence, lineage=target)
+        print(json.dumps(result, indent=2, default=str) if args.json else cadence_markdown(result), end='' if not args.json else '\n')
         return 0
     selected_lineage = '896-b' if args.lineage is None else args.lineage
     lineages = {name: benchmark(evidence, lineage=name) for name in

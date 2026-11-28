@@ -342,41 +342,226 @@ def test_a_lock_refusal_does_nothing_and_the_next_poll_computes_the_range_again(
     assert world.calls == [Window(RUN, '001', 1, 20)] * 2 and runner.cursor == {'001': 20}
 
 
-def test_a_refused_spend_reservation_retries_the_oldest_uncovered_steps_after_restart(world):
+def test_a_refused_spend_reservation_without_publication_stops_without_blind_step_halving(world):
     world.reading = read({'001': 20})
-    world.outcomes = [lambda window: Outcome('sealed', (), stop=live.SPEND_REFUSED), 'accepted']
+    world.outcomes = [lambda window: Outcome('sealed', (), stop=live.SPEND_REFUSED)]
     runner = world.runner()
-    assert runner.poll()
+    assert not runner.poll()
     now = status(world)
-    assert now['state'] == 'polling' and now['stop_reason'] is None
+    assert now['state'] == 'stopped' and now['stop_reason'] == live.SPEND_EXHAUSTED
     assert now['examined'][-1]['outcome'] == live.SPEND_REFUSED
     assert runner.cursor == {} and runner.session_failures() == 0
+    assert now['covered_prefix']['end'] is None
+    assert world.calls == [Window(RUN, '001', 1, 20)]
+
+
+def test_a_spend_exhausted_closeout_advances_covered_prefix_only_when_gate_confirmed(world):
+    world.reading = read({'001': 20})
+    world.outcomes = [lambda window: Outcome('sealed', ({'operation': 'submission', 'status': 'published',
+                                                       'version': world.publish(window)},),
+                                             stop=live.SPEND_EXHAUSTED)]
     runner = world.runner()
+    assert not runner.poll()
+    now = status(world)
+    assert now['state'] == 'stopped' and now['stop_reason'] == live.SPEND_EXHAUSTED
+    assert runner.cursor == {'001': 20}
+    assert now['covered_prefix']['end']['operation'] == 'op-001-20'
+
+
+def test_flex_capacity_deferrals_retry_same_window_up_to_bound_without_halving(world):
+    world.reading = read({'001': 20})
+    world.outcomes = [
+        lambda _: Outcome('aborted', (), stop=live.FLEX_DEFERRED),
+        lambda _: Outcome('aborted', (), stop=live.FLEX_DEFERRED),
+        'accepted',
+    ]
+    runner = world.runner()
+    assert runner.poll() and runner.cursor == {} and runner.session_failures() == 0 and runner.flex_deferrals() == 1
+    assert runner.poll() and runner.cursor == {} and runner.session_failures() == 0 and runner.flex_deferrals() == 2
+    assert runner.poll() and runner.cursor == {'001': 20} and runner.flex_deferrals() == 0
+    assert world.calls == [Window(RUN, '001', 1, 20)] * 3
+    # Three consecutive deferrals stop cleanly.
+    world.reading = read({'001': 40})
+    world.outcomes = [lambda _: Outcome('aborted', (), stop=live.FLEX_DEFERRED)] * live.FLEX_DEFERRALS
+    assert runner.poll() and runner.poll() and not runner.poll()
+    assert status(world)['stop_reason'] == live.FLEX_DEFERRED and runner.cursor == {'001': 20}
+
+
+def test_interleaved_hygiene_respects_cooldown_backlog_digest_and_two_failure_shutoff(tmp_path):
+    world = World(tmp_path/'runner', Settings(trigger_steps=20, ceiling_steps=20, poll_seconds=15, watch_seconds=60))
+    hygiene_calls = []
+    hygiene_outcomes = []
+    trigger_state = dict(triggered=True, digest='dig-1', reasons=['stale_citations'], counts=dict(stale_citations=1))
+
+    def hygiene_call(_reading, label):
+        hygiene_calls.append(label)
+        return hygiene_outcomes.pop(0)(label)
+
+    runner = Runner(
+        world.directory, RUN, snapshot=world.snapshot, session_call=world.session, look=world.look,
+        settings=world.settings, clock=world.clock, sleep=lambda _: None,
+        hygiene_call=hygiene_call, hygiene_check=lambda: dict(trigger_state),
+        hygiene_settings=live.HygieneSettings(min_windows=5, max_unexamined_steps=10),
+    )
+    # 4 confirmed windows: below min_windows=5, no hygiene runs even when idle with backlog 0.
+    world.outcomes = ['accepted'] * 4
+    for n in range(1, 5):
+        world.reading = read({'001': 20 * n})
+        assert runner.poll()
+    assert runner.poll() and hygiene_calls == []
+
+    # 5th confirmed window + backlog > 10: still blocked by max_unexamined_steps=10.
+    world.outcomes = ['accepted']
+    world.reading = read({'001': 115})
+    assert runner.poll()  # examines 81..100, leaving backlog=15
+    assert runner.poll() and hygiene_calls == []
+
+    # Backlog <= 10 (105 steps, cursor 100): triggers hygiene! Publishes v6 cleanly without advancing cursor.
+    world.reading = read({'001': 105})
+
+    def publish_hygiene(label):
+        version = f'v{len(world.tags)}'
+        world.tags[version] = dict(coverage=world.tags['v5']['coverage'], restored_from=None)
+        return Outcome('sealed', ({'operation': 'submission', 'status': 'published', 'version': version},), session_id=label)
+
+    hygiene_outcomes.append(publish_hygiene)
     assert runner.poll()
-    assert world.calls == [Window(RUN, '001', 1, 20), Window(RUN, '001', 1, 10)]
-    assert runner.cursor == {'001': 10}
-    assert status(world)['covered_prefix']['end']['operation'] == 'op-001-10'
+    assert len(hygiene_calls) == 1
+    assert runner.cursor == {'001': 100}
+    now = status(world)
+    assert now['unconfirmed'] == [] and now['covered_prefix']['end']['step'] == 100
+    assert runner.hygiene_publications() == ['v6']
+    rows = [json.loads(line) for line in (world.directory/'examined.jsonl').read_text().splitlines()]
+    hygiene_ends = [r for r in rows if r['event'] == 'end' and r.get('session_kind') == 'hygiene']
+    assert len(hygiene_ends) == 1 and hygiene_ends[0]['advanced'] is False
+
+    # Same digest does not re-trigger even after 5 more windows; new digest triggers, and 2 consecutive
+    # hygiene failures disable hygiene without halting ingestion.
+    world.outcomes = ['accepted'] * 5
+    for n in range(6, 11):
+        world.reading = read({'001': 20 * n})
+        assert runner.poll()
+    assert runner.poll() and len(hygiene_calls) == 1  # suppressed by same digest 'dig-1'
+
+    trigger_state['digest'] = 'dig-2'
+    hygiene_outcomes.append(lambda label: Outcome('aborted', (), session_id=label))
+    assert runner.poll() and len(hygiene_calls) == 2 and runner.hygiene_failures() == 1
+    assert status(world)['state'] == 'polling' and runner.session_failures() == 0
+
+    # Wait 5 more confirmed windows, fail hygiene a second time -> hygiene permanently disabled, ingestion continues.
+    world.outcomes = ['accepted'] * 5
+    for n in range(11, 16):
+        world.reading = read({'001': 20 * n})
+        assert runner.poll()
+    hygiene_outcomes.append(lambda label: Outcome('aborted', (), session_id=label))
+    assert runner.poll() and len(hygiene_calls) == 3 and runner.hygiene_failures() == 2
+    assert status(world)['state'] == 'polling' and runner.session_failures() == 0
+
+    world.outcomes = ['accepted'] * 5
+    for n in range(16, 21):
+        world.reading = read({'001': 20 * n})
+        assert runner.poll()
+    trigger_state['digest'] = 'dig-3'
+    assert runner.poll() and len(hygiene_calls) == 3  # disabled after 2 consecutive hygiene failures
+    assert status(world)['state'] == 'polling'
 
 
 @pytest.mark.parametrize('refusal', [live.SPEND_REFUSED, live.SPEND_EXHAUSTED])
-def test_a_refusal_at_one_step_and_an_exhausted_cap_have_distinct_terminal_reasons(world, refusal):
+def test_a_refusal_at_one_step_and_an_exhausted_cap_both_stop_cleanly_as_spend_exhausted(world, refusal):
     world.reading = read({'001': 1}, ended=('001',))
     world.outcomes = [lambda window: Outcome(None, stop=refusal)]
     runner = world.runner()
     assert not runner.poll()
     assert runner.cursor == {}
-    assert status(world)['stop_reason'] == refusal
-    assert json.loads((world.directory/'stopped.json').read_text())['reason'] == refusal
+    assert status(world)['stop_reason'] == live.SPEND_EXHAUSTED
+    assert json.loads((world.directory/'stopped.json').read_text())['reason'] == live.SPEND_EXHAUSTED
 
 
-def test_a_spend_refusal_keeps_an_already_published_window(world):
+def test_a_spend_refusal_keeps_an_already_published_window_before_stopping_as_spend_exhausted(world):
     world.reading = read({'001': 20})
     world.outcomes = [lambda window: Outcome('sealed', ({'operation': 'submission', 'status': 'published',
                                                        'version': world.publish(window)},),
                                              stop=live.SPEND_REFUSED)]
     runner = world.runner()
-    assert runner.poll() and runner.cursor == {'001': 20}
+    assert not runner.poll()
+    assert runner.cursor == {'001': 20}
+    assert status(world)['stop_reason'] == live.SPEND_EXHAUSTED
     assert status(world)['covered_prefix']['end']['operation'] == 'op-001-20'
+
+
+def test_hygiene_subcap_exhaustion_does_not_spin_across_idle_polls(tmp_path):
+    world = World(tmp_path/'runner', Settings(trigger_steps=20, ceiling_steps=20, poll_seconds=15, watch_seconds=60))
+    hygiene_calls = []
+
+    def subcap_exhausted(_reading, label):
+        hygiene_calls.append(label)
+        return Outcome(state=None, stop=live.HYGIENE_SUBCAP_EXHAUSTED)
+
+    runner = Runner(
+        world.directory, RUN, snapshot=world.snapshot, session_call=world.session, look=world.look,
+        settings=world.settings, clock=world.clock, sleep=lambda _: None,
+        hygiene_call=subcap_exhausted,
+        hygiene_check=lambda: dict(triggered=True, digest='dig-subcap', reasons=['stale_citations'], counts=dict(stale_citations=1)),
+        hygiene_settings=live.HygieneSettings(min_windows=5, max_unexamined_steps=10),
+    )
+    world.outcomes = ['accepted'] * 5
+    for n in range(1, 6):
+        world.reading = read({'001': 20 * n})
+        assert runner.poll()
+    # 20 idle polls after sub-cap exhaustion must dispatch hygiene at most once (resets 5-window cooldown).
+    for _ in range(20):
+        assert runner.poll()
+    assert len(hygiene_calls) == 1
+    rows = [json.loads(line) for line in (world.directory/'examined.jsonl').read_text().splitlines()]
+    assert len([r for r in rows if r.get('session_kind') == 'hygiene']) == 2
+
+    # When the callable exposes available() == False, _due_hygiene skips before writing any start row.
+    class UnavailableHygiene:
+        def available(self):
+            return False
+
+        def __call__(self, _reading, _label):
+            pytest.fail('unavailable hygiene must not be called')
+
+    world2 = World(tmp_path/'runner2', Settings(trigger_steps=20, ceiling_steps=20, poll_seconds=15, watch_seconds=60))
+    runner2 = Runner(
+        world2.directory, RUN, snapshot=world2.snapshot, session_call=world2.session, look=world2.look,
+        settings=world2.settings, clock=world2.clock, sleep=lambda _: None,
+        hygiene_call=UnavailableHygiene(),
+        hygiene_check=lambda: dict(triggered=True, digest='dig-unavail', reasons=['stale_citations'], counts=dict(stale_citations=1)),
+        hygiene_settings=live.HygieneSettings(min_windows=5, max_unexamined_steps=10),
+    )
+    world2.outcomes = ['accepted'] * 5
+    for n in range(1, 6):
+        world2.reading = read({'001': 20 * n})
+        assert runner2.poll()
+    for _ in range(5):
+        assert runner2.poll()
+    rows2 = [json.loads(line) for line in (world2.directory/'examined.jsonl').read_text().splitlines()]
+    assert not any(r.get('session_kind') == 'hygiene' for r in rows2)
+
+
+def test_flex_deferral_with_validated_prefix_publication_advances_and_continues(world):
+    world.reading = read({'001': 20})
+    world.outcomes = [lambda window: Outcome('sealed', ({'operation': 'submission', 'status': 'published',
+                                                       'version': world.publish(window)},),
+                                             stop=live.FLEX_DEFERRED)]
+    runner = world.runner()
+    assert runner.poll()
+    assert runner.cursor == {'001': 20} and runner.flex_deferrals() == 0
+    assert status(world)['covered_prefix']['end']['operation'] == 'op-001-20'
+    # A rejected Flex-deferred prefix (e.g. published + rejected verdicts) still respects the 2-consecutive-failure stop.
+    world.reading = read({'001': 80})
+    world.outcomes = [
+        'rejected',
+        lambda window: Outcome('sealed', (
+            {'operation': 'submission', 'status': 'published', 'version': world.publish(window)},
+            {'operation': 'submission', 'status': 'rejected', 'version': None},
+        ), stop=live.FLEX_DEFERRED),
+    ]
+    assert runner.poll()
+    assert not runner.poll()
+    assert status(world)['stop_reason'] == '2 consecutive failed sessions'
 
 
 def test_no_store_waits_and_the_closing_marker_ends_every_read(world):
@@ -935,17 +1120,21 @@ def status_of(runner: Runner) -> dict:
 # ---------------------------------------------------------------- the process's own session call and configuration
 def runner_config(tmp_path: Path, **values) -> Path:
     path = tmp_path/'runner.json'
-    path.write_text(json.dumps(dict(dict(schema='curator-runner-config/1', knowledge_root=str(tmp_path/'runtime'/'knowledge'/'live'),
+    path.write_text(json.dumps(dict(dict(schema='curator-runner-config/2', knowledge_root=str(tmp_path/'runtime'/'knowledge'/'live'),
                                          arm='terra', cap_usd='1'), **values)))
     return path
 
 
 @pytest.mark.parametrize('change, message', [
-    (dict(schema='curator-runner-config/0'), 'not a curator-runner-config/1'),
+    (dict(schema='curator-runner-config/1'), 'not a curator-runner-config/2'),
     (dict(knowledge_root='data/knowledge'), 'knowledge_root must be inside'),
     (dict(arm='nobody'), 'unknown arm'), (dict(cap_usd=1), 'decimal string'), (dict(cap_usd='0'), 'positive'),
+    (dict(service_tier='batch'), 'service_tier must be one of'),
     (dict(upstream='http://example.com'), 'may only be OpenRouter'), (dict(trigger_steps=50), 'must not exceed'),
-    (dict(host=dict(gpu=1)), 'host may have'), (dict(extra=1), 'may have')])
+    (dict(host=dict(gpu=1)), 'host may have'),
+    (dict(host=dict(context_image_block=8)), 'host may have'),
+    (dict(hygiene=dict(extra=1)), 'hygiene may have'),
+    (dict(extra=1), 'may have')])
 def test_the_runner_configuration_is_refused_before_anything_runs(tmp_path, change, message):
     with pytest.raises(live_runner.ConfigError, match=message):
         live_runner.read_config(runner_config(tmp_path, **change), tmp_path/'runtime')
@@ -954,7 +1143,10 @@ def test_the_runner_configuration_is_refused_before_anything_runs(tmp_path, chan
 def test_the_runner_configuration_takes_the_designs_defaults(tmp_path):
     config = live_runner.read_config(runner_config(tmp_path), tmp_path/'runtime')
     assert config['settings'] == Settings() and config['upstream'] == shadow.OPENROUTER_ORIGIN
+    assert config['service_tier'] == 'default' and config['hygiene'] == live.HygieneSettings()
     assert config['host']['max_requests'] == 120 and config['host']['effort'] is None and config['session_cap'] is None
+    flex_cfg = live_runner.read_config(runner_config(tmp_path, service_tier='flex'), tmp_path/'runtime')
+    assert flex_cfg['service_tier'] == 'flex' and flex_cfg['host']['request_timeout_seconds'] == 960
 
 
 def fake_sessions(tmp_path: Path, monkeypatch, behave) -> live_runner.Sessions:
@@ -1032,7 +1224,7 @@ def test_an_unclosed_session_holds_its_cap_across_runner_restart(tmp_path, monke
     assert restarted(reading, window, 'no-budget').stop == live.SPEND_EXHAUSTED
 
 
-@pytest.mark.parametrize('spent,stop', [('0.75', live.SPEND_REFUSED), ('1', live.SPEND_EXHAUSTED)])
+@pytest.mark.parametrize('spent,stop', [('0.75', live.SPEND_REFUSED), ('0.99', live.SPEND_EXHAUSTED), ('1', live.SPEND_EXHAUSTED)])
 def test_live_spend_refusal_distinguishes_remaining_headroom(tmp_path, monkeypatch, spent, stop):
     def behave(directory, kwargs):
         closed(directory, spent)
@@ -1041,6 +1233,69 @@ def test_live_spend_refusal_distinguishes_remaining_headroom(tmp_path, monkeypat
     outcome = fake_sessions(tmp_path, monkeypatch, behave)(Reading(tmp_path/RUN, (), 0., 0., 0.),
                                                            Window(RUN, '001', 1, 20), 'one')
     assert outcome.stop == stop
+
+
+def test_session_preflight_stops_before_opening_when_remaining_is_below_min_headroom(tmp_path, monkeypatch):
+    called = []
+    sessions = fake_sessions(tmp_path, monkeypatch, lambda directory, kwargs: called.append(kwargs) or summary(directory))
+    # Spend 0.95 of a 1.00 cap, leaving 0.05 < min_headroom (~0.083 at 16384 output tokens on terra).
+    prior = sessions.out/RUN/'prior'
+    prior.mkdir(parents=True)
+    closed(prior, '0.95')
+    outcome = sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), Window(RUN, '001', 1, 20), 'preflight')
+    assert outcome.stop == live.SPEND_EXHAUSTED and outcome.state is None and called == []
+
+
+def test_live_sessions_detect_flex_capacity_deferral_and_hygiene_subcaps(tmp_path, monkeypatch):
+    seen = []
+
+    def behave(directory, kwargs):
+        seen.append(kwargs)
+        closed(directory, '0')
+        if kwargs.get('session_kind') == 'hygiene':
+            return summary(directory)
+        return summary(directory, state='aborted', sandbox=dict(survivors=[], returncode=live_runner.FLEX_DEFERRED_EXIT_CODE))
+
+    config = live_runner.read_config(
+        runner_config(tmp_path, cap_usd='4.00', service_tier='flex',
+                      hygiene=dict(pass_cap_usd='0.30', max_spend_share='0.10', max_requests=10, wall_seconds=90)),
+        tmp_path/'runtime',
+    )
+    repo = Repository(config['knowledge_root'], shadow.GAME)
+
+    def run_one(**kwargs):
+        directory = kwargs['out']/kwargs['lineage']/kwargs['name']
+        directory.mkdir(parents=True)
+        return behave(directory, kwargs)
+
+    monkeypatch.setattr(shadow, 'run_one', run_one)
+    sessions = live_runner.Sessions(tmp_path/'runner', config, repo, shadow.LOOPBACK_KEY)
+    sessions.tools = {}
+    outcome = sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), Window(RUN, '001', 1, 20), 'flex-win')
+    assert outcome.stop == live.FLEX_DEFERRED and live.classify(outcome) == (live.FLEX_DEFERRED, False, False)
+
+    hygiene_sessions = live_runner.HygieneSessions(tmp_path/'runner', config, repo, shadow.LOOPBACK_KEY, sessions=sessions)
+    hygiene_sessions.tools = {}
+    hygiene_sessions.model_config = live_runner.session_host_configuration(
+        config, hygiene_sessions.prices, Decimal('0.30'), text_only=True, max_requests=10, wall_seconds=90)
+    # With $0.50 cumulative spend out of a $4.00 cap, 10% share is $0.05 (< min_headroom ~0.083) -> not available.
+    closed(tmp_path/'runner'/'sessions'/RUN/'flex-win', '0.50')
+    assert hygiene_sessions.available() is False
+    assert hygiene_sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), 'hyg-too-early').stop == live.HYGIENE_SUBCAP_EXHAUSTED
+    # Once cumulative runner curation spend reaches $2.00, 10% cumulative spend is $0.20 (< $0.30 pass cap).
+    closed(tmp_path/'runner'/'sessions'/RUN/'flex-win', '2.00')
+    assert hygiene_sessions.available() is True
+    h_out = hygiene_sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), 'hyg-1')
+    assert h_out.stop is None and seen[-1]['session_kind'] == 'hygiene'
+    assert seen[-1]['cap'] == Decimal('0.20')
+    assert seen[-1]['model_config']['text_only'] is True and seen[-1]['model_config']['max_context_images'] == 0
+    assert seen[-1]['model_config']['max_requests'] == 10 and seen[-1]['wall_seconds'] == 90
+
+    # Once hygiene spend reaches $0.18 of the $0.20 10% cumulative share, further hygiene is unavailable.
+    closed(tmp_path/'runner'/'sessions'/'hygiene'/'hyg-1', '0.18')
+    assert hygiene_sessions.available() is False
+    h_blocked = hygiene_sessions(Reading(tmp_path/RUN, (), 0., 0., 0.), 'hyg-2')
+    assert h_blocked.stop == live.HYGIENE_SUBCAP_EXHAUSTED and len(seen) == 2
 
 
 @pytest.mark.parametrize('survivors, host_output, stops', [

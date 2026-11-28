@@ -102,7 +102,7 @@ below own [launch](#freeze-launch-and-inspect) and [cleanup](#failure-and-owned-
    owns bounds, source states and snapshot identity.
 
    Add `--curator-runner CONFIG` to run the [curator runner](../components/curator.md#runner-windows)
-   beside play, with a `curator-runner-config/1` file
+   beside play, with a `curator-runner-config/2` file
    ([`tools/curator_host/live_runner.py`](../../tools/curator_host/live_runner.py) states its fields).
    The supervisor then creates `curator-read.lock` and the runner's directory
    `curator-runner/` in the run directory before the custodian starts, and starts the

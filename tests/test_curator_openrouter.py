@@ -14,7 +14,7 @@ import threading
 import pytest
 
 from harness.curator.proxy import IMAGE_TOKENS, ModelProxy, Price, body_token_bound, refusal
-from tools.curator_host.providers import ANTHROPIC, OPENROUTER, TERRA, TERRA_FRAME_TOKENS, reported_cost
+from tools.curator_host.providers import ANTHROPIC, OPENROUTER, PNG_960X640_PREFIX, TERRA, TERRA_FRAME_TOKENS, reported_cost
 
 ROUTE = '/api/v1/chat/completions'
 MODEL = 'vendor/model-a'
@@ -129,15 +129,15 @@ def test_the_shapes_pi_sends_for_an_openrouter_model_pass():
     assert refusal(OPENROUTER, allowed) is None
 
 
-@pytest.mark.parametrize('tier', [None, 'auto', 'priority', 'flex', 'fast', '', {}, True])
-def test_only_an_explicit_default_service_tier_is_allowed(tier):
-    assert refusal(OPENROUTER, body(service_tier=tier)) == 'the default service tier must be explicitly requested'
+@pytest.mark.parametrize('tier', [None, 'auto', 'priority', 'fast', '', {}, True])
+def test_unapproved_service_tiers_are_refused(tier):
+    assert refusal(OPENROUTER, body(service_tier=tier)) == 'the service tier must be explicitly requested as default or flex'
 
 
 def test_omitting_the_tier_cannot_inherit_a_workspace_default():
     request = body()
     del request['service_tier']
-    assert refusal(OPENROUTER, request) == 'the default service tier must be explicitly requested'
+    assert refusal(OPENROUTER, request) == 'the service tier must be explicitly requested as default or flex'
 
 
 def test_an_unpriced_or_online_model_is_refused_before_reaching_openrouter(tmp_path):
@@ -233,12 +233,15 @@ def test_inline_images_reserve_a_bounded_token_count_not_their_encoding(tmp_path
         assert len(seen) == 1
 
 
-def test_pinned_terra_counts_decoded_text_and_reduces_the_bound_only_for_known_frame_geometry():
-    routing = dict(only=['openai'], order=['openai'], allow_fallbacks=False, require_parameters=True)
+@pytest.mark.parametrize('endpoint', ['openai', 'openai/flex'])
+@pytest.mark.parametrize('tier', ['default', 'flex'])
+def test_pinned_terra_counts_decoded_text_and_reduces_the_bound_only_for_known_frame_geometry(endpoint, tier):
+    routing = dict(only=[endpoint], order=[endpoint], allow_fallbacks=False, require_parameters=True)
     frame = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8AAAAKA'
+    assert frame == PNG_960X640_PREFIX
     other = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA8AAAAKB'
     value = '"a"\n' * 1000
-    request = body(model=TERRA, provider=routing, messages=[dict(role='user', content=[
+    request = body(model=TERRA, provider=routing, service_tier=tier, messages=[dict(role='user', content=[
         dict(type='text', text=value), dict(type='image_url', image_url=dict(url=frame))])])
 
     def encoded(payload):
@@ -248,7 +251,10 @@ def test_pinned_terra_counts_decoded_text_and_reduces_the_bound_only_for_known_f
     bound = OPENROUTER.prompt_bound(TERRA, wire, request)
     assert bound > len(value.encode()) + TERRA_FRAME_TOKENS
     assert bound < body_token_bound(TERRA, wire, request)
+    suffix = OPENROUTER.suffix_bound(TERRA, request['messages'], request)
+    assert len(value.encode()) + TERRA_FRAME_TOKENS < suffix < bound
     request['messages'][0]['content'][1]['image_url']['url'] = other
+    assert OPENROUTER.suffix_bound(TERRA, request['messages'], request) - suffix == IMAGE_TOKENS - TERRA_FRAME_TOKENS
     assert OPENROUTER.prompt_bound(TERRA, encoded(request), request) - bound == IMAGE_TOKENS - TERRA_FRAME_TOKENS
     request['provider'] = dict(routing, only=['other'], order=['other'])
     assert OPENROUTER.prompt_bound(TERRA, encoded(request), request) == body_token_bound(TERRA, encoded(request), request)
@@ -639,3 +645,17 @@ def test_client_reset_before_response_headers_still_drains_and_settles(tmp_path)
         assert Decimal(closure['spent_snapshot_usd']) == Decimal('.0001')
         row = json.loads(proxy.ledger.read_text())
         assert row['status'] == 200 and not row['usage_missing'] and not row['breach']
+
+
+def test_flex_tier_and_prefix_mode_are_recorded(tmp_path):
+    response = b'data: {"response":{"service_tier":"flex"},"usage":{"prompt_tokens":20,"completion_tokens":1}}\n\n'
+    with openrouter(tmp_path, response) as (proxy, port, seen):
+        initial = body(service_tier='flex', messages=[dict(role='user', content='long prefix ' * 1000)])
+        assert post(port, initial, proxy.token)[0] == 200
+        extended = dict(initial, messages=[*initial['messages'], dict(role='assistant', content='continue')])
+        assert post(port, extended, proxy.token)[0] == 200
+        assert len(seen) == 2 and seen[0]['body']['service_tier'] == 'flex'
+        first, second = map(json.loads, proxy.ledger.read_text().splitlines())
+        assert [row['reservation_mode'] for row in (first, second)] == ['full-bound', 'prefix-suffix']
+        assert Decimal(second['reserved']) < Decimal(first['reserved'])
+        assert second['requested_service_tier'] == second['applied_service_tier'] == 'flex'
