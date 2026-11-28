@@ -11,8 +11,8 @@ Lineage-wide metrics are written to every admission's record as well:
   a rewind lowers it. Also decisions, overall game seconds per decision and long activities.
 - `lineage.day_check`: the first step at or after one game day (`DAY_SECONDS`) with legible
   needs; it passes when no death was read before it and the binding reports no severe need.
-- `lineage.memory_reuse`: distinct memory records read in a later admission that an earlier
-  admission wrote.
+- `lineage.knowledge_carry`: adjacent admissions whose opening and preceding closing
+  delivered knowledge versions match.
 """
 from __future__ import annotations
 
@@ -22,12 +22,12 @@ from typing import Mapping, Sequence
 
 from .binding import Binding
 from .derive import UNIT_SECONDS
-from .records import (EvaluationError, EventRow, MetricRow, RecordWriter, loads, open_readonly, read_metadata)
+from .records import (EvaluationError, EventRow, MetricRow, RecordWriter, loads, open_readonly, read_metadata, read_run_facts)
 
 METRIC = 'lineage.continuity'
 ELAPSED_METRIC = 'lineage.elapsed'
 DAY_METRIC = 'lineage.day_check'
-MEMORY_METRIC = 'lineage.memory_reuse'
+KNOWLEDGE_METRIC = 'lineage.knowledge_carry'
 DAY_SECONDS = 24 * 3600
 
 
@@ -90,8 +90,8 @@ class Timeline:
     points: tuple[tuple[int, int, str], ...]      # (seq, game seconds, mode) for steps with a game time
     deaths: tuple[int, ...]                       # seq of each death event
     episodes: tuple[int, ...]                     # seq of each new episode (restarted clock or other survivor)
-    written: frozenset[str]
-    read: frozenset[str]
+    opening_knowledge_version: str | None
+    closing_knowledge_version: str | None
 
 
 def timeline(record: Path) -> Timeline:
@@ -106,25 +106,16 @@ def timeline(record: Path) -> Timeline:
         decisions = connection.execute('SELECT COALESCE(MAX(decision), 0) FROM steps').fetchone()[0]
         long_row = connection.execute("SELECT value FROM metrics WHERE name='pace.long_activities' AND key=''").fetchone()
         long_value = loads(long_row[0]) if long_row else None
-        events = connection.execute(
-            "SELECT kind,seq_start,payload FROM events WHERE kind IN ('death','episode','memory_write','memory_read') "
-            'ORDER BY seq_start')
-        deaths, episodes, written, read = [], [], set(), set()
-        for kind, seq, payload in events:
-            data = loads(payload)
-            if kind == 'death':
-                deaths.append(seq)
-            elif kind == 'episode':
-                episodes.append(seq)
-            elif kind == 'memory_write':
-                written.add(data['record_id'])
-            else:
-                read.update(data.get('record_ids') or ())
+        events = list(connection.execute(
+            "SELECT kind,seq_start FROM events WHERE kind IN ('death','episode') ORDER BY seq_start"))
+        deaths = tuple(seq for kind, seq in events if kind == 'death')
+        episodes = tuple(seq for kind, seq in events if kind == 'episode')
+        run = read_run_facts(connection)
     finally:
         connection.close()
     long_seconds = float(long_value.get('total_game_seconds') or 0) if isinstance(long_value, dict) else 0.0
-    return Timeline(record, str(metadata.get('run')), unit, int(decisions), long_seconds, points, tuple(deaths),
-        tuple(episodes), frozenset(written), frozenset(read))
+    return Timeline(record, str(metadata.get('run')), unit, int(decisions), long_seconds, points, deaths,
+        episodes, run.get('opening_knowledge_version'), run.get('closing_knowledge_version'))
 
 
 def _flat(timelines: Sequence[Timeline]) -> list[tuple[int, int, int, str]]:
@@ -209,20 +200,17 @@ def day_check_metric(timelines: Sequence[Timeline], binding: Binding) -> MetricR
     return MetricRow(DAY_METRIC, 1, dict(base, passed=None, severe=None), 0, 1, 'needs_not_legible')
 
 
-def memory_metric(timelines: Sequence[Timeline]) -> MetricRow:
-    earlier: set[str] = set()
-    reused: set[str] = set()
-    per_admission = []
-    for line in timelines:
-        found = line.read & earlier
-        per_admission.append(dict(run=line.run, reused=len(found)))
-        reused |= found
-        earlier |= line.written
-    available = set().union(*(t.written for t in timelines[:-1])) if len(timelines) > 1 else set()
-    if not available:
-        return MetricRow(MEMORY_METRIC, 1, dict(per_admission=per_admission), len(reused), None, 'no_earlier_writes')
-    return MetricRow(MEMORY_METRIC, 1, dict(per_admission=per_admission, reused=len(reused)), len(reused),
-        len(available), None)
+def knowledge_carry_metric(timelines: Sequence[Timeline]) -> MetricRow:
+    items = []
+    for before, after in zip(timelines, timelines[1:]):
+        closing, opening = before.closing_knowledge_version, after.opening_knowledge_version
+        matches = closing == opening if closing is not None and opening is not None else None
+        items.append(dict(previous_run=before.run, run=after.run, closing_knowledge_version=closing,
+            opening_knowledge_version=opening, matches=matches))
+    compared = sum(item['matches'] is not None for item in items)
+    matched = sum(item['matches'] is True for item in items)
+    missing = 'single_admission' if not items else 'no_delivered_knowledge' if compared < len(items) else None
+    return MetricRow(KNOWLEDGE_METRIC, 1, dict(boundaries=items, matched=matched), matched, compared, missing)
 
 
 def apply(records: Sequence[Path], items: Sequence[dict], extra: Sequence[MetricRow] = ()) -> None:
@@ -257,6 +245,6 @@ def stitch(run_dirs: Sequence[Path], binding: Binding, root: Path, *, memory_sto
                 replace=replace))
     items = boundaries([summarise(path) for path in paths])
     timelines = [timeline(path) for path in paths]
-    extra = [elapsed_metric(timelines), day_check_metric(timelines, binding), memory_metric(timelines)]
+    extra = [elapsed_metric(timelines), day_check_metric(timelines, binding), knowledge_carry_metric(timelines)]
     apply(paths, items, extra)
     return dict(records=[str(p) for p in paths], boundaries=items, **{row.name: row.value for row in extra})

@@ -17,6 +17,8 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
+import re
+import stat
 import time
 from typing import Any, Mapping
 
@@ -25,12 +27,12 @@ from .derive import (CORE_READERS, CORE_VERSION, NO_FRAME, READER_CLOCK, READER_
     build_timeline, clock_readings, core_events, describe_actions, frame_summary, map_change_fraction,
     operation_events)
 from .facts import LABEL_KEYS, run_facts
-from .host import host_events, host_facts, seq_resolver
+from .host import HostFacts, host_events, host_facts, seq_resolver
 from .metrics import compute_metrics
-from .lineage import DAY_METRIC, ELAPSED_METRIC, MEMORY_METRIC, METRIC as LINEAGE_METRIC
-LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, MEMORY_METRIC)
-from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, record_path
-from .sources import MANIFEST_SCHEMA, RunInputs, archive_entry, read_run, run_name
+from .lineage import DAY_METRIC, ELAPSED_METRIC, KNOWLEDGE_METRIC, METRIC as LINEAGE_METRIC
+LINEAGE_METRICS = (LINEAGE_METRIC, ELAPSED_METRIC, DAY_METRIC, KNOWLEDGE_METRIC)
+from .records import EvaluationError, MetricRow, ReadingRow, RecordWriter, StepRow, loads, record_path
+from .sources import MANIFEST_SCHEMA, MAX_JSON_FILE_BYTES, RunInputs, archive_entry, read_run, run_name
 
 
 def _frame_matches(png: Path, sha256: str | None) -> bool:
@@ -92,8 +94,54 @@ def _read_new_steps(inputs: RunInputs, binding: Binding, known: list[StepRow], f
     return steps, readings
 
 
-def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, external: Mapping[str, Any] | None,
-            labels: Mapping[str, object] | None = None) -> dict:
+def _read_opening_knowledge(run_dir: Path) -> tuple[str | None, str | None]:
+    """Read `delivered-knowledge.json` from `run_dir` through a rooted non-symlink descriptor, hashing the exact bytes."""
+    name = 'delivered-knowledge.json'
+    dir_fd: int | None = None
+    fd: int | None = None
+    try:
+        dir_fd = os.open(run_dir, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        fd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW, dir_fd=dir_fd)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            return None, None
+        with os.fdopen(fd, 'rb', closefd=False) as stream:
+            data = stream.read(MAX_JSON_FILE_BYTES + 1)
+    except OSError:
+        return None, None
+    finally:
+        if fd is not None:
+            os.close(fd)
+        if dir_fd is not None:
+            os.close(dir_fd)
+    if not data or len(data) > MAX_JSON_FILE_BYTES:
+        return None, None
+    try:
+        snapshot = loads(data, name)
+    except EvaluationError:
+        return None, None
+    if not isinstance(snapshot, dict):
+        return None, None
+    schema = snapshot.get('schema')
+    version = snapshot.get('version')
+    if not (isinstance(schema, str) and re.fullmatch(r'delivered-knowledge/[1-9][0-9]*', schema)
+            and isinstance(version, str) and version):
+        return None, None
+    return version, hashlib.sha256(data).hexdigest()
+
+
+def _knowledge_versions(inputs: RunInputs, facts: HostFacts, *, digests: bool) -> dict[str, str | None]:
+    briefing = next((delivery for delivery in facts.deliveries if delivery.kind == 'briefing'), None)
+    opening = briefing.version if briefing is not None else None
+    if opening is None:
+        opening, digest = _read_opening_knowledge(inputs.run_dir)
+        if digests and opening is not None and digest is not None:
+            inputs.digests['delivered-knowledge.json'] = digest
+    return dict(opening_knowledge_version=opening,
+        closing_knowledge_version=facts.deliveries[-1].version if facts.deliveries else None)
+
+
+def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts: HostFacts, external: Mapping[str, Any] | None,
+            labels: Mapping[str, object] | None, *, digests: bool) -> dict:
     steps = writer.steps()
     timeline = build_timeline(steps, writer.readings(), binding)
     clock = clock_readings(timeline, binding)
@@ -103,8 +151,10 @@ def _derive(writer: RecordWriter, inputs: RunInputs, binding: Binding, facts, ex
     events = [*core_events(timeline, binding), *operation_events(inputs.operations, inputs.end),
         *host_events(facts, resolve, inputs.memory)]
     human = frozenset(e['payload'].get('rung') for e in writer.events() if e['source'] == 'human' and e['kind'] == 'milestone')
-    metrics = compute_metrics(timeline, inputs.operations, events, facts, binding, inputs.carry, human, external, inputs.end)
+    metrics = compute_metrics(timeline, inputs.operations, events, facts, binding, inputs.carry, human, external,
+        inputs.end, manifest_schema=inputs.manifest['schema'], memory_schema=inputs.memory.schema if inputs.memory else None)
     run = run_facts(inputs.manifest, inputs.host, inputs.actors, labels)
+    run.update(_knowledge_versions(inputs, facts, digests=digests))
     writer.replace_run_facts(run)
     writer.replace_host_rows(facts.tool_rows(), facts.request_rows())
     writer.set_metadata(dict(labels=run['labels']))
@@ -193,7 +243,7 @@ def evaluate(run_dir: Path, binding: Binding, root: Path, memory_store: Path | N
             known = writer.steps()
             steps, readings = _read_new_steps(inputs, binding, known, facts)
             writer.append_steps(steps, readings)
-            derived = _derive(writer, inputs, binding, facts, external, labels)
+            derived = _derive(writer, inputs, binding, facts, external, labels, digests=state == 'final')
             writer.set_metadata(dict(last_seq=inputs.last_seq or 0, inputs=inputs.digests if state == 'final' else {},
                 pending_seqs=[op.seq for op in inputs.operations if op.status == 'pending'], **derived))
     except BaseException:

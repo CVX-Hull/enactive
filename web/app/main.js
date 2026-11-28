@@ -1,27 +1,70 @@
-// Spectator page: the interpretive viewer UI in three tabs. The control strip (Pause, status and frame)
-// is static markup driven by control.js and does not depend on this module.
-import {html, render, useState, useEffect, useLayoutEffect, count, kilo, plural, runName} from './ui.js';
-import {store, useStore, startPolling, selectRun, liveRun, selectedRun, followingLive, recordedPage} from './data.js';
+// Spectator page: the interpretive viewer in four run tabs (Watch, Memory, Curator, Diagnostics) and the All runs
+// workspace. The control strip (Pause, status and frame) is static markup driven by control.js and does not depend on
+// this module.
+import {html, render, useState, useEffect, useLayoutEffect, useRef, kilo, plural, runName, usd2} from './ui.js';
+import {store, set, useStore, useView, startPolling, selectRun, sessionOf, setCursorSeq, liveRun, selectedRun, followingLive,
+  recordedPage, runPath} from './data.js';
 import {pauseMet} from './supervise.js';
 import {Watch} from './watch.js';
 import {MemoryTab} from './memory.js';
-import {Diagnostics} from './diagnostics.js';
+import {CuratorTab} from './curator.js';
+import {Diagnostics, spendParts} from './diagnostics.js';
+import {AllRuns, RUNS_SECTIONS} from './allruns.js';
 
-const VIEWS = {watch: Watch, memory: MemoryTab, diagnostics: Diagnostics};
-function parse() {
-  const [view, section] = location.hash.slice(1).split('/');
-  let name = section || '';
-  try { name = decodeURIComponent(name); } catch { /* not an encoded name */ }
-  return {view: Object.hasOwn(VIEWS, view) ? view : 'watch', section: name};
+const TABS = {watch: Watch, memory: MemoryTab, curator: CuratorTab, diagnostics: Diagnostics};
+const VERSION = /^(?:v\d+|initial)$/;
+
+/** `#<tab>/<section>?run=&step=&entry=&version=&csess=`, `#runs/<section>`, and the older `#memory/<version>`. */
+export function parseRoute(hash = location.hash) {
+  const raw = hash.replace(/^#/, '');
+  const at = raw.indexOf('?');
+  const path = at < 0 ? raw : raw.slice(0, at);
+  const params = new URLSearchParams(at < 0 ? '' : raw.slice(at + 1));
+  const [head, ...rest] = path.split('/');
+  let section = rest.join('/');
+  try { section = decodeURIComponent(section); } catch { /* not an encoded name */ }
+  if (head === 'runs') {
+    const [first, ...deeper] = section.split('/');
+    return {view: 'runs', section: RUNS_SECTIONS.some(([id]) => id === first) ? first : 'lineage', sub: deeper.join('/'), params, version: '', csess: '', key: raw};
+  }
+  const view = Object.hasOwn(TABS, head) ? head : 'watch';
+  const version = params.get('version') || (view === 'memory' && VERSION.test(section) ? section : '');
+  return {view, section: view === 'memory' && VERSION.test(section) ? '' : section, params, version, csess: params.get('csess') || '', key: raw};
 }
 function useRoute() {
-  const [route, setRoute] = useState(parse());
+  const [route, setRoute] = useState(parseRoute());
   useEffect(() => {
-    const f = () => setRoute(parse());
+    const f = () => setRoute(parseRoute());
     addEventListener('hashchange', f);
     return () => removeEventListener('hashchange', f);
   }, []);
   return route;
+}
+
+/** A deep link's run, step and entry, applied once each as the data they name arrives; later owner choices stand. */
+function useDeepLink(route) {
+  const done = useRef({key: null});
+  useEffect(() => {
+    const d = done.current;
+    if (d.key !== route.key) Object.assign(d, {key: route.key, run: false, step: false, entry: false});
+    const run = route.params.get('run'), step = route.params.get('step'), entry = route.params.get('entry');
+    if (!d.run) {
+      if (!run) d.run = true;
+      else if (store.runs) {
+        const session = sessionOf(run);
+        d.run = true;
+        if (session && session !== store.runId) { selectRun(session); return; }
+      }
+    }
+    if (!d.run) return;
+    if (step && !d.step && store.steps.length && Number.isFinite(Number(step))) { d.step = true; setCursorSeq(Number(step)); }
+    if (entry && !d.entry && store.feedMeta && route.view === 'watch') {
+      const found = store.feed.find(e => String(e.id) === entry);
+      d.entry = true;
+      // The inspector is a step's; any other entry is placed on the playhead only.
+      if (found) set({...(found.entry_kind === 'step' ? {inspect: found.id} : {}), ...(found.seq === null || step ? {} : {cursor: found.seq})});
+    }
+  });
 }
 
 function Banner() {
@@ -32,7 +75,9 @@ function Banner() {
 
 function App() {
   useStore();
-  const {view, section} = useRoute();
+  const route = useRoute();
+  const {view} = route;
+  useDeepLink(route);
   useEffect(() => {
     for (const link of document.querySelectorAll('nav.jobs [data-nav]')) {
       if (link.dataset.nav === view) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
@@ -54,71 +99,126 @@ function App() {
     if (stage) flags.watchStage = 'ok'; else delete flags.watchStage;
     if (alert) flags.pauseAlert = 'yes'; else delete flags.pauseAlert;
   }, [store.viewerOk, stage, alert]);
-  const View = VIEWS[view];
-  return html`<div class="app" data-viewer=${store.viewerOk ? 'ok' : 'down'}><${Banner} /><${View} section=${section} /></div>`;
+  const body = view === 'runs' ? html`<${AllRuns} section=${route.section} sub=${route.sub} />` : html`<${TABS[view]} section=${route.section} version=${route.version} csess=${route.csess} />`;
+  return html`<div class="app" data-viewer=${store.viewerOk ? 'ok' : 'down'} data-route=${view}><${Banner} />${body}</div>`;
 }
 
 /* ---------------------------------------------------------------- the viewer's part of the strip */
-const dollars = text => `$${Number(text).toFixed(2)}`;
+const limitOf = s => (s.facts && typeof s.facts.spend_allowance_usd === 'number' ? s.facts.spend_allowance_usd : null);
 
+/** The loop's spend: every part that is recorded, summed; the player's part against its limit; each part in the title. */
 function SpendPill({s}) {
-  const host = s.host_telemetry, curator = s.curator_spend;
-  const limit = s.facts && typeof s.facts.spend_allowance_usd === 'number' ? s.facts.spend_allowance_usd : null;
-  const reported = host ? host.reported_cost_usd : null;
-  const value = reported !== null ? Number(reported) : s.dollars;
-  if (typeof value !== 'number') return null;
-  const curated = curator ? curator.spent_usd : null;
-  const title = `${reported !== null ? `Provider-reported player and recall spend $${reported}${host.spend_complete === true ? '' : ' (partial)'}` : 'Configured-rate estimate; no provider cost is recorded'}${limit === null ? '' : `, limit $${limit.toFixed(2)}`}`
-    + `${curator ? `. Live curator, proxy-accounted: ${curated === null ? 'unavailable' : `$${curated}`}, ${curator.sessions_settled} of ${curator.sessions_total} sessions settled` : ''}. Boundary grooming is not in these figures`;
-  return html`<span class="spill spend" id="pill-spend" title=${title}><b class="num">${reported !== null ? dollars(reported) : `~${dollars(value)} est`}${limit === null ? '' : html`<span class="of"> / ${dollars(limit)}</span>`}</b>
-    ${limit ? html`<progress max=${limit} value=${Math.min(value, limit)} aria-label="Player spend against its limit"></progress>` : null}
-    ${curator ? html`<span class="sub num">+ ${curated === null ? 'unavailable' : dollars(curated)} curator${curator.spend_complete ? '' : '*'}</span>` : null}</span>`;
+  const p = spendParts(s);
+  const limit = limitOf(s);
+  const player = p.player.usd === null ? null : Number(p.player.usd);
+  const total = p.sum !== null ? p.sum : player;
+  const estimate = total === null && typeof s.dollars === 'number' ? s.dollars : null;
+  if (total === null && estimate === null) return null;
+  const parts = [[p.playerName, p.player.usd], ['Curator ingestion', p.ingestion.usd], ['Interleaved hygiene', p.hygiene.usd], ['Boundary grooming', p.boundary.usd]];
+  const title = `${total !== null ? `Loop spend ${usd2(total)}${p.partial ? ' (partial)' : ''}` : `Configured-rate estimate ${usd2(estimate)}; no provider cost is recorded`}`
+    + `${limit === null ? '' : `. Player ${usd2(player)} of a ${usd2(limit)} limit`}. ${parts.map(([n, v]) => `${n}: ${v === null || v === undefined ? 'unavailable' : usd2(v)}`).join(' · ')}`;
+  return html`<a class="spill spend" id="pill-spend" href="#diagnostics" title=${title}><span class="sub">Spend</span>
+    <b class="num">${total !== null ? usd2(total) : `~${usd2(estimate)}`}</b>${total !== null && p.partial ? html`<span class="sub">*</span>` : estimate !== null ? html`<span class="sub">est</span>` : null}
+    ${limit && player !== null ? html`<progress max=${limit} value=${Math.min(player, limit)} aria-label="Player spend against its limit"></progress>` : null}</a>`;
 }
-/** The latest prompt while the playhead follows live; the run's median while it is in history, held or on a recorded run. */
+
+/** The latest prompt while the playhead follows live, else the run's median; cuts; and a held wait for coverage. */
 function ContextPill({s, live}) {
   const host = s.host_telemetry;
   if (!host) return null;
-  const t = host.token_summary;
+  const t = host.token_summary, waits = host.coverage_waits || {count: 0, active_count: 0};
   const shown = live ? t.latest_prompt_tokens : t.p50_prompt_tokens;
   if (shown === null) return null;
-  return html`<span class="spill" id="pill-context" title=${`Prompt tokens: latest ${kilo(t.latest_prompt_tokens)}, p50 ${kilo(t.p50_prompt_tokens)}, max ${kilo(t.max_prompt_tokens)}. ${plural(host.context_cuts.applied, 'context cut')} applied, ${host.context_cuts.held_back} held back`}>
-    <b class="num">${kilo(shown)} tok</b><span class="sub num">${live ? '' : 'p50 · '}${plural(host.context_cuts.applied, 'cut')}</span></span>`;
-}
-/** The endpoint that answered last. How often each answered is in its title. */
-function EndpointPill({s}) {
-  const host = s.host_telemetry;
-  const ends = host ? Object.entries(host.response_by_endpoint) : [];
-  if (!ends.length) return null;
-  const others = ends.filter(([name]) => name !== host.latest_provider).length;
-  return html`<span class="spill" id="pill-endpoint" title=${`Last answering endpoint: ${host.latest_provider ?? 'unknown'}. Responses: ${ends.map(([n, c]) => `${n} ${count(c)}`).join(', ')}`}><b>${host.latest_provider ?? 'unknown'}</b>${others ? html`<span class="sub">+${others}</span>` : null}</span>`;
+  const active = waits.active_count > 0;
+  const held = active && waits.latest && waits.latest.active ? waits.latest.duration_seconds : null;
+  const title = `Prompt tokens: latest ${kilo(t.latest_prompt_tokens)}, p50 ${kilo(t.p50_prompt_tokens)}, max ${kilo(t.max_prompt_tokens)}. ${plural(host.context_cuts.applied, 'context cut')} applied, `
+    + `${plural(waits.count, 'coverage wait')}${active ? `, ${waits.active_count} still holding requests` : ''}`;
+  return html`<a class="spill" id="pill-context" href="#watch" title=${title}><b class="num">${kilo(shown)} tok</b><span class="sub num">${live ? '' : 'p50 · '}${plural(host.context_cuts.applied, 'cut')}</span>
+    ${active ? html`<span class="waitbadge" id="wait-badge">WAIT${held === null ? '' : ` ${Math.round(held)}s`}</span>` : null}</a>`;
 }
 
-/** Availability, the run picker and the run's figures. Control facts stay in control.js. */
+/** The knowledge version the player holds now, and how far the curator's coverage lags play, when its runner says. */
+function HeadPill({s, run, live}) {
+  const host = s.host_telemetry;
+  const version = host ? (host.knowledge_deliveries && host.knowledge_deliveries.latest_version) || host.knowledge_updates.latest_version : null;
+  const curator = useView(version && run ? runPath(run, 'curator') : null, live ? 10000 : 0);
+  if (!version) return null;
+  const status = curator.data && curator.data.runner && curator.data.runner.status;
+  const lag = status && typeof status.lag === 'number' ? status.lag : null;
+  return html`<a class="spill" id="pill-curator" href=${`#memory?version=${encodeURIComponent(version)}`} title=${`Head knowledge version the player holds: ${version}${lag === null ? '' : `; curator coverage lags play by ${plural(lag, 'operation')}`}`}>
+    <span class="sub">Head</span><b class="num">${version}</b>${lag ? html`<span class="sub num">lag ${lag}</span>` : null}</a>`;
+}
+
+/** Availability and, for a run evaluated live, how far the evaluator has read. */
+function ViewerStatus({s}) {
+  const ok = store.viewerOk;
+  const fresh = s && s.evaluator_freshness;
+  const latest = s ? s.latest_step_seq : null;
+  const behind = fresh && typeof fresh.last_seq === 'number' && typeof latest === 'number' && latest - fresh.last_seq > 10;
+  const title = recordedPage ? 'Reads existing evaluation records' : `The viewer computes interpretive values; Pause and checks never depend on it${fresh ? `. Live evaluator: ${fresh.passes} passes, last evaluated step ${fresh.last_seq} of ${latest}${fresh.error ? `, error ${fresh.error}` : ''}` : ''}`;
+  return html`<span class="viewer ${ok ? '' : 'down'} ${behind ? 'behind' : ''}" id="viewer" title=${title} role="status">${ok
+    ? html`${store.viewerSeen ? 'ok' : 'connecting'}${fresh && fresh.last_seq !== null && fresh.last_seq !== undefined ? html`<span class="evalf num"> · eval #${fresh.last_seq}/${latest ?? '—'}</span>` : null}`
+    : 'viewer unavailable'}</span>`;
+}
+
+function runOption(r) {
+  const admission = r.labels && r.labels.admission !== null && r.labels.admission !== undefined ? ` · a${String(r.labels.admission).padStart(2, '0')}` : '';
+  return `${runName(r)} · ${r.labels.arm || 'no arm'}${admission}${r.state === 'live' ? ' · live' : r.state === 'unfinished' ? ' · not finalized' : ''}${r.outcome.lost ? ' · lost' : ''}`;
+}
+/** Runs grouped by lineage, in the order the viewer lists them; runs of no lineage stand alone. */
+function RunPicker({runs}) {
+  const groups = [];
+  for (const r of runs) {
+    const name = r.labels && r.labels.lineage ? r.labels.lineage : null;
+    const last = groups[groups.length - 1];
+    const found = name === null ? null : groups.find(g => g.name === name);
+    if (found) found.runs.push(r);
+    else if (name === null && last && last.name === null) last.runs.push(r);
+    else groups.push({name, runs: [r]});
+  }
+  const option = r => html`<option key=${r.session} value=${r.session} selected=${r.session === store.runId}>${runOption(r)}</option>`;
+  return html`<select class="runpick" id="runpick" aria-label="Run to show" title=${selectedRun() ? runOption(selectedRun()) : 'Run to show'} value=${store.runId || ''} disabled=${!runs.length} onChange=${e => selectRun(e.target.value)}>
+    ${runs.length ? groups.map(g => (g.name === null ? g.runs.map(option) : html`<optgroup label=${`Lineage ${g.name}`}>${g.runs.map(option)}</optgroup>`)) : html`<option>no runs</option>`}</select>`;
+}
+
 function StripViewer() {
   useStore();
+  const route = useRoute();
   const runs = store.runs || [];
   const run = selectedRun();
   const s = store.summary;
   const live = liveRun();
   const ok = store.viewerOk;
-  const version = s && s.host_telemetry ? s.host_telemetry.knowledge_updates.latest_version : null;
-  const viewerTitle = recordedPage ? 'Reads existing evaluation records' : 'The viewer computes interpretive values; Pause and checks never depend on it';
+  const mine = ok && s && run && s.session === run.session;
   return html`<div class="strip-viewer">
-    <select class="runpick" id="runpick" aria-label="Run to show" value=${store.runId || ''} disabled=${!runs.length} onChange=${e => selectRun(e.target.value)}>
-      ${runs.length ? runs.map(r => html`<option key=${r.session} value=${r.session} selected=${r.session === store.runId}>${runName(r)} · ${r.labels.arm || 'no arm'}${r.state === 'live' ? ' · live' : r.state === 'unfinished' ? ' · not finalized' : ''}${r.outcome.lost ? ' · lost' : ''}</option>`) : html`<option>no runs</option>`}</select>
-    <span class="vfacts ${ok ? '' : 'greyed'}" id="viewer-facts">${ok && s && run ? html`${run.state === 'live' ? null : html`<span class="spill plain">${run.state === 'unfinished' ? 'ended, not finalized' : 'final'}</span>`}
+    <span class="runbox"><${RunPicker} runs=${runs} /><a class="spill allruns" id="all-runs-btn" href="#runs/lineage" aria-current=${route.view === 'runs' ? 'page' : null}>All runs</a></span>
+    <span class="vfacts ${ok ? '' : 'greyed'}" id="viewer-facts">${mine ? html`${run.state === 'live' ? null : html`<span class="spill plain">${run.state === 'unfinished' ? 'ended, not finalized' : 'final'}</span>`}
       ${live && run.session !== live.session ? html`<span class="state watch">not the live run</span>` : null}
-      <${SpendPill} s=${s} /><${ContextPill} s=${s} live=${followingLive()} />
-      ${version ? html`<a class="spill" id="pill-curator" href=${`#memory/${encodeURIComponent(version)}`} title="The knowledge version the player holds"><span class="sub">Curator</span><b class="num">${version}</b></a>` : null}
-      <${EndpointPill} s=${s} />` : null}</span>
-    <span class="viewer ${ok ? '' : 'down'}" id="viewer" title=${viewerTitle} role="status">${ok ? (store.viewerSeen ? 'viewer ok' : 'viewer connecting') : 'viewer unavailable'}</span></div>`;
+      <${SpendPill} s=${s} /><${ContextPill} s=${s} live=${followingLive()} /><${HeadPill} s=${s} run=${store.runId} live=${!!s.live} key=${store.runId} />` : null}</span>
+    <${ViewerStatus} s=${mine ? s : null} /></div>`;
 }
 
+/** Beside Pause, the viewer's own reading that a Pause condition is met; it opens the conditions. Pause is unchanged. */
+function PauseBadge() {
+  useStore();
+  const s = store.summary;
+  if (!store.viewerOk || !pauseMet(s)) return null;
+  return html`<a class="pausealert" id="pausealert" href="#diagnostics/pause" title=${`Pause condition met: ${s.pause.met.join('; ')}. Open the conditions.`}><span aria-hidden="true">◆</span> Pause? <span class="why">${s.pause.met[0]}</span></a>`;
+}
+
+/* ---------------------------------------------------------------- start */
 if (recordedPage) {
   document.body.dataset.recorded = '';
   document.getElementById('watch').closest('header').setAttribute('aria-label', 'Recorded spectator');
 }
+// Panels that stick below the bar read its height; the bar wraps on narrow screens, so it is measured, not assumed.
+const header = document.querySelector('header.ctl');
+const measure = () => document.documentElement.style.setProperty('--header-h', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+measure();
+if (typeof ResizeObserver === 'function') new ResizeObserver(measure).observe(header);
 document.getElementById('app').replaceChildren();
 render(html`<${App} />`, document.getElementById('app'));
 render(html`<${StripViewer} />`, document.getElementById('strip-viewer'));
+const slot = document.getElementById('viewer-alert');
+if (slot) render(html`<${PauseBadge} />`, slot);
 startPolling();

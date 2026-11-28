@@ -450,8 +450,8 @@ def test_binding_skips_unreadable_records_and_retains_reasons_when_none_readable
     pm.agreement(run, ['judge-a', 'judge-b'], draws=20)
     root = tmp_path / 'evaluation'
     session = mapping['sessions']['admission-a']
-    with records.RecordWriter.create(root / session / '1-fixture-1.sqlite3',
-            dict(session=session, core_version=records.CORE_VERSION - 1)):
+    with records.RecordWriter.create(root / session / '3-fixture-1.sqlite3',
+            dict(session=session, core_version=3)):
         pass
     (root / session / 'broken.sqlite3').write_text('Not a SQLite record')
     result = pm.measure(run, draws=20, records_root=root)
@@ -461,8 +461,8 @@ def test_binding_skips_unreadable_records_and_retains_reasons_when_none_readable
     assert 'core version' in skipped[0]['reason']
     assert 'not an evaluation record' in skipped[1]['reason']
     assert all(row['admission'] == 'admission-a' and row['record'] for row in skipped)
-    with records.RecordWriter.create(root / session / '2-fixture-1.sqlite3',
-            dict(session=session, core_version=records.CORE_VERSION)):
+    with records.RecordWriter.create(root / session / '4-fixture-1.sqlite3',
+            dict(session=session, core_version=4)):
         pass
     result = pm.measure(run, draws=20, records_root=root)
     assert result['binding_reason'] is None

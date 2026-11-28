@@ -1,4 +1,4 @@
-"""Payload builders for the per-run `spectator-view/3` routes. Pure reads over one evaluation store.
+"""Payload builders for the per-run `spectator-view/4` routes. Pure reads over one evaluation store.
 
 Each builder takes the catalog, the run's `RunInfo` and an open read-only connection and returns a plain
 JSON-able dict (the app adds the schema field and bounds the size). Values keep their provenance:
@@ -6,23 +6,24 @@ JSON-able dict (the app adds the schema field and bounds the size). Values keep 
 """
 from __future__ import annotations
 
+from collections import OrderedDict
 from decimal import Decimal
-import hashlib
 from pathlib import Path
 import re
 import sqlite3
 import time
+import stat
+import threading
 
 from harness.evaluation.core import context as ctx
-from harness.evaluation.core.host import host_facts
 from harness.evaluation.core.metrics import nearest_rank
 from harness.evaluation.core.records import EvaluationError, loads
-from harness.evaluation.core.sources import (JOURNAL_MANIFEST_SCHEMAS, RECEIPT_SCHEMA, read_carry, read_host, read_json_file,
+from harness.evaluation.core.sources import (JOURNAL_MANIFEST_SCHEMAS, RECEIPT_SCHEMA, read_carry, read_host,
     read_manifest, read_historical_memory, read_player_store, run_archive_entry)
 
-from .catalog import Catalog, RunInfo, ViewError
-from .curator import read_rooted
-from .telemetry import Captured
+from .catalog import MAX_RESPONSE_BYTES, Catalog, RunInfo, ViewError
+from .curator import read_rooted, rooted_status
+from .telemetry import Captured, agenda_for_actor
 from . import pause
 
 SOURCE_ID = re.compile(r'^[A-Za-z0-9._-]{1,128}$')
@@ -30,7 +31,8 @@ FINDING_KINDS = ('stall', 'long_activity', 'ineffective_repeat', 'handoff', 'dea
     'tool_refused', 'memory_write', 'program_save', 'context_eviction')
 PROVENANCE = {'survival': 'derived', 'pace': 'derived', 'stall': 'derived', 'lineage': 'derived', 'handoff': 'derived',
     'run': 'derived', 'mode': 'read', 'needs': 'read', 'ladder': 'read', 'reader': 'read'}
-DERIVED_NAMES = ('memory.retrieved_beyond_carry', 'memory.late_write_share')
+DERIVED_NAMES = ('memory.retrieved_beyond_carry', 'memory.late_write_share', 'knowledge.reads', 'knowledge.deliveries',
+    'context.uncovered_cuts', 'agenda.calls', 'source.ancestor_reads')
 HEADLINE = ('survival.game_hours', 'stall.longest', 'stall.count', 'mode.out_of_play_share', 'mode.ui_share',
     'mode.interruption_share', 'pace.routine_seconds_per_decision', 'host.dollars_per_decision', 'host.large_rewrite_share',
     'run.infrastructure_loss')
@@ -125,7 +127,8 @@ def custodian_receipt(info: RunInfo) -> dict | None:
         if (manifest['schema'] not in JOURNAL_MANIFEST_SCHEMAS
                 or (manifest.get('session'), manifest.get('source_commit')) != (info.session, commit)):
             return None
-        receipt = read_json_file(info.run_dir / 'receipt.json')
+        state, _, data = read_rooted(info.run_dir, 'receipt.json')
+        receipt = loads(data) if state == 'available' else None
     except (OSError, EvaluationError):
         return None
     if not isinstance(receipt, dict) or (receipt.get('schema'), receipt.get('session'), receipt.get('source_commit')) != (
@@ -248,7 +251,9 @@ def summary(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, liv
         ROUTINE_FINDINGS).fetchone()[0]
     return dict(run=info.run, session=info.session, state=info.state, facts=info.facts, labels=info.labels,
         started_wall=started, routine_findings=dict(context_eviction=routine), outcome=outcome(info), decisions=info.decisions, dollars=info.dollars, versions=versions(info), live=live,
-        evaluator=evaluator, custodian_receipt=custodian_receipt(info),
+        evaluator=evaluator, evaluator_freshness=None if evaluator is None else {
+            key: evaluator.get(key) for key in ('running', 'passes', 'last_seq', 'last_pass_wall', 'error', 'finished')},
+        latest_step_seq=connection.execute('SELECT MAX(seq) FROM steps').fetchone()[0], custodian_receipt=custodian_receipt(info),
         pause=pause.conditions(connection, info.facts, time.time() if now is None else now) if live else None,
         game_state=game_state(connection, validation), findings=findings(connection), ladder=ladder,
         metrics=[metric_json(row, validation) for _, row in sorted(info.metrics.items())],
@@ -266,21 +271,68 @@ def steps(connection: sqlite3.Connection, after: int, limit: int) -> dict:
     return page(items, limit, lambda item: item['seq'])
 
 
-def frame(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, source_id: str) -> bytes:
-    """The original PNG, only after its SHA-256 matches the one the record holds."""
+_verified_frames: OrderedDict[tuple, str | None] = OrderedDict()
+_frame_lock = threading.Lock()
+MAX_VERIFIED_FRAMES = 4096
+
+
+def frame_digest(connection: sqlite3.Connection, source_id: str) -> str:
     if not SOURCE_ID.fullmatch(source_id):
         raise ViewError(400, 'bad_source_id')
     row = connection.execute('SELECT frame_sha256 FROM steps WHERE source_id=? LIMIT 1', (source_id,)).fetchone()
     if row is None or row[0] is None:
         raise ViewError(404, 'unknown_frame', source_id)
-    path = catalog.need_run_dir(info) / 'sources' / f'{source_id}.png'
-    try:
-        data = path.read_bytes()
-    except OSError as exc:
-        raise ViewError(404, 'frame_unavailable', source_id) from exc
-    if hashlib.sha256(data).hexdigest() != row[0]:
+    return row[0]
+
+
+def checked_frame(run_dir: Path, source_id: str, digest: str) -> bytes:
+    state, snapshot, data = read_rooted(run_dir, 'sources', f'{source_id}.png')
+    if state != 'available':
+        raise ViewError(404, 'frame_unavailable', source_id)
+    if snapshot['sha256'] != digest:
         raise ViewError(409, 'frame_digest_mismatch', source_id)
+    if len(data) > MAX_RESPONSE_BYTES:
+        raise ViewError(413, 'response_too_large', f'{len(data)} bytes')
     return data
+
+
+def frame(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, source_id: str) -> bytes:
+    digest = frame_digest(connection, source_id)
+    return checked_frame(catalog.need_run_dir(info), source_id, digest)
+
+
+def _frame_stamp(status):
+    return (status.st_dev, status.st_ino, status.st_mtime_ns, status.st_ctime_ns, status.st_size)
+
+
+def frame_available(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, source_id: str) -> str | None:
+    """Return the frame route's refusal code, or None for verified bytes at this file state."""
+    try:
+        digest = frame_digest(connection, source_id)
+        run_dir = catalog.need_run_dir(info)
+    except ViewError as error:
+        return error.code
+    parts = ('sources', f'{source_id}.png')
+    status = rooted_status(run_dir, *parts)
+    if status is None or not stat.S_ISREG(status.st_mode):
+        return 'frame_unavailable'
+    stamp = _frame_stamp(status)
+    key = (run_dir, source_id, stamp, digest)
+    with _frame_lock:
+        if key in _verified_frames:
+            _verified_frames.move_to_end(key)
+            return _verified_frames[key]
+        reason = None
+        try:
+            checked_frame(run_dir, source_id, digest)
+        except ViewError as error:
+            reason = error.code
+        after = rooted_status(run_dir, *parts)
+        if reason != 'frame_unavailable' and after is not None and _frame_stamp(after) == stamp:
+            _verified_frames[key] = reason
+            if len(_verified_frames) > MAX_VERIFIED_FRAMES:
+                _verified_frames.popitem(last=False)
+        return reason
 
 
 # Tools, calls, requests ----------------------------------------------------------------------------
@@ -413,34 +465,6 @@ def memory(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) -> d
     return dict(records=items, hints=list(store.hints[:500]), hints_omitted=max(0,len(store.hints)-500), store_schema=store.schema, available=True, provenance='player_public_report' if store.schema=='player-journal/1' else 'player_claim')
 
 
-def programs(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) -> dict:
-    store = memory_store(catalog, info)
-    docs = [] if store is None else [dict(id=pid, parent_id=doc.get('parent_id'), actor_id=doc.get('actor_id'),
-        created_wall=doc.get('created_wall'), name=doc.get('name') or doc.get('title'), document=doc)
-        for pid, doc in store.programs.items()]
-    runs = []
-    run_dir = info.run_dir
-    if run_dir is not None:
-        by_actor = {}
-        for (actor,) in connection.execute('SELECT DISTINCT actor FROM tool_calls'):
-            try:
-                by_actor[actor] = host_events(catalog, info, actor)
-            except ViewError:
-                continue
-        facts = host_facts(tuple(by_actor), by_actor)
-        for call in facts.calls:
-            if call.tool == 'player_program_run' and call.finished:
-                value = call.result if isinstance(call.result, dict) else {}
-                steps_done = value.get('steps') if isinstance(value.get('steps'), list) else []
-                runs.append(dict(actor=call.actor, program_id=value.get('program_id') or call.arguments.get('program_id'),
-                    run_id=value.get('run_id'), status=value.get('status'), steps=len(steps_done),
-                    elapsed_seconds=value.get('elapsed_seconds'), reason=value.get('reason'), wall=call.wall))
-    saves = [loads(p) for (p,) in connection.execute("SELECT payload FROM events WHERE kind='program_save' ORDER BY seq_start")]
-    return dict(programs=docs, runs=runs, saves=saves, provenance='player_claim',
-                capability='retired' if info.facts.get('manifest_schema') in JOURNAL_MANIFEST_SCHEMAS else 'recorded',
-                store_schema=store.schema if store is not None else None)
-
-
 def handoffs(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) -> dict:
     rows = connection.execute("SELECT e.seq_start, e.payload, s.decision, s.wall FROM events e LEFT JOIN steps s ON s.seq=e.seq_start "
         "WHERE e.kind='handoff' ORDER BY e.seq_start").fetchall()
@@ -452,21 +476,27 @@ def handoffs(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection) ->
         carry, text, ids = None, None, []
         context_id = value.get('context_id')
         if run_dir is not None and isinstance(context_id, str) and SOURCE_ID.fullmatch(context_id):
-            path = run_dir / 'contexts' / f'{context_id}.json'
+            state, snapshot, data = read_rooted(run_dir, 'contexts', f'{context_id}.json')
             try:
-                packet = read_json_file(path)
+                packet = loads(data) if state == 'available' else {}
+                if not isinstance(packet, dict):
+                    packet = {}
                 text = packet.get('summary')
                 knowledge = packet.get('knowledge') or {}
                 ids = [n['id'] for k in ('records', 'programs') for n in knowledge.get(k, ()) if isinstance(n, dict) and 'id' in n]
-                carry = path.stat().st_size
+                carry = snapshot['bytes'] if state == 'available' else None
             except (OSError, EvaluationError):
                 pass
         resume = info.metrics.get(('handoff.decisions_to_resume', str(index)))
         ratio = info.metrics.get(('handoff.carry_ratio', str(index)))
         errors = [l for l in labels if l.get('target') in ids and l.get('code') == 'identity_or_world_error'
             and l.get('verdict') == 'confirm']
+        successor = connection.execute('SELECT actor FROM steps WHERE seq > ? AND actor != ? ORDER BY seq LIMIT 1',
+                                       (seq, value.get('actor'))).fetchone()
+        actor = None if successor is None else successor[0]
+        carried_agenda = agenda_for_actor(info, actor, previous_actor=value.get('actor'))
         items.append(dict(index=index, seq=seq, decision=decision, wall=wall, actor=value.get('actor'), context_id=context_id,
             context_sha256=value.get('context_sha256'), decisions_to_resume=None if resume is None else resume.value,
-            carry_ratio=None if ratio is None else ratio.value, carry_bytes=carry, carry_text=text, carried_ids=ids,
+            carry_ratio=None if ratio is None else ratio.value, carry_bytes=carry, carry_text=text, carried_ids=ids, carried_agenda=carried_agenda,
             identity_check=dict(provenance='human', errors=errors, checked=bool(errors))))
     return dict(handoffs=items)

@@ -13,11 +13,12 @@ import sqlite3
 import threading
 from typing import Any
 
-from harness.evaluation.core.records import (EvaluationError, open_readonly, read_metadata, read_metrics, read_run_facts)
+from harness.evaluation.core.records import (CORE_VERSION, EvaluationError, open_readonly, read_metadata, read_metrics, read_run_facts)
 from harness.evaluation.core.sources import read_json_file, read_json_lines, read_manifest
 
-API = 'spectator-view/3'
+API = 'spectator-view/4'
 #: Bounds shared by the projections: a text is cut and says so, an identifier is whole or absent, a list states its omissions.
+MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 TEXT_LIMIT = 1024
 ID_LIMIT = 512
 LIST_LIMIT = 100
@@ -85,9 +86,11 @@ class Catalog:
         self.runs_dirs = tuple(Path(p) for p in runs_dirs)
         self.live_run = Path(live_run) if live_run is not None else None
         self.data_dir = Path(data_dir)
-        self._cache: dict[Path, tuple[tuple, RunInfo]] = {}
+        self._cache: dict[Path, tuple[tuple, RunInfo | str]] = {}
         self._dirs: dict[str, Path] = {}
         self._lock = threading.Lock()
+        self._scan_lock = threading.Lock()
+        self._skipped_non_current = 0
 
     # Discovery -----------------------------------------------------------------------------------
 
@@ -115,26 +118,30 @@ class Catalog:
                 self._dirs = self._directories()
             return self._dirs.get(session)
 
-    def _load(self, path: Path) -> RunInfo | None:
+    def _load(self, path: Path) -> RunInfo | str | None:
         state = stamp(path)
         cached = self._cache.get(path)
         if cached is not None and cached[0] == state:
             return cached[1]
         try:
             connection = open_readonly(path)
-        except (EvaluationError, sqlite3.Error):
+        except (EvaluationError, sqlite3.Error, OSError):
             return None
         try:
-            meta, facts, metrics = read_metadata(connection), read_run_facts(connection), read_metrics(connection)
+            meta = read_metadata(connection)
+            session = meta.get('session')
+            if not isinstance(session, str):
+                return None
+            if meta.get('core_version') != CORE_VERSION:
+                self._cache[path] = (state, session)
+                return session
+            facts, metrics = read_run_facts(connection), read_metrics(connection)
             decisions, dollars = connection.execute('SELECT MAX(decision), MAX(dollars) FROM steps').fetchone()
             spend = connection.execute('SELECT SUM(dollars) FROM requests').fetchone()[0]
-        except sqlite3.Error:
+        except (EvaluationError, sqlite3.Error, ValueError, RecursionError):
             return None
         finally:
             connection.close()
-        session = meta.get('session')
-        if not isinstance(session, str):
-            return None
         info = RunInfo(session, str(meta.get('run') or session), path, self.run_dir_for(session, meta), meta, facts, metrics,
             decisions or 0, float(spend if spend is not None else dollars or 0.0))
         self._cache[path] = (state, info)
@@ -142,16 +149,27 @@ class Catalog:
 
     def runs(self) -> list[RunInfo]:
         """One entry per session: the newest binding version's store, sorted by run name."""
-        newest: dict[str, RunInfo] = {}
-        for path in sorted(self.root.glob('*/*.sqlite3')) if self.root.is_dir() else ():
-            info = self._load(path)
-            if info is None:
-                continue
-            best = newest.get(info.session)
-            if best is None or (info.meta.get('binding_version', 0), info.meta.get('core_version', 0)) >= (
-                    best.meta.get('binding_version', 0), best.meta.get('core_version', 0)):
-                newest[info.session] = info
-        return sorted(newest.values(), key=lambda i: (i.run, i.session))
+        with self._scan_lock:
+            newest: dict[str, RunInfo] = {}
+            current, non_current = set(), set()
+            paths = sorted(self.root.glob('*/*.sqlite3')) if self.root.is_dir() else []
+            self._cache = {path: self._cache[path] for path in paths if path in self._cache}
+            for path in paths:
+                info = self._load(path)
+                if isinstance(info, str):
+                    non_current.add(info)
+                elif info is not None:
+                    current.add(info.session)
+                    best = newest.get(info.session)
+                    if best is None or info.meta.get('binding_version', 0) >= best.meta.get('binding_version', 0):
+                        newest[info.session] = info
+            self._skipped_non_current = len(non_current - current)
+            return sorted(newest.values(), key=lambda i: (i.run, i.session))
+
+    def skipped_non_current(self) -> int:
+        """The number of sessions with only non-current stores at the last scan."""
+        with self._scan_lock:
+            return self._skipped_non_current
 
     def find(self, identifier: str) -> RunInfo:
         """A run by session ID, or by its run directory name."""
@@ -168,7 +186,7 @@ class Catalog:
         try:
             return open_readonly(info.path)
         except (EvaluationError, sqlite3.Error) as exc:
-            raise ViewError(503, 'record_unavailable', str(exc)) from exc
+            raise ViewError(503, 'record_unavailable') from exc
 
     def need_run_dir(self, info: RunInfo) -> Path:
         if info.run_dir is None:

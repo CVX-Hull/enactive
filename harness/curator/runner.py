@@ -25,7 +25,7 @@ path, and the only lock taken beside the custodian is the shared read lock insid
   Versions present at the runner's first look ever are its `baseline`.
 - `polls.jsonl` (`curator-runner-poll/1`): one row per poll, with the snapshot's timings or why
   there was none, the position and `coverage`.
-- `status.json` (`curator-runner-status/1`), replaced atomically at each poll and at each
+- `status.json` (`curator-runner-status/2`), replaced atomically at each poll and at each
   session's start and end; its fields are listed in `Runner.status`.
 - `stopped.json` (`curator-runner-stopped/1`), replaced atomically once when the runner stops for
   a failure; a runner restarted for the same admission finds it and does not work again.
@@ -99,7 +99,7 @@ from .gate import COVERAGE, journal
 from .knowledge import KnowledgeError, Repository
 from .window import Window
 
-STATUS_SCHEMA = 'curator-runner-status/1'
+STATUS_SCHEMA = 'curator-runner-status/2'
 EXAMINED_SCHEMA = 'curator-runner-examined/1'
 VERSION_SCHEMA = 'curator-runner-version/1'
 POLL_SCHEMA = 'curator-runner-poll/1'
@@ -388,12 +388,15 @@ class Runner:
     def __init__(self, directory: Path, session: str, *, snapshot: Snapshotter, session_call: Session, look: Look,
                  settings: Settings = Settings(), clock=time, sleep: Callable[[float], None] = time.sleep,
                  run: Path | None = None, hygiene_call: HygieneSession | None = None,
-                 hygiene_check: HygieneCheck | None = None, hygiene_settings: HygieneSettings = HygieneSettings()):
-        """`run` is the live run directory, checked at each poll for the custodian's receipt."""
+                 hygiene_check: HygieneCheck | None = None, hygiene_settings: HygieneSettings = HygieneSettings(),
+                 limits: dict | None = None):
+        """`run` is the live run directory, checked at each poll for the custodian's receipt. `limits` is the
+        bounded, JSON-serializable record of the configured spend and hygiene limits the status file reports."""
         self.directory, self.session, self.run_directory = Path(directory), session, run
         self.snapshot, self.session_call, self.look = snapshot, session_call, look
         self.hygiene_call, self.hygiene_check, self.hygiene_settings = hygiene_call, hygiene_check, hygiene_settings
         self.settings, self.clock, self.sleep = settings, clock, sleep
+        self.limits = limits
         self.directory.mkdir(parents=True, exist_ok=True)
         shutil.rmtree(self.directory/SNAPSHOTS, ignore_errors=True)  # a killed runner's staged snapshot
         _cut(self.directory/POLLS)
@@ -723,8 +726,11 @@ class Runner:
             return dict(schema=STATUS_SCHEMA, session=self.session, state=self.state, updated_wall=self.clock.time(),
                         settings=asdict(self.settings), position=self.position(), snapshot=snapshot,
                         examined=self.examined(), cursor=self.cursor, current=self.current,
+                        limits=self.limits,
                         **self.coverage(), failures=dict(sessions=self.session_failures(),
-                                                         snapshots=self.snapshot_failures),
+                                                         snapshots=self.snapshot_failures,
+                                                         hygiene=self.hygiene_failures(),
+                                                         flex_deferrals=self.flex_deferrals()),
                         versions=sorted(self.versions.values(), key=lambda v: _number(v['version'])),
                         look_error=self.look_error, stop_reason=self.reason, as_of=self.position(),
                         after_last_read=UNKNOWN, unexamined=self.unexamined() if done else None)

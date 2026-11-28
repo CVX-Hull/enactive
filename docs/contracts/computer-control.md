@@ -210,7 +210,7 @@ authority renewal follows. Pause reasons never reach the actor or native stop in
 
 ## Reuse and qualification limits
 
-The spectator view API ([contract](spectator-view.md#spectator-view-api-spectator-view3))
+The spectator view API ([contract](spectator-view.md#spectator-view-api-spectator-view4))
 is a separate read-only projection of recorded data. It has no actor/native effects,
 grants no authority, replaces no current status/source and cannot block independent
 Pause. No archive, collector or semantic control API is added to these runtime ports.

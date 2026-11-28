@@ -19,6 +19,7 @@ Terms are in the [glossary](../glossary.md).
 | [`curator-submission/3`](#submissions-curator-submission3) | `submissions/<id>/submission.json` | Curator |
 | [`curator-coverage/2`](#coverage-stamp-curator-coverage2) | `coverage.json` | Gate, from the session runner's stamp |
 | [`curator-gate/2`](#gate-result-curator-gate2) | `gate.jsonl` | Gate |
+| [`curator-runner-status/2`](#live-runner-status) | Live runner `status.json` | Live runner |
 | `container-manifest/1` | [Session](#session-close-out) and [draft](#drafts) manifests | Session runner |
 | [`curator-boundary-grooming/2`](#boundary-grooming-summary-curator-boundary-grooming2) | `grooming-summary.json` | Boundary grooming command |
 
@@ -439,6 +440,25 @@ coverage-gated cuts for the run ([player-host coverage updates](player-host.md#a
 - **Growth.** Grooming addresses the store's growth, and the store has no hard cap
   ([decision](../decisions/owner-decisions.md#groom-the-store-between-admissions)).
   Submission and host resource limits still apply.
+
+### Live runner status
+
+The runner atomically replaces `curator-runner/status.json` at polls and session
+boundaries. The `curator-runner-status/2` file records progress as of its last
+successful read. The live host's `limits` records configured `cap_usd`, nullable
+`session_cap_usd`, `service_tier`, `flex_deferral_limit` and `hygiene` settings.
+The hygiene fields are `enabled`, `min_windows`, `max_unexamined_steps`,
+`pass_cap_usd`, `max_spend_share`, `max_requests`, `wall_seconds`,
+`host_wall_seconds` and `max_consecutive_failures`. Money and shares are decimal
+strings. `host_wall_seconds` is the hygiene wall limit minus 30 seconds.
+
+`failures` includes `sessions`, `snapshots`, `hygiene` and `flex_deferrals`.
+`hygiene` counts consecutive failed hygiene outcomes, skipping sessions that did
+not run, were interrupted or were flex-deferred. `flex_deferrals` counts consecutive
+flex-deferred ingestion outcomes, skipping hygiene, sessions that did not run and
+interrupted sessions. The runner records `session_kind: "hygiene"` in `current`
+and `examined` for hygiene passes. See the [viewer projection](spectator-view.md#curator-runner-status)
+for reading archived status files.
 
 ### Boundary grooming summary (`curator-boundary-grooming/2`)
 

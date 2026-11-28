@@ -255,10 +255,10 @@ def draft_projection(manifest, directory, draft_id):
                 max_bytes=max_bytes, retention_policy=_safe(policy))
 
 
-def read_drafts(root, after, limit):
+def read_drafts(root, after, limit, *, select=None):
     """Fingerprint the configured manifests in bucket and ID order and keep only the requested page."""
     sha = hashlib.sha256()
-    size = total = 0
+    size = total = lineage = 0
     rows = []
     failure = None
     for bucket in sorted(DRAFT_BUCKETS):
@@ -273,7 +273,7 @@ def read_drafts(root, after, limit):
             if status == 'missing':
                 continue
             if status == 'unreadable':
-                return status, None, [], 0
+                return status, None, [], 0, 0
             sha.update(json.dumps((bucket, draft_id, snapshot['sha256'], snapshot['bytes']),
                                   separators=(',', ':')).encode() + b'\n')
             size += snapshot['bytes']
@@ -290,20 +290,23 @@ def read_drafts(root, after, limit):
             except (ValueError, TypeError, KeyError):
                 failure = failure or 'unsupported'
                 continue
+            lineage += 1
+            if select is not None and not select(row, manifest['provenance']['sessions']):
+                continue
             if after <= total < after + limit:
                 rows.append(row)
             total += 1
     snapshot = dict(sha256=sha.hexdigest(), bytes=size)
     if failure is not None:
-        return failure, snapshot, [], 0
-    return 'available' if total else 'empty', snapshot, rows, total
+        return failure, snapshot, [], 0, 0
+    return 'available' if lineage else 'empty', snapshot, rows, total, lineage
 
 
 def drafts(sources, label, after, limit, digest):
     path = snapshot_source(sources, label, after, digest)
     try:
         with opened_directory(path) as root:
-            status, snapshot, rows, total = read_drafts(root, after, limit)
+            status, snapshot, rows, total, _ = read_drafts(root, after, limit)
     except FileNotFoundError:
         status, snapshot, rows, total = 'missing', None, [], 0
     except OSError:

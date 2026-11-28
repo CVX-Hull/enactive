@@ -92,8 +92,11 @@ async function settled(page) {
   if (hash === '' || hash.startsWith('#watch')) await until(page, () => document.querySelector('#tl') && document.querySelector('#story .card'));
 }
 const SESSIONS = Object.fromEntries(JSON.parse(fs.readFileSync(path.join(__dirname, 'runs.json'), 'utf8')).items.map(r => [r.run, r.session]));
-/** Choose a fixture run in the picker, whose values are sessions. */
-const pick = (page, run) => page.select('#runpick', SESSIONS[run]);
+/** Choose a fixture run in the picker, whose values are sessions, once the run list has it. */
+async function pick(page, run) {
+  await until(page, s => [...(document.getElementById('runpick')?.options || [])].some(o => o.value === s), SESSIONS[run]);
+  return page.select('#runpick', SESSIONS[run]);
+}
 async function overflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }

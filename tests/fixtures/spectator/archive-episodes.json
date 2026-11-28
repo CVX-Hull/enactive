@@ -1,5 +1,5 @@
 {
- "schema": "spectator-frame/1",
+ "schema": "spectator-view/4",
  "lineages": [
   {"lineage": "fixture", "study": "fixture-study", "source": "synthetic fixture", "note": "Synthetic evaluation data for the fixture server.",
    "episodes": [

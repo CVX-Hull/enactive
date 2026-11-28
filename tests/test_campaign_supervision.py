@@ -21,11 +21,11 @@ COMMIT = 'b' * 40
 
 
 def test_gateway_passes_viewer_routing_errors_as_json(tmp_path):
-    client = TestClient(create_app(Catalog(tmp_path / 'evaluation')))
+    client = TestClient(create_app(Catalog(tmp_path / 'evaluation')), base_url='http://127.0.0.1')
     with watch_fixture(tmp_path) as gateway:
         for method, path, code, error in (
                 ('GET', '/api/view/no-such-route', 404, 'not_found'),
-                ('POST', '/api/view/frame/curator-drafts', 405, 'method_not_allowed')):
+                ('POST', '/api/view/curator-sources/drafts', 405, 'method_not_allowed')):
             # The gateway forwards GET only, including a 405 returned by the upstream viewer.
             upstream = client.request(method, path)
             assert upstream.status_code == code
@@ -33,7 +33,8 @@ def test_gateway_passes_viewer_routing_errors_as_json(tmp_path):
             response, data = gateway.reply(path)
             assert response.status == code and gateway.state['view']['paths'][-1] == path
             assert response.getheader('Content-Type') == 'application/json'
-            assert data == upstream.content and json.loads(data)['error'] == error
+            body = json.loads(data)
+            assert data == upstream.content and body['error'] == error and body['schema'] == 'spectator-view/4'
 
 
 def markers(directory, *, deadline=200):
@@ -327,7 +328,22 @@ def test_viewer_exit_never_counts_as_supervision_loss(tmp_path, monkeypatch):
     assert result['cleanup']['viewer']['process_absent']
 
 
-def supervised_with_runner(tmp_path, monkeypatch, runner_code, *, configured=True):
+def runner_config(tmp_path, monkeypatch, **values):
+    """A valid curator runner configuration whose lineage lives under a synthetic checkout's `.runtime`."""
+    monkeypatch.setattr(guard, 'ROOT', tmp_path/'checkout')
+    config = tmp_path/'runner.json'
+    config.write_text(json.dumps(dict(dict(schema='curator-runner-config/2', arm='terra', cap_usd='1',
+                                           knowledge_root=str(tmp_path/'checkout'/'.runtime'/'knowledge'/'live')),
+                                      **values)))
+    return config
+
+
+def lineage_state(tmp_path):
+    return (tmp_path/'checkout'/'.runtime'/'knowledge'/'live').resolve()/'cdda.state'
+
+
+def supervised_with_runner(tmp_path, monkeypatch, runner_code, *, configured=True, curator_drafts=(),
+                           curator_results=()):
     """A supervised run whose curator runner child runs `runner_code` (None: its launch fails)."""
     profile = dict(session=SESSION, source_commit=COMMIT, wall_seconds=60, port=12345)
     monkeypatch.setattr(guard, 'preflight', lambda _: (profile, {'api_key_env': 'WATCH_TEST_KEY'}, {}))
@@ -335,8 +351,7 @@ def supervised_with_runner(tmp_path, monkeypatch, runner_code, *, configured=Tru
     run = tmp_path/'run'
     run.mkdir()
     (run/'manifest.json').write_text('{}')
-    config = tmp_path/'runner.json'
-    config.write_text('{}')
+    config = runner_config(tmp_path, monkeypatch)
     launched, calls, closed = {}, [], []
     def launch(argv, **kwargs):
         if 'tools.campaign_run' in argv:
@@ -381,7 +396,8 @@ def supervised_with_runner(tmp_path, monkeypatch, runner_code, *, configured=Tru
         return original_close(handle)
     monkeypatch.setattr(guard, 'close_group', close)
     result = guard.run_supervised(run, popen=launch, viewer_port=lambda: 54321,
-                                  curator_runner=config if configured else None)
+                                  curator_runner=config if configured else None,
+                                  curator_drafts=curator_drafts, curator_results=curator_results)
     assert all(h.poll() is not None for h in launched.values())
     outcome['events'] = events
     return run, result, calls, closed, outcome
@@ -401,6 +417,11 @@ def test_a_curator_runner_starts_after_the_custodian_outside_supervision_and_is_
     # The viewer it starts reads the runner's status file (against R-REGRESSION: a paid run nobody can watch).
     viewer = result['children']['viewer']['argv']
     assert viewer[viewer.index('--curator-runner-status')+1] == str(run/'curator-runner'/'status.json')
+    # ... and the lineage's drafts and gate results, though the gate has not yet created its state directory.
+    state = lineage_state(tmp_path)
+    assert not state.exists()
+    assert viewer[viewer.index('--curator-drafts')+1] == f'live={state}'
+    assert viewer[viewer.index('--curator-results')+1] == f'live={state/"gate.jsonl"}'
     options = calls[2][2]
     assert options['start_new_session'] is True and 'WATCH_TEST_KEY' not in options['env']
     cleanup = result['cleanup']['curator_runner']
@@ -461,11 +482,34 @@ def test_a_package_that_already_holds_runner_files_is_refused_before_the_reserva
     run = tmp_path/'run'
     run.mkdir()
     (run/left).mkdir() if left == 'curator-runner' else (run/left).touch()
-    config = tmp_path/'runner.json'
-    config.write_text('{}')
+    config = runner_config(tmp_path, monkeypatch)
     with pytest.raises(ValueError, match='already holds a curator read lock or runner directory'):
         guard.run_supervised(run, curator_runner=config)
     assert sorted(p.name for p in run.iterdir()) == [left]  # no reservation: the package is not made inert
+
+
+@pytest.mark.parametrize('change', [dict(schema='curator-runner-config/1'), dict(arm='nobody'),
+                                    dict(knowledge_root='/elsewhere/knowledge'), None])
+def test_an_invalid_curator_runner_configuration_is_refused_before_the_reservation(tmp_path, monkeypatch, change):
+    monkeypatch.setattr(guard, 'preflight', lambda _: pytest.fail('refused before preflight'))
+    run = tmp_path/'run'
+    run.mkdir()
+    config = runner_config(tmp_path, monkeypatch, **(change or {}))
+    if change is None:
+        config.write_text('{not json')
+    with pytest.raises(ValueError, match='curator runner configuration is invalid'):
+        guard.run_supervised(run, curator_runner=config)
+    assert list(run.iterdir()) == []  # no watch-start.json, lock or runner directory
+
+
+def test_explicit_live_curator_sources_are_kept_over_the_lineage_defaults(tmp_path, monkeypatch):
+    _, result, _, _, _ = supervised_with_runner(
+        tmp_path, monkeypatch, 'pass', curator_drafts=('live=/chosen/drafts', 'other=/x'),
+        curator_results=('live=/chosen/gate.jsonl',))
+    viewer = result['children']['viewer']['argv']
+    drafts = [viewer[i+1] for i, arg in enumerate(viewer) if arg == '--curator-drafts']
+    results = [viewer[i+1] for i, arg in enumerate(viewer) if arg == '--curator-results']
+    assert drafts == ['live=/chosen/drafts', 'other=/x'] and results == ['live=/chosen/gate.jsonl']
 
 
 @pytest.mark.parametrize('runner_code', ['raise SystemExit(3)', None])
@@ -487,7 +531,8 @@ def test_without_a_curator_runner_nothing_is_created_and_the_launches_are_unchan
     run, result, calls, _, _ = supervised_with_runner(tmp_path, monkeypatch, 'pass', configured=False)
     assert [name for name, _, _ in calls] == ['custodian', 'viewer', 'gateway', 'wake']
     assert 'curator_runner' not in result['children'] and 'curator_runner' not in result['cleanup']
-    assert '--curator-runner-status' not in result['children']['viewer']['argv']
+    viewer = result['children']['viewer']['argv']
+    assert not {'--curator-runner-status', '--curator-drafts', '--curator-results'} & set(viewer)
     assert not (run/'curator-read.lock').exists() and not (run/'curator-runner').exists()
 
 

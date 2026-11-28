@@ -154,9 +154,9 @@ class Run:
     def wall(self) -> float:
         return self.base + 10 * self.count
 
-    def event(self, actor: str, kind: str, wall: float | str | None = None, **fields) -> dict:
+    def event(self, actor: str, event_type: str, wall: float | str | None = None, **fields) -> dict:
         self.monotonic += 1
-        value = dict(type=kind, monotonic_ms=self.monotonic, **fields)
+        value = dict(type=event_type, monotonic_ms=self.monotonic, **fields)
         if wall is not None:
             value['wall_time'] = wall if isinstance(wall, str) else iso(wall)
         return value
@@ -326,6 +326,7 @@ def run_and_evaluate(tmp_path: Path, build=main_scenario, **options) -> Path:
 def test_record_follows_the_contract_tables(tmp_path):
     path = run_and_evaluate(tmp_path)
     assert path == record_path(tmp_path / 'evaluations', SESSION, 'fake', 3)
+    assert CORE_VERSION == 4
     assert path.name == f'{CORE_VERSION}-fake-3.sqlite3'
     connection = open_readonly(path)
     tables = {r[0]: [c[1] for c in connection.execute(f'PRAGMA table_info({r[0]})')]
@@ -731,6 +732,7 @@ def test_memory_program_and_handoff_events_and_metrics(tmp_path, legacy_player_a
     metrics = metrics_of(path)
     assert metrics['memory.writes'].value == 3 and metrics['memory.writes'].count == 3
     assert metrics['memory.reads'].value == 3
+    assert 'knowledge.reads' not in metrics
     # Reads returned first, second and third; the carry from actor 1 is just the first record.
     carry = metrics['memory.retrieved_beyond_carry']
     assert (carry.count, carry.denominator, carry.value) == (2, 3, pytest.approx(2 / 3)) and carry.missing is None
@@ -750,7 +752,7 @@ def test_memory_program_and_handoff_events_and_metrics(tmp_path, legacy_player_a
     assert metrics['handoff.carry_ratio', '0'].value == pytest.approx(0.25)
 
 
-def test_memory_metrics_missing_without_a_host_trace(tmp_path):
+def test_knowledge_metrics_missing_without_a_host_trace(tmp_path):
     def build(directory):
         run = Run(directory, hosts=False)
         a = run.actor()
@@ -758,10 +760,106 @@ def test_memory_metrics_missing_without_a_host_trace(tmp_path):
         run.finish()
         return directory
     metrics = metrics_of(run_and_evaluate(tmp_path, build))
-    assert metrics['memory.writes'].value is None and metrics['memory.writes'].missing == 'no_host_trace'
+    assert metrics['knowledge.reads'].value is None and metrics['knowledge.reads'].missing == 'no_host_trace'
+    for name, denominator in [('knowledge.deliveries', None), ('context.uncovered_cuts', 0),
+                             ('agenda.calls', None), ('source.ancestor_reads', None)]:
+        row = metrics[name]
+        assert (row.value, row.count, row.denominator, row.missing) == (None, 0, denominator, 'no_host')
     assert metrics['host.dollars_per_decision'].missing == 'no_host_trace'
     assert metrics['pace.dollars_per_game_hour'].missing == 'no_host_trace'
     assert metrics['host.retry_share'].value['value'] is None
+
+
+def test_current_knowledge_and_context_metrics(tmp_path):
+    run = Run(tmp_path / 'run')
+    actor = run.actor()
+    request = run.request(actor)
+    for kind, outcome in [('briefing', 'delivered'), ('update', 'delivered'), ('update', 'empty-suppressed'),
+                          ('update', 'refused')]:
+        run.host[actor].append(run.event(actor, 'knowledge-delivery', kind=kind, outcome=outcome, version='v1'))
+    run.host[actor].append(run.event(actor, 'knowledge-undelivered', kind='update', version='v2', reason='actor-ended'))
+    for outcome, uncovered in [('cut', 0), ('cut', 2), ('held-back', 8)]:
+        run.host[actor].append(run.event(actor, 'context-cut', outcome=outcome, uncovered_turns=uncovered))
+    for tool in ('player_knowledge_read', 'player_knowledge_query', 'player_memory_read'):
+        run.call(actor, tool, {}, {})
+    run.call(actor, 'player_knowledge_read', {}, {}, error=True)
+    run.call(actor, 'player_agenda', {}, {})
+    run.call(actor, 'player_agenda', {}, {}, error=True)
+    for schema, clickable, origin in [
+        ('player-source-read/2', False, dict(admission='s01', actor='001', step=1)),
+        ('player-source-read/2', False, dict(admission='current', actor='001', step=None)),
+        ('player-source-read/2', True, dict(admission='current', actor='001', step=1)),
+        ('player-source-read/1', False, dict(admission='s01')),
+        ('player-source-read/2', False, None),
+    ]:
+        run.call(actor, 'player_source', {}, dict(schema=schema, clickable=clickable, origin=origin))
+    for tool in ('player_agenda', 'player_source'):
+        run.host[actor].append(run.event(actor, 'tool-refused', tool=tool, request_id=request, tool_call_id=tool))
+    path = evaluate(run.finish(), FakeBinding(), tmp_path / 'evals')
+    metrics = metrics_of(path)
+    expected = {
+        'knowledge.reads': (2, 2, None),
+        'knowledge.deliveries': (3, 3, 5),
+        ('knowledge.deliveries', 'delivered'): (2, 2, 5),
+        ('knowledge.deliveries', 'empty-suppressed'): (1, 1, 5),
+        ('knowledge.deliveries', 'refused'): (1, 1, 5),
+        ('knowledge.deliveries', 'undelivered'): (1, 1, 5),
+        'context.uncovered_cuts': (1, 1, 2),
+        'agenda.calls': (2, 2, None),
+        'source.ancestor_reads': (1, 1, 6),
+    }
+    for name, values in expected.items():
+        row = metrics[name]
+        assert (row.value, row.count, row.denominator) == values and row.missing is None
+    assert all(not row.name.startswith(('memory.', 'programs.')) for row in metrics.values())
+    assert [event['payload']['tool'] for event in events_of(path, 'memory_read')] == [
+        'player_knowledge_read', 'player_knowledge_query', 'player_memory_read']
+
+
+def test_uncovered_cuts_distinguishes_missing_field_and_opening_knowledge_refuses_symlinks(tmp_path):
+    run = Run(tmp_path / 'run')
+    actor = run.actor()
+    run.request(actor)
+    run.host[actor].append(run.event(actor, 'context-cut', outcome='cut'))
+    directory = run.finish()
+    outside = tmp_path / 'outside.json'
+    outside.write_text(json.dumps(dict(schema='delivered-knowledge/4', version='v99')))
+    (directory / 'delivered-knowledge.json').symlink_to(outside)
+    path = evaluate(directory, FakeBinding(), tmp_path / 'evals')
+    metrics = metrics_of(path)
+    cut_row = metrics['context.uncovered_cuts']
+    assert (cut_row.value, cut_row.count, cut_row.denominator, cut_row.missing) == (None, 0, 0, 'unrecorded_uncovered_turns')
+    with open_readonly(path) as connection:
+        assert read_run_facts(connection)['opening_knowledge_version'] is None
+    # Malformed snapshot or bare schema prefix also leaves opening version unknown rather than aborting live evaluation.
+    (directory / 'delivered-knowledge.json').unlink()
+    (directory / 'delivered-knowledge.json').write_text('{broken')
+    live_path = evaluate(directory, FakeBinding(), tmp_path / 'live-evals', state='live')
+    with open_readonly(live_path) as connection:
+        assert read_run_facts(connection)['opening_knowledge_version'] is None
+    (directory / 'delivered-knowledge.json').write_text(json.dumps(dict(schema='delivered-knowledge/', version='v99')))
+    live_path = evaluate(directory, FakeBinding(), tmp_path / 'live-evals-2', state='live')
+    with open_readonly(live_path) as connection:
+        assert read_run_facts(connection)['opening_knowledge_version'] is None
+    # Mixed cuts (one with uncovered_turns=0, one missing) keep denominator=1 and still report unrecorded_uncovered_turns.
+    mixed = Run(tmp_path / 'mixed-cuts')
+    ma = mixed.actor()
+    mixed.request(ma)
+    mixed.host[ma].append(mixed.event(ma, 'context-cut', outcome='cut', uncovered_turns=0))
+    mixed.host[ma].append(mixed.event(ma, 'context-cut', outcome='cut'))
+    mixed_row = metrics_of(evaluate(mixed.finish(), FakeBinding(), tmp_path / 'mixed-evals'))['context.uncovered_cuts']
+    assert (mixed_row.value, mixed_row.count, mixed_row.denominator, mixed_row.missing) == (0, 0, 1, 'unrecorded_uncovered_turns')
+
+
+def test_current_manifest_with_legacy_write_retains_legacy_metrics(tmp_path):
+    run = Run(tmp_path / 'run')
+    actor = run.actor()
+    run.request(actor)
+    run.call(actor, 'player_memory_append', {}, dict(id='old-record', kind='work'))
+    metrics = metrics_of(evaluate(run.finish(), FakeBinding(), tmp_path / 'evals'))
+    assert metrics['memory.writes'].value == 1
+    assert metrics['programs.saved'].value == 0
+    assert 'knowledge.reads' not in metrics
 
 
 # ---------------------------------------------------------------------------------------------
@@ -773,12 +871,18 @@ def test_every_metric_row_is_present_with_count_and_denominator(tmp_path):
         'pace.dollars_per_game_hour', 'mode.out_of_play_share', 'mode.ui_share', 'mode.interruption_share',
         'stall.longest', 'stall.count',
         'input.actions_per_call', 'input.unseen_action_share', 'input.frame_unchanged_rate',
-        'custody.uncertain_receipts', 'custody.stopped', 'memory.writes', 'memory.reads', 'memory.retrieved_beyond_carry',
-        'memory.late_write_share', 'programs.saved', 'programs.runs', 'programs.reused', 'programs.outcomes',
+        'custody.uncertain_receipts', 'custody.stopped', 'knowledge.reads', 'knowledge.deliveries',
+        'context.uncovered_cuts', 'agenda.calls', 'source.ancestor_reads',
         'handoff.decisions_to_resume', 'handoff.carry_ratio', 'host.dollars_per_decision', 'host.cache_write_share',
         'host.large_rewrite_share', 'host.retry_share', 'needs.severe_share', 'ladder.reached',
         'lineage.continuity', 'run.infrastructure_loss'}
     assert expected <= set(metrics)
+    for name, denominator, missing in [('knowledge.deliveries', None, None),
+                                       ('context.uncovered_cuts', 0, 'no_cuts'),
+                                       ('agenda.calls', None, None),
+                                       ('source.ancestor_reads', None, 'no_source_reads')]:
+        row = metrics[name]
+        assert (row.value, row.count, row.denominator, row.missing) == (0, 0, denominator, missing)
     keyed = {n: {k for item in metrics if isinstance(item, tuple) for name, k in [item] if name == n}
         for n in ('reader.coverage', 'host.latency', 'tools.calls')}
     assert keyed['reader.coverage'] >= {'core.frame', 'clock', 'mode', 'core.game_time', 'core.map_change'}
@@ -1032,25 +1136,29 @@ DAY = 24 * 3600
 
 
 def day_lineage(tmp_path: Path, name: str, *, critical: bool = False, death: bool = False) -> list[Path]:
-    """Two admissions: the first writes a memory record, the second crosses one game day and reads it."""
+    """Two admissions: the second opens with the first's closing knowledge and crosses one game day."""
     one = Run(tmp_path / f'{name}-one', session=f'{name}1'.ljust(32, '0')[:32], base=BASE)
     a = one.actor()
     one.step(a, 'input', [key('j')], F('in_play', 3600, identity=1, fill=0))
-    one.call(a, 'player_memory_append', dict(record=record_doc()), dict(id='rec-1', kind='work', supports=[], sources=[]))
+    one.host[a].append(one.event(a, 'knowledge-delivery', kind='briefing', outcome='delivered', version='v1'))
     one.step(a, 'input', [key('j')], F('in_play', 3660, identity=1, fill=1, death=death))
     one.step(a, 'input', [key('j')], F('in_play', 3720, identity=1, fill=2))
+    one.host[a].append(one.event(a, 'knowledge-delivery', kind='update', outcome='delivered', version='v2'))
+    one.host[a].append(one.event(a, 'knowledge-delivery', kind='update', outcome='empty-suppressed', version='v3'))
+    one.host[a].append(one.event(a, 'knowledge-delivery', kind='update', outcome='undelivered', version='v4'))
     one.finish()
     two = Run(tmp_path / f'{name}-two', session=f'{name}2'.ljust(32, '0')[:32], base=BASE + 1000)
     b = two.actor()
     two.step(b, 'input', [key('j')], F('in_play', 3600 + DAY - 60, identity=1, fill=0))
-    two.call(b, 'player_memory_read', dict(record_id='rec-1'), dict(id='rec-1', kind='work'))
+    two.host[b].append(two.event(b, 'knowledge-delivery', kind='briefing', outcome='delivered', version='v2'))
+    two.host[b].append(two.event(b, 'knowledge-delivery', kind='briefing', outcome='delivered', version='v3'))
     two.step(b, 'input', [key('j')], F('in_play', 3600 + DAY + 60, identity=1, fill=1, critical=critical))
     two.step(b, 'input', [key('j')], F('in_play', 3600 + DAY + 120, identity=1, fill=2))
     two.finish()
     return [tmp_path / f'{name}-one', tmp_path / f'{name}-two']
 
 
-def test_lineage_elapsed_day_check_and_memory_reuse(tmp_path):
+def test_lineage_elapsed_day_check_and_knowledge_carry(tmp_path):
     result = stitch(day_lineage(tmp_path, 'ab'), FakeBinding(), tmp_path / 'evals')
     elapsed = result['lineage.elapsed']
     assert elapsed['game_seconds'] == DAY + 120 and elapsed['admissions'] == 2 and elapsed['decisions'] > 0
@@ -1058,12 +1166,14 @@ def test_lineage_elapsed_day_check_and_memory_reuse(tmp_path):
     day = result['lineage.day_check']
     assert (day['passed'], day['severe'], day['died_before']) == (True, [], False)
     assert day['elapsed_hours'] == round((DAY + 60) / 3600, 3)
-    assert result['lineage.memory_reuse'] == dict(per_admission=[dict(run='ab-one', reused=0), dict(run='ab-two', reused=1)],
-        reused=1)
+    assert result['lineage.knowledge_carry'] == dict(boundaries=[dict(previous_run='ab-one', run='ab-two',
+        closing_knowledge_version='v2', opening_knowledge_version='v2', matches=True)], matched=1)
     # Every admission carries the lineage metrics; a fresh re-score drops them until the lineage is stitched again.
     for path in map(Path, result['records']):
         metrics = metrics_of(path)
-        assert metrics['lineage.day_check'].count == 1 and metrics['lineage.memory_reuse'].denominator == 1
+        carry = metrics['lineage.knowledge_carry']
+        assert metrics['lineage.day_check'].count == 1
+        assert (carry.count, carry.denominator, carry.missing) == (1, 1, None)
     evaluate(tmp_path / 'ab-two', FakeBinding(), tmp_path / 'evals', replace=True)
     assert 'lineage.elapsed' not in metrics_of(Path(result['records'][1]))
     assert stitch(day_lineage(tmp_path / 'again', 'ab'), FakeBinding(), tmp_path / 'again-evals')['lineage.elapsed'] == elapsed
@@ -1072,10 +1182,37 @@ def test_lineage_elapsed_day_check_and_memory_reuse(tmp_path):
     assert (severe['passed'], severe['severe']) == (False, ['hunger'])
     died = stitch(day_lineage(tmp_path, 'ef', death=True), FakeBinding(), tmp_path / 'evals')['lineage.day_check']
     assert (died['passed'], died['died_before']) == (False, True)
-    # A lineage short of a day is reported as not reached, and a single admission has no earlier writes.
+    # A lineage short of a day is reported as not reached, and a single admission has no boundaries.
     short = stitch([lineage_run(tmp_path / 'short', '9' * 32, [3600, 3660], 1, BASE)], FakeBinding(), tmp_path / 'evals')
     record = metrics_of(Path(short['records'][0]))
-    assert record['lineage.day_check'].missing == 'not_reached' and record['lineage.memory_reuse'].missing == 'no_earlier_writes'
+    assert record['lineage.day_check'].missing == 'not_reached'
+    assert record['lineage.knowledge_carry'].missing == 'single_admission'
+
+
+def test_lineage_uses_recorded_versions_for_mismatched_and_missing_boundaries(tmp_path):
+    root = tmp_path / 'evals'
+    binding = FakeBinding()
+    one, two = day_lineage(tmp_path, 'ab')
+    three = lineage_run(tmp_path / 'third', '9' * 32, [3600, 3660], 1, BASE + 2000)
+    # Admission two retains only the frozen opening version and has no delivered closing version.
+    trace = two / 'actors' / '001' / 'host.jsonl'
+    trace.write_text(''.join(line + '\n' for line in trace.read_text().splitlines()
+        if json.loads(line)['type'] != 'knowledge-delivery'))
+    snapshot = two / 'delivered-knowledge.json'
+    snapshot.write_text(json.dumps(dict(schema='delivered-knowledge/4', version='v9')))
+    for directory in (one, two, three):
+        record = evaluate(directory, binding, root)
+        if directory == two:
+            with open_readonly(record) as connection:
+                run = read_run_facts(connection)
+                assert (run['opening_knowledge_version'], run['closing_knowledge_version']) == ('v9', None)
+                assert read_metadata(connection)['inputs'][snapshot.name] == hashlib.sha256(snapshot.read_bytes()).hexdigest()
+        (directory / 'actors' / '001' / 'host.jsonl').unlink()
+    snapshot.unlink()
+    result = stitch([one, two, three], binding, root)
+    carry = metrics_of(Path(result['records'][0]))['lineage.knowledge_carry']
+    assert [item['matches'] for item in carry.value['boundaries']] == [False, None]
+    assert (carry.count, carry.denominator, carry.missing) == (0, 1, 'no_delivered_knowledge')
 
 
 def frames_lineage(tmp_path: Path, name: str, admissions: list[list[F]]) -> list[Path]:
@@ -1993,6 +2130,9 @@ def test_a_campaign_run_4_manifest_is_read_only_for_a_listed_session(tmp_path, m
         arm='pilot', start='S1', scenario='Evacuee', lineage=None, admission=None, world=None)
     assert read_run_facts(connection)['manifest_schema'] == 'campaign-run/4'
     connection.close()
+    metrics = metrics_of(path)
+    assert metrics['memory.reads'].value == metrics['memory.writes'].value == metrics['programs.runs'].value == 0
+    assert 'knowledge.reads' not in metrics
     # The directory name is not the key: a renamed run directory is the same listed session.
     renamed = evaluate(archived_run(tmp_path / 'renamed'), FakeBinding(), tmp_path / 'other', created_wall=1.0)
     assert metrics_of(renamed)['survival.game_hours'].value['hours'] == pytest.approx(120 / 3600)

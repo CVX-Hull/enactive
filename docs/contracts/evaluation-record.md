@@ -95,14 +95,13 @@ Its `metadata.state` is `live` or `final`.
 - **Lineage.** `evaluate-lineage` takes one lineage's admission run directories in order. It
   scores any admission without a `final` store as `evaluate-run` does, then writes
   `continuity` events and the four `lineage.*` metrics (continuity, elapsed time, the day
-  check and memory reuse) into every admission's store. Stitching again after re-scoring an
+  check and knowledge carry) into every admission's store. Stitching again after re-scoring an
   admission restores them.
-- **Current versions.** Core 3 and CDDA binding 3. The core includes the lineage elapsed
-  time, day check and memory reuse, and core 3 adds the `ui` mode and the split of
-  out-of-play decisions into `mode.ui_share` and `mode.interruption_share`. The binding
-  includes `severe_needs`, and binding 3 reads game screens the player works in as `ui`
-  (mode reader version 2). Snapshot rows of core 2 stay as recorded, so the dated tables
-  that select `core=2` are unchanged.
+- **Current versions.** Core 4 (`CORE_VERSION = 4`) and CDDA binding 3. Binding 3
+  includes `severe_needs` and reads game screens the player works in as `ui`
+  (mode reader version 2). The existing `core=2` and `core=3` rows in
+  `data/evaluation/run-metrics.jsonl` remain the inputs for dated tables that select
+  those versions.
 
 | Table | Columns | Meaning |
 | --- | --- | --- |
@@ -251,6 +250,19 @@ size or layout changes (this follows the custom-code table in
 
 ## Metrics, version 1
 
+Core 4 uses the journal branch for a `player-journal/1` store or a
+`campaign-run/10` or later manifest, including current `campaign-run/14`. It emits
+`knowledge.reads` in place of `memory.reads` on that branch and omits
+`memory.writes`, `memory.records`, `memory.retrieved_beyond_carry`,
+`memory.late_write_share` and `programs.*`. Archived pre-journal inputs, a legacy
+store, or recorded legacy writes or program events select the legacy
+`memory.*` and `programs.*` metrics, preserving the metric names historical
+`changes.json` records reference. Both branches emit the knowledge delivery,
+context, agenda and source metrics using whatever host facts were recorded.
+Lineage stitching emits `lineage.knowledge_carry` in place of
+`lineage.memory_reuse`.
+
+
 A **decision** is one completed `computer_input` operation; operations before the first
 one (decision 0, such as the opening observe) belong to no decision, so a run without
 input has no mode decisions, abstentions or stalls. Rates are shown with their
@@ -265,8 +277,8 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `pace.long_activities` | Count and total game seconds of `long_activity` events | — | — |
 | `pace.dollars_per_game_hour` | Run dollars ÷ survival game hours | game hours | Zero hours: null |
 | `mode.out_of_play_share` | Decisions whose mode is not `in_play` ÷ decisions with a non-abstained mode | mode readings | Abstentions excluded and counted |
-| `mode.ui_share` | Decisions whose mode is `ui` ÷ the same denominator (core 3) | mode readings | As `mode.out_of_play_share` |
-| `mode.interruption_share` | Decisions whose mode is neither `in_play` nor `ui` (`prompt`, `menu`, `loading`, `dead`) ÷ the same denominator; with `mode.ui_share` it sums to `mode.out_of_play_share` (core 3) | mode readings | As `mode.out_of_play_share` |
+| `mode.ui_share` | Decisions whose mode is `ui` ÷ the same denominator | mode readings | As `mode.out_of_play_share` |
+| `mode.interruption_share` | Decisions whose mode is neither `in_play` nor `ui` (`prompt`, `menu`, `loading`, `dead`) ÷ the same denominator; with `mode.ui_share` it sums to `mode.out_of_play_share` | mode readings | As `mode.out_of_play_share` |
 | `stall.longest` / `stall.count` | Longest streak after setup of decisions without `in_play`, `ui` included (`dead` closes a streak; abstentions neither extend nor break one); number of `stall` events after setup (`setup: false`) | decisions | — |
 | `input.actions_per_call` | Key, text and click actions in input operations (`wait` actions excluded) ÷ input operations | input operations | — |
 | `input.unseen_action_share` | 1 − input operations with a capture ÷ actions in input operations | input actions | — |
@@ -274,9 +286,15 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `custody.uncertain_receipts` | Partial or unknown receipts ÷ receipts; a run end or custody stop never counts here | receipts | No receipts: null (`no_receipts`) |
 | `custody.stopped` | Boolean: whether the run has a `custody_stop` event | — | — |
 | `tools.calls` | Calls per tool, with refusals and error results per tool | calls | — |
-| `memory.writes` / `memory.reads` | Append calls; query, read and context calls | — | — |
-| `memory.retrieved_beyond_carry` | Distinct record IDs returned by any read that were not in the reading actor's handoff context ÷ distinct records written (capped at 1) | records written | No writes: null |
-| `memory.late_write_share` | Writes within an actor's last six tool calls ÷ writes | writes | — |
+| `knowledge.reads` | Recorded `player_knowledge_read` and `player_knowledge_query` read events | — | No host trace: `no_host` |
+| `knowledge.deliveries` | Recorded deliveries plus empty suppressions, with keyed rows for recorded outcomes | Delivery events | No host trace: `no_host` |
+| `context.uncovered_cuts` | Applied cuts with positive recorded `uncovered_turns` | Applied cuts recording `uncovered_turns` | `no_host`, `no_cuts` or `unrecorded_uncovered_turns` |
+| `agenda.calls` | Recorded `player_agenda` calls excluding refusals | — | No host trace: `no_host` |
+| `source.ancestor_reads` | `player-source-read/2` results whose recorded `origin.admission` names an ancestor admission (not `current`) | `player_source` calls | `no_host` or `no_source_reads` |
+| `memory.records` (legacy) | Writes by record kind | Writes | `no_host` or `no_writes` |
+| `memory.writes` / `memory.reads` (legacy) | Append calls; query, read and context calls | — | — |
+| `memory.retrieved_beyond_carry` (legacy) | Distinct record IDs returned by any read that were not in the reading actor's handoff context ÷ distinct records written (capped at 1) | records written | No writes: null |
+| `memory.late_write_share` (legacy) | Writes within an actor's last six tool calls ÷ writes | writes | — |
 | `programs.saved` / `programs.runs` / `programs.reused` / `programs.outcomes` | Saves; runs; runs by an actor or run other than the author; runs per status | — | — |
 | `handoff.decisions_to_resume` | Decisions after a handoff until the first input operation with three or more actions and a changed capture | handoffs | — |
 | `handoff.carry_ratio` | Handoff context file bytes ÷ the predecessor's last request text bytes | handoffs | — |
@@ -291,7 +309,7 @@ its `count` and `denominator`, and the viewer shows an insufficient sample as su
 | `lineage.continuity` | Per admission boundary: same identity (or `unknown`) and game-time gap (negative means rewound) | boundaries | — |
 | `lineage.elapsed` | Game time from admission 1's first in-play clock to the lineage's last accepted reading (a rewind lowers it), with total decisions, overall game seconds per decision (null when elapsed is not positive), long-activity hours and their share of elapsed time (null when elapsed is not positive, and above 1 when a reload undid long activities), and `episode_changes` (a restarted clock or another survivor inside an admission) | game seconds | No accepted reading: missing (`no_game_time`) |
 | `lineage.day_check` | Alive one game day after the lineage's first in-play clock, with no severe need ([rules](#the-one-day-check)) | 1 | No clock: `no_game_time`; not crossed: `not_reached`; needs never legible after the crossing: `needs_not_legible`; death in the lag: `died_in_lag` |
-| `lineage.memory_reuse` | Distinct memory record IDs read in an admission that an earlier admission of the lineage wrote, per admission and in total | records written before the last admission | None written: `no_earlier_writes` |
+| `lineage.knowledge_carry` | Per boundary, compares the preceding closing and next opening knowledge versions. The value contains `boundaries` and `matched`. | Boundaries with both versions recorded | `single_admission` or `no_delivered_knowledge` |
 
 The four `lineage.*` metrics are written only by `evaluate-lineage` and are the same in every
 admission's store. An incremental pass keeps them; a fresh `--replace` pass drops them until

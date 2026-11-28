@@ -602,7 +602,7 @@ def test_the_schedule_command_writes_the_runner_record_as_a_schedule(tmp_path):
     run = admission(tmp_path, [['a1'], ['b1', 'b2'], ['c1']])
     b2 = dict(actor='001', step=3, operation='b2', ordinal=3)
     restore = dict(version='v4', restored='v2', counted_through='v2')
-    status = dict(schema='curator-runner-status/1', state='ended', updated_wall=BASE + 5, lag='unknown',
+    status = dict(schema='curator-runner-status/2', state='ended', updated_wall=BASE + 5, lag='unknown',
         covered_prefix=dict(end=dict(actor='001', step=1, operation='a1', ordinal=1), restore=restore))
     directory = runner_files(run, [poll(BASE + 1, None), poll(BASE + 2, None), poll(BASE + 3, b2),
         poll(BASE + 4, b2, outcome='failed')], status, tail='{"schema": "curator-runner-poll/1", "ended')
@@ -625,7 +625,7 @@ def test_the_schedule_command_writes_the_runner_record_as_a_schedule(tmp_path):
 ])
 def test_the_schedule_command_refuses_runner_files_it_cannot_read(tmp_path, polls, refusal):
     run = admission(tmp_path, [['a1']])
-    runner_files(run, polls, dict(schema='curator-runner-status/1', updated_wall=BASE + 9,
+    runner_files(run, polls, dict(schema='curator-runner-status/2', updated_wall=BASE + 9,
         covered_prefix=dict(end=None, restore=None)))
     with pytest.raises(ScheduleError, match=refusal):
         schedule_from_runner(run)
@@ -692,7 +692,7 @@ def test_the_schedule_command_times_a_restore_by_the_row_before_it(tmp_path):
     run = admission(tmp_path, [['a1'], ['b1'], ['c1']])
     a1, b1, c1 = (dict(actor='001', step=n, operation=o, ordinal=n) for n, o in ((1, 'a1'), (2, 'b1'), (3, 'c1')))
     restore = dict(version='v4', restored='v2', counted_through='v2')
-    status = dict(schema='curator-runner-status/1', updated_wall=BASE + 9, covered_prefix=dict(end=c1, restore=restore))
+    status = dict(schema='curator-runner-status/2', updated_wall=BASE + 9, covered_prefix=dict(end=c1, restore=restore))
     runner_files(run, [poll(BASE + 1, None), poll(BASE + 2, b1), poll(BASE + 3, b1), poll(BASE + 4, a1, restore),
         poll(BASE + 5, a1, restore)], status)
     assert schedule_from_runner(run)['changes'] == [change(BASE + 1), change(BASE + 2, '001', 2, 'b1'),
@@ -705,7 +705,7 @@ def test_the_schedule_command_times_a_restore_by_the_row_before_it(tmp_path):
 
 def test_the_schedule_command_refuses_an_unreadable_status_file_and_an_output_inside_the_run(tmp_path):
     run = admission(tmp_path, [['a1']])
-    directory = runner_files(run, [poll(BASE + 1, None)], dict(schema='curator-runner-status/1', updated_wall=BASE + 2,
+    directory = runner_files(run, [poll(BASE + 1, None)], dict(schema='curator-runner-status/2', updated_wall=BASE + 2,
         covered_prefix=dict(end=None, restore=None)))
     before = {path: path.read_bytes() for path in directory.iterdir()}
     for inside in (directory / 'polls.jsonl', run / 'schedule.json', tmp_path / 'run' / '.' / 'actors' / 'x.json'):
