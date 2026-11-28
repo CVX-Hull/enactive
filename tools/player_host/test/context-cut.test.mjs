@@ -14,7 +14,7 @@ import { compactSourceIds, coverageEntry, cutBriefing, cutMarker, CUT_BRIEFING_A
 import { contest, knowledge, listUpdate } from './delivery-scenario.mjs';
 import { actorId, article, fact, model, png, position, realDelay, reply, route, sessionId, usageRecord } from './host-scenario.mjs';
 
-const tokenCut = {high_mark:20_000, low_mark:2_600, min_free:1};
+const tokenCut = {high_mark:60_000, low_mark:2_600, min_free:1};
 const imageCut = {high_mark:90_000, low_mark:80_000, min_free:1};
 const operationId = n => n.toString(16).padStart(32, '0');
 const sourceId = n => `${sessionId}-${n}`;
@@ -114,7 +114,7 @@ test('a high-mark cut delivers a bounded briefing, clears stale usage and warnin
   const {events, payloads} = await play(t, async (n, {publish}) => {
     if (n === 4) await publish(publication(3));
     if (n >= 7) return reply();
-    return observe(n, 1, [3, 4].includes(n) ? 97_000 : n === 5 ? 12_345 : 16);
+    return observe(n, 1, [3, 4].includes(n) ? 95_000 : n === 5 ? 12_345 : 16);
   }, {contextCut:tokenCut, maxImages:12});
   const start = events.find(event => event.type === 'host-start');
   assert.deepEqual([start.schema, start.telemetry_version, start.context_cut], ['player-host/13', 13, tokenCut]);
@@ -125,7 +125,7 @@ test('a high-mark cut delivers a bounded briefing, clears stale usage and warnin
   assert.deepEqual([cut.request_id, cut.outcome, cut.triggers, cut.removed_turns, cut.cumulative_removed_turns],
     ['request-5', 'cut', ['high_mark'], 3, 3]);
   assert.equal(cut.source_ids_count, 3);
-  assert.ok(cut.tokens_before > 97_000);
+  assert.ok(cut.tokens_before > 95_000);
   assert.ok(cut.tokens_after - cut.briefing_tokens <= tokenCut.low_mark, JSON.stringify(cut));
   assert.deepEqual([cut.images_before, cut.images_after], [4, 1]);
 
@@ -458,7 +458,7 @@ test('a second capacity warning after a cut re-emits the full wrap-up instructio
   const {events, payloads} = await play(t, async (n, {publish}) => {
     if (n === 4) await publish(publication(3));
     if (n === 6) return reply();
-    return observe(n, 1, [3, 4, 5].includes(n) ? 97_000 : 16);
+    return observe(n, 1, [3, 4, 5].includes(n) ? 95_000 : 16);
   }, {contextCut:tokenCut, maxImages:12});
   assert.deepEqual(events.filter(event => event.type === 'tail-notice' && event.kinds.includes('context-capacity'))
     .map(event => event.request_id), ['request-4', 'request-6']);
@@ -622,11 +622,240 @@ test('cut markers accumulate distinct committed intents with the most recent occ
     if (n === 10) return reply();
     const intent = intents[n - 1] ?? 'latest protected';
     return reply(null, [['computer_observe', {intent}], ['computer_observe', {intent:'malformed\nintent'}]],
-      usage([5, 9].includes(n) ? 8000 : 16), undefined, `turn-${n}`);
-  }, {maxImages:30, contextCut:{low_mark:1, high_mark:7000, min_free:2}});
+      usage([5, 9].includes(n) ? 13_000 : 16), undefined, `turn-${n}`);
+  }, {maxImages:30, contextCut:{low_mark:1, high_mark:12_000, min_free:2}});
   const markers = [payloads[5], payloads[9]].map(payload => JSON.parse(markerText(payload).split('\n')[1]));
   assert.deepEqual(markers.map(marker => marker.recent_intents), [
     ['collect', 'inspect', 'x'.repeat(158) + '…'],
     ['x'.repeat(158) + '…', 'plan', 'confirm', 'route', 'inspect'],
   ]);
+});
+
+test('tiered uncovered-cut fallback holds between high_mark and uncovered ceiling, cuts uncovered above ceiling, and heals when coverage catches up', async t => {
+  // high_mark=20_000 -> uncoveredHighMark=ceil(20_000 * 5 / 3)=33_334.
+  const agenda = applyAgendaTool(emptyAgenda(), {op:'upsert', id:'survive', status:'active', title:'Keep playing',
+    refs:['fact-alone']}, new Set(['fact-alone'])).agenda;
+  const {events, payloads} = await play(t, async (n, {publish}) => {
+    if (n === 6) await publish(publication(5));
+    if (n === 7) return reply();
+    // n=3 (request-4): 25_000 > high_mark but <= 33_334 -> holds back uncovered!
+    // n=4 (request-5): 40_000 > 33_334 with 0 coverage -> tiered uncovered cut!
+    // n=6 (request-7): coverage catches up through op 5, pressure 40_000 -> covered cut heals uncovered_turns to 0!
+    const tok = n === 3 ? 25_000 : n === 4 ? 40_000 : n === 6 ? 40_000 : 16;
+    return reply(null, [['computer_observe', {intent:`step-${n}`}]], usage(tok), undefined, `turn-${n}`);
+  }, {agenda, maxImages:12, contextCut:{high_mark:20_000, low_mark:5_000, min_free:2}});
+  const cuts = cutEvents(events);
+  assert.deepEqual(cuts.map(c => [c.request_id, c.outcome, c.reason ?? c.cut_result, c.covered_through_operation_id, c.uncovered_turns]), [
+    ['request-4', 'held-back', 'uncovered', null, undefined],
+    ['request-5', 'cut', 'target', null, 2],
+    ['request-7', 'cut', 'target', operationId(5), 0],
+  ]);
+  const uncovBanner = markerText(payloads[4]).split('\n');
+  assert.ok(uncovBanner[0].includes('(some not yet curator-covered)'));
+  const uncovData = JSON.parse(uncovBanner[1]);
+  assert.deepEqual([uncovData.removed_turns, uncovData.uncovered_turns, uncovData.covered_through_operation_id,
+    uncovData.source_id_prefix, uncovData.source_ids, uncovData.recent_intents, uncovData.agenda.threads.map(th => th.id)],
+    [2, 2, null, `${sessionId}-`, ['1..2'], ['step-1', 'step-2'], ['survive']]);
+  const healedBanner = markerText(payloads[6]).split('\n');
+  assert.ok(healedBanner[0].includes('older curator-covered turns omitted'));
+  assert.equal(JSON.parse(healedBanner[1]).uncovered_turns, 0);
+});
+
+test('hard-fit rescue drops uncovered turns when zero coverage exists instead of stopping on context-capacity', async t => {
+  const {result, events, payloads} = await play(t, async n => {
+    if (n === 3) return reply();
+    return observe(n, 1, n === 2 ? 98_500 : 16);
+  }, {maxImages:12, contextCut:{low_mark:95_000, high_mark:99_000, min_free:10}});
+  assert.equal(result.ok, true);
+  const [cut] = cutEvents(events);
+  assert.deepEqual([cut.request_id, cut.outcome, cut.cut_result, cut.covered_through_operation_id, cut.removed_turns, cut.uncovered_turns],
+    ['request-3', 'cut', 'rescue', null, 1, 1]);
+  const marker = JSON.parse(markerText(payloads[2]).split('\n')[1]);
+  assert.deepEqual([marker.removed_turns, marker.uncovered_turns, marker.covered_through_operation_id, marker.source_ids],
+    [1, 1, null, [`${sessionId}-1`]]);
+});
+
+test('restore invalidation and orderly_stop still fence uncovered-cut fallback', async t => {
+  const {events} = await play(t, async (n, {publish}) => {
+    if (n === 2) await publish(restoration);
+    if (n === 5) return reply();
+    return observe(n, 1, n >= 3 ? 60_000 : 16);
+  }, {maxImages:12, contextCut:{high_mark:20_000, low_mark:5_000, min_free:2}});
+  assert.equal(cutEvents(events).length, 0);
+
+  const command = {schema:'player-control/1', type:'orderly_stop', id:'c'.repeat(32), session:sessionId, actor_id:actorId};
+  const {events:stopEvents, result} = await play(t, async n => {
+    if (n === 4) return reply(null, [['player_finish', {disposition:'external_stop_complete', report:'Stopped',
+      source_ids:[], control_id:command.id}]]);
+    return observe(n, 1, n >= 3 ? 60_000 : 16);
+  }, {maxImages:12, contextCut:{high_mark:20_000, low_mark:5_000, min_free:2}, onEvent:(event, control) => {
+    if (event.type === 'tool-result' && event.request_id === 'request-2') control.write(JSON.stringify(command) + '\n');
+  }});
+  assert.equal(result.reason, 'external_stop_complete');
+  assert.equal(cutEvents(stopEvents).length, 0);
+});
+
+test('covered hard-fit rescue below min_free wins over uncovered fallback even above the Tier-2 ceiling', async t => {
+  // high_mark=20_000 -> uncoveredHighMark=33_334; min_free=2; turn 1 is covered, turn 2 is uncovered.
+  // At request-4 (after turn 3), usage=99_500 exceeds hard limit (99_000) AND uncoveredHighMark.
+  // Covered rescue (k=1) must win over cutting uncovered turns (k=2)!
+  const {result, events} = await play(t, async (n, {publish}) => {
+    if (n === 3) await publish(publication(1));
+    if (n === 4) return reply();
+    return observe(n, 1, n === 3 ? 99_500 : 16);
+  }, {maxImages:12, contextCut:{high_mark:20_000, low_mark:5_000, min_free:2}});
+  assert.equal(result.ok, true);
+  const [cut] = cutEvents(events);
+  assert.deepEqual([cut.request_id, cut.outcome, cut.cut_result, cut.removed_turns, cut.uncovered_turns, cut.covered_through_operation_id],
+    ['request-4', 'cut', 'rescue', 1, 0, operationId(1)]);
+});
+
+test('unknown player-transport/2 op fences BOTH covered and uncovered cuts even above the Tier-2 ceiling', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'player-context-cut-unknown-tier2-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
+  await mkdir(actor, {recursive:true});
+  const configuration = {...route(), context_cut:{high_mark:20_000, low_mark:5_000, min_free:1}, max_context_images:12};
+  let calls = 0;
+  t.mock.method(McpClient.prototype, 'connect', async () => {});
+  t.mock.method(McpClient.prototype, 'close', async () => {});
+  t.mock.method(McpClient.prototype, 'listTools', async () => [{name:'computer_observe',
+    inputSchema:{type:'object', properties:{intent:{type:'string'}}, required:['intent'], additionalProperties:false}}]);
+  t.mock.method(McpClient.prototype, 'callTool', async () => {
+    calls++;
+    if (calls === 1) {
+      return {content:[{type:'text', text:JSON.stringify({schema:'player-transport/2', status:'unknown', reason:'timeout'})}]};
+    }
+    return {content:[{type:'text', text:`Observation ${calls}`}, {type:'image', data:png, mimeType:'image/png'}],
+      structuredContent:{schema:'player-computer-operation/1', kind:'observe', status:'completed',
+        actor_id:actorId, session:sessionId, operation_id:operationId(calls), source:{source_id:sourceId(calls)}}};
+  });
+  const events = [];
+  let reqs = 0;
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
+    session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
+    context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
+    env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
+      enabled:true, required:true, enabled_tools:['computer_observe'], startup_timeout_sec:2, tool_timeout_sec:2},
+    fetch:async () => {
+      reqs++;
+      // Even with verified coverage on turn 2 (op 2) AND tokens 60_000 > uncoveredHighMark (33_334),
+      // turn 1 has an unknown transport op, so neither covered nor uncovered cuts may cross it.
+      if (reqs === 2) { await appendFile(list, JSON.stringify(publication(2)) + '\n'); await realDelay(1200); }
+      return reqs === 4 ? reply() : observe(reqs, 1, reqs >= 3 ? 60_000 : 16);
+    }, onEvent:event => events.push(event)});
+  assert.equal(result.ok, true, result.reason);
+  const cuts = cutEvents(events);
+  assert.ok(cuts.length >= 1 && cuts.every(c => c.outcome === 'held-back'));
+});
+
+test('repeated uncovered cuts track partial then full catch-up including read-only turns', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'player-context-cut-partial-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
+  await mkdir(actor, {recursive:true});
+  const configuration = {...route(), context_cut:{high_mark:20_000, low_mark:5_000, min_free:1}, max_context_images:12};
+  let ops = 0;
+  t.mock.method(McpClient.prototype, 'connect', async () => {});
+  t.mock.method(McpClient.prototype, 'close', async () => {});
+  t.mock.method(McpClient.prototype, 'listTools', async () => [
+    {name:'computer_observe', inputSchema:{type:'object', properties:{intent:{type:'string'}}, required:['intent'], additionalProperties:false}},
+    {name:'player_knowledge_read', inputSchema:{type:'object', properties:{intent:{type:'string'}}, required:['intent'], additionalProperties:false}},
+  ]);
+  t.mock.method(McpClient.prototype, 'callTool', async name => {
+    if (name === 'player_knowledge_read') return {content:[{type:'text', text:'read-only'}]};
+    const n = ++ops;
+    return {content:[{type:'text', text:`Observation ${n}`}, {type:'image', data:png, mimeType:'image/png'}],
+      structuredContent:{schema:'player-computer-operation/1', kind:'observe', status:'completed',
+        actor_id:actorId, session:sessionId, operation_id:operationId(n), source:{source_id:sourceId(n)}}};
+  });
+  const events = [];
+  let reqs = 0;
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
+    session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
+    context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
+    env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
+      enabled:true, required:true, enabled_tools:['computer_observe', 'player_knowledge_read'], startup_timeout_sec:2, tool_timeout_sec:2},
+    fetch:async () => {
+      reqs++;
+      // Turn 1: op 1; Turn 2: read-only (no op); Turn 3: op 2 -> request-4 cuts 1 uncovered (uncovered_turns=1)
+      // Turn 4: op 3 -> request-5 cuts 1 more uncovered (cumulative 2, uncovered_turns=2)
+      // Coverage arrives for op 1 (turn 1 only) before request-6 -> request-6 cuts turn 3 (cumulative 3, uncovered_turns=2)
+      // Coverage arrives for op 3 (turns 1..4) before request-7 -> request-7 cuts turn 4 (cumulative 4, uncovered_turns=0!)
+      if (reqs === 5) { await appendFile(list, JSON.stringify(publication(1)) + '\n'); await realDelay(1200); }
+      if (reqs === 6) { await appendFile(list, JSON.stringify(publication(3)) + '\n'); await realDelay(1200); }
+      if (reqs === 7) return reply();
+      if (reqs === 2) return reply(null, [['player_knowledge_read', {intent:'read'}]], usage(16), undefined, 'turn-2');
+      const tok = reqs >= 3 ? 45_000 : 16;
+      return reply(null, [['computer_observe', {intent:`obs-${reqs}`}]], usage(tok), undefined, `turn-${reqs}`);
+    }, onEvent:event => events.push(event)});
+  assert.equal(result.ok, true, result.reason);
+  const applied = cutEvents(events).filter(c => c.outcome === 'cut');
+  assert.deepEqual(applied.map(c => [c.cumulative_removed_turns, c.uncovered_turns, c.covered_through_operation_id]), [
+    [1, 1, null],
+    [2, 2, null],
+    [3, 2, operationId(1)],
+    [4, 0, operationId(3)],
+  ]);
+});
+
+test('uncovered best-effort retains the largest fitting reducing prefix even when a longer prefix grows tokens', async t => {
+  // With maxImages=3, block=3, T1=1 img, T2=1 img, T3=2 imgs + unknown op (fencing allCuttable to [T1, T2]),
+  // T4=1 img (protected=1): at request-5, uncut (5 imgs) omits 3 -> 2 sent (> uncoveredHighMark 3,334);
+  // k=1 (4 imgs) omits 3 -> 1 sent (reduces!); k=2 (3 imgs, full prefix) omits 0 -> 3 sent (grows ~+1k!).
+  // Uncovered best_effort must select k=1 instead of holding.
+  const dir = await mkdtemp(join(tmpdir(), 'player-context-cut-nonmono-'));
+  t.after(() => rm(dir, {recursive:true, force:true}));
+  const actor = join(dir, 'actors', '001'), list = join(actor, 'knowledge-updates.jsonl');
+  await mkdir(actor, {recursive:true});
+  const configuration = {...route(), context_cut:{high_mark:2_300, low_mark:1, min_free:1}, max_context_images:3, context_image_block:3};
+  let calls = 0;
+  t.mock.method(McpClient.prototype, 'connect', async () => {});
+  t.mock.method(McpClient.prototype, 'close', async () => {});
+  t.mock.method(McpClient.prototype, 'listTools', async () => [{name:'computer_observe',
+    inputSchema:{type:'object', properties:{intent:{type:'string'}}, required:['intent'], additionalProperties:false}}]);
+  t.mock.method(McpClient.prototype, 'callTool', async () => {
+    calls++;
+    if (calls === 5) {
+      return {content:[{type:'text', text:JSON.stringify({schema:'player-transport/2', status:'unknown', reason:'timeout'})}]};
+    }
+    return {content:[{type:'text', text:`Observation ${calls}`}, {type:'image', data:png, mimeType:'image/png'}],
+      structuredContent:{schema:'player-computer-operation/1', kind:'observe', status:'completed',
+        actor_id:actorId, session:sessionId, operation_id:operationId(calls), source:{source_id:sourceId(calls)}}};
+  });
+  const events = [];
+  let reqs = 0;
+  const result = await runHost({configuration, knowledge:knowledge('v1'), knowledgeUpdates:list,
+    session:sessionId, actorId, pendingControlId:null, control:new PassThrough(), finishReserveUsd:'0',
+    context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:15,
+    env:{OFFLINE_TEST_KEY:'fixture-only'}, mcpConfig:{command:process.execPath, args:[], cwd:dir,
+      enabled:true, required:true, enabled_tools:['computer_observe'], startup_timeout_sec:2, tool_timeout_sec:2},
+    fetch:async () => {
+      reqs++;
+      if (reqs === 5) return reply();
+      return observe(reqs, reqs === 3 ? 3 : 1, 16);
+    }, onEvent:event => events.push(event)});
+  assert.equal(result.ok, true, result.reason);
+  const applied = cutEvents(events).filter(c => c.outcome === 'cut');
+  assert.ok(applied.some(c => c.request_id === 'request-5' && c.cut_result === 'best_effort'
+    && c.removed_turns === 1 && c.uncovered_turns === 1), JSON.stringify(cutEvents(events)));
+});
+
+test('covered hard-fit rescue evaluates k < min_free even when coveredNormal is armed with eligible >= min_free', async t => {
+  // Exact B1 condition: coveredNormal is armed (eligible = 2 >= min_free = 2), uncut exceeds hardLimit,
+  // k=2 restores omitted images and STILL exceeds hardLimit, while k=1 fits strictly below hardLimit!
+  const smallModel = {...model, contextWindow:5_180, maxTokens:1_000}; // hardLimit = 4,180
+  const {result, events} = await play(t, async (n, {publish}) => {
+    if (n === 4) await publish(publication(2));
+    if (n === 5) return reply();
+    return observe(n, n === 3 ? 2 : 1, 16);
+  }, {
+    maxImages:3, block:3,
+    contextCut:{high_mark:2_300, low_mark:1, min_free:2},
+    routeOverrides:{model:smallModel, context_reserve_tokens:1_100},
+  });
+  assert.equal(result.ok, true);
+  const [cut] = cutEvents(events).filter(c => c.outcome === 'cut');
+  assert.deepEqual([cut.request_id, cut.cut_result, cut.removed_turns, cut.uncovered_turns],
+    ['request-5', 'rescue', 1, 0]);
 });

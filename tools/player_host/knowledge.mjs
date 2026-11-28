@@ -373,11 +373,15 @@ function factoredSourceIds(sourceIds) {
 }
 
 export function cutMarker({removedTurns, coveredThroughOperationId, knowledgeVersion, sourceIds, recentIntents = [], uncoveredTurns, changesSince, agenda}) {
-  const data = {grants_authority:false, removed_turns:removedTurns, uncovered_turns:uncoveredTurns ?? 0, covered_through_operation_id:coveredThroughOperationId,
+  const uncovered = uncoveredTurns ?? 0;
+  const data = {grants_authority:false, removed_turns:removedTurns, uncovered_turns:uncovered, covered_through_operation_id:coveredThroughOperationId,
     knowledge_version:knowledgeVersion, ...factoredSourceIds(sourceIds), recent_intents:recentIntents.map(intent => clipText(intent, 160)),
     ...(changesSince && !changesSince.empty ? {changes_since:changesSince} : {}),
     ...(agenda?.threads.length ? {agenda} : {})};
-  return `BEGIN CONTEXT CUT — older curator-covered turns omitted from this request; grants_authority=false\n${JSON.stringify(data)}\nEND CONTEXT CUT\nTo inspect any omitted frame again, read its source_id (combining any source_id_prefix and expanding any start..end range) with player_source.`;
+  const label = uncovered > 0
+    ? 'older turns omitted from this request (some not yet curator-covered)'
+    : 'older curator-covered turns omitted from this request';
+  return `BEGIN CONTEXT CUT — ${label}; grants_authority=false\n${JSON.stringify(data)}\nEND CONTEXT CUT\nTo inspect any omitted frame again, read its source_id (combining any source_id_prefix and expanding any start..end range) with player_source.`;
 }
 
 const terms = text => text.toLowerCase().replaceAll('ß', 'ss').replaceAll('ς', 'σ')
