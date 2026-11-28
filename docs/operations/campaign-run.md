@@ -349,7 +349,11 @@ With [live knowledge updates](#live-knowledge-updates) each actor directory also
 holds `knowledge-updates.jsonl` and the adopted versions under `knowledge/`.
 Each actor receives its starting `agenda.json` (`player-agenda-continuation/1`) and
 writes its final committed `agenda-final.json`, which carries across handoffs and is
-persisted to the run directory's `agenda-final.json` for resumed admissions.
+persisted to the run directory's `agenda-final.json` for resumed admissions. When a
+host stops before writing `agenda-final.json` (for example after Pause exhausts
+final-report grace), the driver reconstructs `agenda-final.json` from the last valid
+`player-agenda` telemetry event flushed by the host (which can predate later context
+cuts).
 It verifies canonical handoff/context plus actual host/MCP group quiescence before
 a successor, without changing original limits. [Host details](player-host.md).
 
@@ -426,8 +430,7 @@ lead has done both of these:
    provider subtotal and observed unpriced counts stay as recorded. The ledger
    stores a separate planning amount for admission. It uses the larger of the
    declared limit and observed subtotal, plus one possible in-flight player
-   request and, if the package delivers knowledge units, one possible in-flight
-   recall request. These exposures can exist even when no starts were observed.
+   request. This exposure can exist even when no starts were observed.
    The flag is refused for a complete trace.
 2. Identified the separate admission amount in the run's dated record and stated which
    cost evidence was unavailable. The provider's charge remains unknown when the
