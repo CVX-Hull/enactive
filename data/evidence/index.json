@@ -1257,7 +1257,8 @@
       "availability": "present",
       "bytes": 148470359,
       "cited_by": [
-        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md"
+        "docs/acceptance/2026-11-26-multi-day-standard-build-campaign-998.md",
+        "docs/acceptance/2026-11-27-flex-tier-probe-1047.md"
       ],
       "files": 1344,
       "manifest_sha256": "d8db290ec245a5ee8b3d70023a43e5ab4233f32d4a925da118ff2a7cd369aa44",
