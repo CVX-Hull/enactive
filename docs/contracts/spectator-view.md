@@ -295,7 +295,10 @@ is listed with its status and no counts.
   other admissions in the catalog. A local anchor gives `seq` and `source_id` for a verified frame. A cross-admission
   anchor also identifies the catalog run and session, and reports availability and
   the reason when the frame cannot be served. Anchor resolution uses the [frame verification cache](#recorded-frames).
-- `version_chain` combines recorded publications, exports and deliveries. Its
+- `version_chain` combines recorded publications, exports and deliveries. When a
+  readable opening export (`delivered-knowledge.json`) records `vN` and no matching
+  numbered export (`curator-runner/delivered/vN.json`) exists, `?version=vN` selects
+  `initial` and that row carries `vN`'s publication and delivery evidence. Its
   `delivery_status` distinguishes `delivered`, `refused`, `empty_suppressed`,
   `undelivered`, `superseded`, `exported_not_delivered`, `published_only` and
   `trace_only`. The selected

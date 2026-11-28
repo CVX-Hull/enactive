@@ -119,6 +119,11 @@ function FeedPlayer({run, step}) {
   scaleRef.current = choose;
   useEffect(() => {
     const onKey = event => {
+      if (event.key === 'Escape' && !event.defaultPrevented && store.inspect === null) {
+        const sheet = document.getElementById('sheet');
+        const openKeys = !(sheet && !sheet.hidden) && shell.current && shell.current.querySelector('details.keys[open]');
+        if (openKeys) { event.preventDefault(); openKeys.open = false; return; }
+      }
       if (!forPlayer(event)) return;
       const a = latest.current;
       const keyed = {' ': a.hold, ArrowLeft: a.back, ArrowRight: a.forward, l: a.live, L: a.live, t: a.wide, T: a.wide, f: a.full, F: a.full,
@@ -157,10 +162,10 @@ function FeedPlayer({run, step}) {
     <div class="player-view">${src || shown ? null : html`<span class="frame-empty">No frame</span>`}
       <canvas ref=${canvas} id="feed" role="img" hidden=${!shown}
         aria-label=${shown ? `Game screen, ${where}` : 'Game screen not yet shown'}></canvas></div>
-    <div class="stagetop">${pill}${atLatest ? null : html`<button type="button" class="stageback" id="backlive" onClick=${actions.live}>${liveRunSelected ? 'Return to live' : 'Latest step'}</button>`}</div>
-    <div class="stagemeta" id="playinfo" role="status">${step ? html`<b>Step ${step.seq}${following ? ' (live)' : ''}</b><span>Decision ${step.decision ?? '—'}</span><span>${gameClock(step.game_time)}</span><span>${label(step.mode || 'unknown')}</span>
+    <div class="stagerow"><div class="stagetop">${pill}${atLatest ? null : html`<button type="button" class="stageback" id="backlive" onClick=${actions.live}>${liveRunSelected ? 'Return to live' : 'Latest step'}</button>`}</div>
+      <div class="stagemeta" id="playinfo" role="status">${step ? html`<b>Step ${step.seq}${following ? ' (live)' : ''}</b><span>Decision ${step.decision ?? '—'}</span><span>${gameClock(step.game_time)}</span><span>${label(step.mode || 'unknown')}</span>
       ${badges.map(b => html`<span class="vital ${b.critical ? 'critical' : ''}" title=${`read · ${readingNote(b.reading)}`}>${b.name}: ${b.text}</span>`)}
-      <span class="mono src" title=${step.source_id || ''}>${step.source_id ? `source ${step.source_id.split('-').pop()}` : 'no frame at this step'}</span>` : 'No steps yet.'}</div>
+      <span class="mono src" title=${step.source_id || ''}>${step.source_id ? `source ${step.source_id.split('-').pop()}` : 'no frame at this step'}</span>` : 'No steps yet.'}</div></div>
     ${words ? html`<div class="player-caption" id="feed-caption" title=${words}>${words}</div>` : null}
     <div class="player-bar" role="toolbar" aria-label=${recordedPage ? 'Recorded frame player' : 'Feed player (view only; never pauses the run)'}>
       <button type="button" id="feed-back" aria-label="Previous recorded frame" title="Previous recorded frame (←)" disabled=${index <= 0} onClick=${actions.back}>◀</button>
@@ -418,8 +423,13 @@ function StoryFeed() {
     const top = card.offsetTop, bottom = top + card.offsetHeight;
     if (top < box.scrollTop || bottom > box.scrollTop + box.clientHeight) box.scrollTop = Math.max(0, top - box.clientHeight / 3);
   }, [seq, filter, needle, store.runId, rows.length === 0, focus]);
+  const storyBox = useRef(null);
+  const inspectorOpen = store.inspect !== null && store.feed.some(e => e.id === store.inspect);
+  useLayoutEffect(() => {
+    if (storyBox.current) storyBox.current.inert = inspectorOpen;
+  }, [inspectorOpen]);
   const show = id => { setFilter('all'); setQuery(''); setExtra({newer: 0, older: 0}); setFocus(id); };
-  return html`<section class="story panel interp" aria-label="Story feed">
+  return html`<section class="story panel interp" ref=${storyBox} aria-label="Story feed" aria-hidden=${inspectorOpen ? 'true' : null}>
     <header class="storyhead"><h2>Continuity</h2><span class="note num" id="story-count">${needle ? `${count(rows.length)} found` : `${count(rows.length)} shown`}</span>
       <${Segmented} label="Story filter" className="chipset" value=${filter} onChange=${v => reset(() => setFilter(v))}
         options=${FILTERS.map(([value, text]) => ({value, text, id: `story-${value}`, count: counts[value]}))} />

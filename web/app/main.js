@@ -213,9 +213,17 @@ if (recordedPage) {
 }
 // Panels that stick below the bar read its height; the bar wraps on narrow screens, so it is measured, not assumed.
 const header = document.querySelector('header.ctl');
-const measure = () => document.documentElement.style.setProperty('--header-h', `${Math.ceil(header.getBoundingClientRect().height)}px`);
+let lastHeaderH = 0, headerRaf = 0;
+const measure = () => {
+  const h = Math.ceil(header.getBoundingClientRect().height);
+  if (h !== lastHeaderH) { lastHeaderH = h; document.documentElement.style.setProperty('--header-h', `${h}px`); }
+};
+const scheduleMeasure = () => {
+  if (headerRaf) return;
+  headerRaf = requestAnimationFrame(() => { headerRaf = 0; measure(); });
+};
 measure();
-if (typeof ResizeObserver === 'function') new ResizeObserver(measure).observe(header);
+if (typeof ResizeObserver === 'function') new ResizeObserver(scheduleMeasure).observe(header);
 document.getElementById('app').replaceChildren();
 render(html`<${App} />`, document.getElementById('app'));
 render(html`<${StripViewer} />`, document.getElementById('strip-viewer'));

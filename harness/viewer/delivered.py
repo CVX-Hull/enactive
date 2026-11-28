@@ -263,10 +263,16 @@ def _version_order(name):
     return -1 if name == INITIAL else int(name[1:])
 
 
+def _aliases_initial(run_dir: Path, files: dict[str, object], initial: str | None) -> bool:
+    return (INITIAL in files and isinstance(initial, str) and bool(VERSION.fullmatch(initial))
+            and initial not in files and rooted_status(run_dir, *EXPORTS, f'{initial}.json') is None)
+
+
 def version_chain(run_dir, exports, host: HostProjection | None, steps):
     published = _published(run_dir)
     files = {row['version']: row for row in exports}
     initial = files.get(INITIAL, {}).get('recorded_version')
+    alias_initial = _aliases_initial(run_dir, files, initial)
     by_version = {}
     superseded = set()
     for mark in host.deliveries if host is not None else ():
@@ -275,12 +281,18 @@ def version_chain(run_dir, exports, host: HostProjection | None, steps):
         name = version if isinstance(version, str) and VERSION.fullmatch(version) else None
         if name and (_delivered(item) or item['delivery_kind'] == 'empty_suppressed'):
             superseded.add(item['previous_version'])
-        if name:
-            by_version.setdefault(name, []).append(item)
-        if (INITIAL in files and version == initial and item['kind'] == 'briefing'
-                and item['delivery_kind'] != 'post_cut_briefing'):
+        if alias_initial and name == initial:
             by_version.setdefault(INITIAL, []).append(item)
-    names = sorted(set(files) | set(published) | set(by_version), key=_version_order)
+        else:
+            if name:
+                by_version.setdefault(name, []).append(item)
+            if (INITIAL in files and files[INITIAL]['status'] == 'available' and version == initial
+                    and item['kind'] == 'briefing' and item['delivery_kind'] != 'post_cut_briefing'):
+                by_version.setdefault(INITIAL, []).append(item)
+    raw_names = set(files) | set(published) | set(by_version)
+    if alias_initial:
+        raw_names.discard(initial)
+    names = sorted(raw_names, key=_version_order)
     if len(names) > MAX_VERSIONS + 1:
         names = ([INITIAL] if INITIAL in names else []) + names[-MAX_VERSIONS:]
     rows = []
@@ -393,12 +405,16 @@ def browse(catalog: Catalog, info: RunInfo, connection: sqlite3.Connection, vers
     rows = [version_row(name, info.run_dir, parts, knowledge_schema) for name, parts in files]
     host = read(info)
     chain, deliveries = version_chain(info.run_dir, rows, host, Steps(connection))
-    if version is not None and version not in dict(files) and not any(row['version'] == version for row in chain):
+    file_map = dict(files)
+    initial_recorded = next((r['recorded_version'] for r in rows if r['version'] == INITIAL), None)
+    alias_initial = _aliases_initial(info.run_dir, file_map, initial_recorded)
+    resolved_version = INITIAL if alias_initial and version == initial_recorded else version
+    if resolved_version is not None and resolved_version not in file_map and not any(row['version'] == resolved_version for row in chain):
         raise ViewError(404, 'unknown_version')
-    selected = version or next((r['version'] for r in reversed(rows) if r['status'] == 'available'),
+    selected = resolved_version or next((r['version'] for r in reversed(rows) if r['status'] == 'available'),
                                rows[-1]['version'] if rows else None)
     chosen = next((row for row in chain if row['version'] == selected), {})
-    parts = dict(files).get(selected)
+    parts = file_map.get(selected)
     state, document = load(info.run_dir, parts, knowledge_schema) if parts is not None else ('missing', None)
     delivery = delivery_for(deliveries.get(selected, []))
     if document is None:

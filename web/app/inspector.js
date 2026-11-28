@@ -80,8 +80,12 @@ function Body({entry, handoffs}) {
 
 export function Inspector({handoffs = []}) {
   const box = useRef(null), back = useRef(null);
-  const entry = store.inspect === null ? null : store.feed.find(e => e.id === store.inspect) || null;
+  const inspectId = store.inspect;
+  const entry = inspectId === null ? null : store.feed.find(e => e.id === inspectId) || null;
   const open = !!entry;
+  useEffect(() => {
+    if (inspectId !== null && !entry && store.inspect === inspectId) set({inspect: null});
+  }, [inspectId, entry]);
   useEffect(() => {
     if (!open) return undefined;
     back.current = document.activeElement;

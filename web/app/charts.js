@@ -15,12 +15,16 @@ export function Chart({option, label, className = '', onReady, epoch}) {
   useEffect(() => {
     const instance = echarts.init(box.current, null, {renderer: 'canvas'});
     chart.current = instance;
-    const resize = () => instance.resize();
+    let raf = 0;
+    const resize = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; if (chart.current) chart.current.resize(); });
+    };
     addEventListener('resize', resize);
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
     if (observer) observer.observe(box.current);
     if (onReady) onReady(instance);
-    return () => { removeEventListener('resize', resize); if (observer) observer.disconnect(); instance.dispose(); chart.current = null; };
+    return () => { if (raf) cancelAnimationFrame(raf); removeEventListener('resize', resize); if (observer) observer.disconnect(); instance.dispose(); chart.current = null; };
   }, [epoch]);
   useEffect(() => { if (chart.current && option) chart.current.setOption(option); }, [option, epoch]);
   return html`<div class="chart ${className}" ref=${box} role="img" aria-label=${label}></div>`;
