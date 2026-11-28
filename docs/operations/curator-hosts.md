@@ -166,7 +166,7 @@ Node tests: `cd tools/curator_host && npm test`.
   that has gone, the proxy still drains upstream within its existing limits and settles usage;
   it does not replace available usage with a reservation merely because header delivery failed.
 
-**Two arms, one route each.** The route is pinned to one provider with no fallback.
+**Two arms; each session pins one provider route with no fallback.**
 
 | Arm | OpenRouter model | Pinned provider | Effort | Recorded base price per MTok (in / out / cache read / cache write) |
 | --- | --- | --- | --- | --- |
