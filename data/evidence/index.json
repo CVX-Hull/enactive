@@ -478,6 +478,25 @@
       },
       "visibility": "private"
     },
+    "campaign-1060-comparative-deep-dive": {
+      "availability": "present",
+      "bytes": 67166,
+      "cited_by": [
+        "docs/acceptance/2026-11-28-continuous-memory-behavioral-deep-dive-1060.md"
+      ],
+      "files": 6,
+      "manifest_sha256": "d42ab5c376ec784cb196ddd3995c457438c9d00bc7a487f74c6886ba7ec708cf",
+      "note": "Comparative player & memory deep dive (#1060 vs #998): three clean-context explorer briefs and reports (Opus 5.5 High curator/hygiene audit, GPT-6.2 Sol xhigh player delivery/cuts audit, Opus 5.5 High gameplay/death/Ballot-11 forensics)",
+      "sources": {
+        "briefs/brief-a-curator-memory.md": ".runtime/campaigns/continuous-memory-1060/deep-dive@b6b3a9c8",
+        "briefs/brief-b-player-delivery.md": ".runtime/campaigns/continuous-memory-1060/deep-dive@b6b3a9c8",
+        "briefs/brief-c-gameplay-forensics.md": ".runtime/campaigns/continuous-memory-1060/deep-dive@b6b3a9c8",
+        "reports/explorer-a-curator-memory.md": ".runtime/campaigns/continuous-memory-1060/deep-dive@b6b3a9c8",
+        "reports/explorer-b-player-delivery.md": ".runtime/campaigns/continuous-memory-1060/deep-dive@b6b3a9c8",
+        "reports/explorer-c-gameplay-forensics.md": ".runtime/campaigns/continuous-memory-1060/deep-dive@b6b3a9c8"
+      },
+      "visibility": "private"
+    },
     "campaign-memory-review-1019": {
       "availability": "present",
       "bytes": 201505,
